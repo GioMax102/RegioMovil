@@ -37,6 +37,18 @@ Devuelve `status`, `service`, `version`, `mode: "simulation"` y `generatedAt` IS
 
 Devuelve directamente `data/network.json`: `sources`, `lines`, `stations`, `places` y `throughServices`. Las referencias de línea contienen `stationIds` en orden. Las coordenadas de estaciones no representan accesos peatonales; los lugares con `coordinateRole: "station-anchor"` comparten el punto de su estación. La respuesta usa `ETag` y admite `If-None-Match` (`304`), con caché de un día.
 
+### `GET /api/services?q=apodaca&network=ima&status=published`
+
+Consulta el catálogo de servicios documentados, independiente del grafo de estaciones del Metro. Devuelve `{version: 1, verifiedAt, networks, sources, routes, total}` y, si existe, `geometryRevision` para seleccionar la revisión de los paquetes geográficos. `total` corresponde a los resultados filtrados; las redes y fuentes conservan su contexto completo. El servidor carga `data/transit-catalog.json` si existe; sin ese archivo devuelve un catálogo vacío y mantiene disponible la red base.
+
+Los filtros son opcionales. `q` busca sin distinguir mayúsculas ni acentos en código, nombre, extremos, municipios, vías, estaciones documentadas y notas; todas sus palabras deben coincidir. Admite hasta 160 caracteres, sin controles. `network` exige un ID presente en `networks`; `status` admite `published`, `construction`, `announced` u `operational`. Filtros desconocidos, repetidos o inválidos devuelven `400` con `INVALID_SERVICE_FILTER`.
+
+Cada ruta contiene `id`, `code`, `name`, `networkId`, `mode`, `status`, `statusAsOf`, `municipalities`, `from`, `to`, `via`, `sourceIds`, `officialUrl`, `planningEligible`, `geometryPack` y `notes`; puede incluir `stationNames`, `stationIds` ordenados y una `geometryRevision` por ruta para su paquete geográfico. `via`, `municipalities` y `notes` son listas de texto. Extremos, fecha de estado, URL y paquete geográfico pueden ser `null` si no hay información suficiente. `verifiedAt` identifica la consulta del catálogo; no sustituye una fecha de publicación desconocida. `published` indica que una autoridad publica el servicio, sin afirmar operación en este instante. La presencia de una geometría tampoco acredita una secuencia completa de paradas o predicciones reales.
+
+### `GET /api/services/:id`
+
+Devuelve directamente los metadatos canónicos de un servicio. Un ID desconocido devuelve `404` con `SERVICE_NOT_FOUND`; un ID codificado inválido devuelve `400` con `INVALID_SERVICE_ID`. Ambos endpoints son de lectura, usan caché pública de una hora y rechazan escrituras con `405`. No crean reportes, unidades, estaciones ni conexiones.
+
 ### `GET /api/board?station=padre-mier&scenario=normal`
 
 `station` admite ID, nombre o alias normalizado, y predetermina Padre Mier. `scenario` puede ser `normal`, `peak`, `rain` o `disruption`.
@@ -104,6 +116,8 @@ Origen y destino son obligatorios y admiten ID, nombre o alias. `preference` pue
 ```
 
 El planificador busca hasta tres caminos simples conectados mediante aristas consecutivas del catálogo. Puede devolver menos alternativas si no hay más caminos documentados. No genera rutas de autobús ni de calles ausentes del catálogo. El mismo origen y destino devuelve una lista vacía y un mensaje; una red desconectada devuelve una lista vacía con explicación.
+
+Las líneas con `planningEligible: false`, `status: "construction"` o `status: "announced"`, o sin una secuencia de al menos dos `stationIds`, se excluyen del grafo y de las llegadas simuladas, también como continuaciones entre líneas. El catálogo de servicios no se incorpora automáticamente al grafo: las futuras L4 y L6 y los corredores informativos de autobús no producen viajes inventados.
 
 Los tiempos de recorrido usan distancia geográfica aproximada, velocidad supuesta de 32 km/h, estancia en estación y ajustes de escenario. Caminata y espera son supuestos explícitos de simulación, sin levantamiento de accesos ni horarios de salida. `comfortable` agrega una penalización por ocupación sintética. `accessible` penaliza cambios de tren para priorizar menos transbordos y devuelve un mensaje de accesibilidad sin verificar. **No garantiza una ruta accesible.**
 

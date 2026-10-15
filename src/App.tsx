@@ -43,6 +43,8 @@ import {
 } from './api';
 import type { Arrival, Board, Journey, Page, Plan, Preference, Scenario, Station } from './types';
 import NetworkMap from './components/NetworkMap';
+import StationPicker from './components/StationPicker';
+import TransitCatalog from './components/TransitCatalog';
 import {
   ArrivalCard,
   Brand,
@@ -57,8 +59,8 @@ type SavedJourney = { from: string; to: string };
 const navItems: { id: Page; label: string; short: string; icon: typeof House }[] = [
   { id: 'home', label: 'Mi camino', short: 'Inicio', icon: House },
   { id: 'plan', label: 'Planear viaje', short: 'Planear', icon: Route },
-  { id: 'stations', label: 'Estaciones', short: 'Estaciones', icon: TrainFront },
-  { id: 'mobility', label: 'Mi movilidad', short: 'Mi movilidad', icon: Bookmark },
+  { id: 'stations', label: 'Estaciones', short: 'Red', icon: TrainFront },
+  { id: 'mobility', label: 'Mi movilidad', short: 'Guardados', icon: Bookmark },
 ];
 const scenarioLabels: Record<Scenario, string> = {
   normal: 'Día habitual',
@@ -92,6 +94,7 @@ export default function App() {
     ),
   );
   const [page, setPage] = useState<Page>('home');
+  const [networkTab, setNetworkTab] = useState<'stations' | 'routes'>('stations');
   const [scenario, setScenario] = useState<Scenario>('normal');
   const [boardSnapshot, setBoard] = useState<Board | null>(null);
   const [transport, setTransport] = useState<Transport>('local');
@@ -99,6 +102,7 @@ export default function App() {
   const [modal, setModal] = useState<Modal>(null);
   const [arrival, setArrival] = useState<Arrival | null>(null);
   const [journey, setJourney] = useState<Journey | null>(null);
+  const [mapStation, setMapStation] = useState(station);
   const [toast, setToast] = useState('');
   const [largeText, setLargeText] = useState(readStored('largeText', false));
   const [contrast, setContrast] = useState(readStored('contrast', false));
@@ -276,7 +280,7 @@ export default function App() {
     const next = [...savedJourneys, { from, to }];
     setSavedJourneys(next);
     writeStored('journeys', next);
-    announce('Trayecto guardado. Puedes consultarlo sin conexión.');
+    announce('Trayecto guardado. Vuelve a planearlo sin conexión para consultar su mapa.');
   }
   function speakBoard() {
     if (!('speechSynthesis' in window)) {
@@ -312,30 +316,20 @@ export default function App() {
           <Route size={19} />
         </span>
         <h2>¿A dónde vamos?</h2>
-        <span className="subtle desktop-only">Un buen viaje empieza con un plan.</span>
+        <button
+          type="button"
+          className="service-discovery-button"
+          onClick={() => {
+            setPage('stations');
+            setNetworkTab('routes');
+          }}
+        >
+          Rutas de autobús
+          <ArrowUpRight size={15} />
+        </button>
       </div>
       <div className="planner-fields">
-        <label className="station-input">
-          <span className="origin-dot" />
-          <span className="field-content">
-            <span>Desde</span>
-            <select
-              value={from}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                setPlan(null);
-              }}
-              aria-label="Estación de origen"
-            >
-              {network.stations.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </span>
-          <ChevronDown size={15} />
-        </label>
+        <StationPicker value={from} onChange={setFrom} />
         <button
           type="button"
           className="swap-button"
@@ -348,27 +342,7 @@ export default function App() {
         >
           <ArrowDownUp size={17} />
         </button>
-        <label className="station-input destination">
-          <MapPin size={19} />
-          <span className="field-content">
-            <span>Hacia</span>
-            <select
-              value={to}
-              onChange={(e) => {
-                setTo(e.target.value);
-                setPlan(null);
-              }}
-              aria-label="Estación de destino"
-            >
-              {network.stations.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </span>
-          <ChevronDown size={15} />
-        </label>
+        <StationPicker value={to} onChange={setTo} destination />
         <button type="submit" className="primary-button" disabled={planning}>
           {planning ? 'Buscando…' : 'Encontrar mi ruta'}
           <ArrowRight size={18} />
@@ -564,7 +538,9 @@ export default function App() {
                     : page === 'plan'
                       ? 'CADA TRAYECTO, UNA MEJOR DECISIÓN'
                       : page === 'stations'
-                        ? 'CONOCE TU PRÓXIMA PARADA'
+                        ? networkTab === 'routes'
+                          ? 'LAS REDES DE NUEVO LEÓN'
+                          : 'CONOCE TU PRÓXIMA PARADA'
                         : 'TUS CAMINOS DE TODOS LOS DÍAS'}
               </span>
               <h1>
@@ -575,7 +551,9 @@ export default function App() {
                     : page === 'plan'
                       ? 'Encuentra tu mejor camino.'
                       : page === 'stations'
-                        ? 'Tu estación, más clara.'
+                        ? networkTab === 'routes'
+                          ? 'Más rutas, más posibilidades.'
+                          : 'Tu estación, más clara.'
                         : 'Tu movilidad, a tu manera.'}
               </h1>
               <p>
@@ -586,7 +564,9 @@ export default function App() {
                     : page === 'plan'
                       ? 'Compara el tiempo y la afluencia. Tú decides cómo viajar.'
                       : page === 'stations'
-                        ? 'Explora la red de Metrorrey y anticipa tu viaje.'
+                        ? networkTab === 'routes'
+                          ? 'Busca los servicios publicados y conoce su alcance.'
+                          : 'Explora la red de Metrorrey y anticipa tu viaje.'
                         : 'Guarda tus trayectos y encuentra los canales oficiales de pago.'}
               </p>
             </div>
@@ -654,7 +634,7 @@ export default function App() {
                         <Navigation size={18} />
                       </span>
                       <div>
-                        <h2>Tu conexión con la ciudad</h2>
+                        <h2>Tu punto de conexión</h2>
                         <p>Red Metrorrey · {currentStation.municipality}</p>
                       </div>
                     </div>
@@ -666,6 +646,7 @@ export default function App() {
                           setModal('station');
                         } else {
                           setPage('stations');
+                          setNetworkTab('stations');
                           setStationQuery('');
                         }
                       }}
@@ -674,7 +655,6 @@ export default function App() {
                       <ArrowUpRight size={16} />
                     </button>
                   </div>
-                  <NetworkMap network={network} selected={station} onSelect={setStation} />
                   <div className="map-location">
                     <div className="map-location-pin">
                       <MapPin size={19} />
@@ -776,6 +756,7 @@ export default function App() {
                         setModal('station');
                       } else {
                         setPage('stations');
+                        setNetworkTab('stations');
                         setLineFilter('all');
                         setStationQuery(currentStation.name);
                       }
@@ -850,13 +831,17 @@ export default function App() {
                     </div>
                     <p className="subtle results-note">
                       Tiempos y afluencia simulados. Incluyen márgenes de espera y caminata dentro
-                      de la red; no incluyen tu traslado hasta la estación.
+                      de la red; no incluyen tu traslado hasta la estación. Abre una opción para ver
+                      su mapa y los pasos del recorrido.
                     </p>
                     {plan.journeys.map((item, i) => (
                       <button
                         key={item.id}
                         className={`journey-card panel ${i === 0 ? 'recommended' : ''}`}
-                        onClick={() => setJourney(item)}
+                        onClick={() => {
+                          setMapStation(item.steps[0]?.fromId ?? from);
+                          setJourney(item);
+                        }}
                       >
                         {i === 0 && (
                           <span className="recommendation">
@@ -907,30 +892,68 @@ export default function App() {
                   </>
                 )}
               </section>
-              <section className="panel plan-map">
-                <div className="panel-heading">
-                  <h2>Tu trayecto en la red</h2>
-                  <span className="subtle">Líneas 1, 2 y 3</span>
-                </div>
-                <NetworkMap
-                  network={network}
-                  selected={from}
-                  onSelect={(id) => {
-                    setTo(id);
-                    setPlan(null);
-                  }}
-                  highlighted={plan?.journeys[0]?.steps.map((step) => step.lineId)}
-                />
-                <div className="plan-map-foot">
-                  <MapPin size={17} />
-                  <span>Selecciona una estación del mapa como destino.</span>
-                </div>
-              </section>
             </div>
           )}
 
           {page === 'stations' && (
-            <div className="stations-layout">
+            <div
+              className="network-section-tabs"
+              role="tablist"
+              aria-label="Consultar la red de transporte"
+              onKeyDown={(event) => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const next = event.key === 'Home' ? 'stations' : event.key === 'End' ? 'routes'
+                  : networkTab === 'stations' ? 'routes' : 'stations';
+                setNetworkTab(next);
+                event.currentTarget.querySelector<HTMLButtonElement>(`#network-${next}-tab`)?.focus();
+              }}
+            >
+              <button
+                id="network-stations-tab"
+                role="tab"
+                aria-selected={networkTab === 'stations'}
+                aria-controls="network-stations-panel"
+                tabIndex={networkTab === 'stations' ? 0 : -1}
+                onClick={() => setNetworkTab('stations')}
+              >
+                <TrainFront size={17} />
+                Estaciones de Metro
+              </button>
+              <button
+                id="network-routes-tab"
+                role="tab"
+                aria-selected={networkTab === 'routes'}
+                aria-controls="network-routes-panel"
+                tabIndex={networkTab === 'routes' ? 0 : -1}
+                onClick={() => setNetworkTab('routes')}
+              >
+                <Route size={17} />
+                Rutas y redes<span className="network-new-label">NUEVO</span>
+              </button>
+            </div>
+          )}
+          {page === 'stations' && networkTab === 'routes' && (
+            <div id="network-routes-panel" role="tabpanel" aria-labelledby="network-routes-tab">
+              <TransitCatalog
+                onPlanLine={(lineId) => {
+                  const line = network.lines.find((item) => item.id === lineId);
+                  if (!line) return;
+                  setFrom(line.stationIds[0]);
+                  setTo(line.stationIds[line.stationIds.length - 1]);
+                  setPlan(null);
+                  setPage('plan');
+                }}
+              />
+            </div>
+          )}
+          {page === 'stations' && networkTab === 'stations' && (
+            <div
+              className="stations-layout"
+              id="network-stations-panel"
+              role="tabpanel"
+              aria-labelledby="network-stations-tab"
+            >
               <section className="panel station-browser">
                 <div className="panel-heading">
                   <h2>Explora las estaciones</h2>
@@ -1134,6 +1157,9 @@ export default function App() {
                           onClick={() => {
                             setStation(id);
                             setPage('stations');
+                            setNetworkTab('stations');
+                            setLineFilter('all');
+                            setStationQuery('');
                           }}
                         >
                           <MapPin size={19} />
@@ -1499,7 +1525,7 @@ export default function App() {
         </Dialog>
       )}
       {journey && (
-        <Dialog title="Tu camino, paso a paso" onClose={() => setJourney(null)}>
+        <Dialog title="Tu camino, paso a paso" onClose={() => setJourney(null)} wide>
           <div className="journey-summary">
             <span>
               {stationName(from)}
@@ -1511,6 +1537,16 @@ export default function App() {
             </strong>
             <Occupancy value={journey.occupancy} />
           </div>
+          <section className="journey-map" aria-label="Mapa del trayecto en Monterrey">
+            <h3>Tu recorrido por Monterrey</h3>
+            <NetworkMap
+              network={network}
+              selected={mapStation}
+              onSelect={setMapStation}
+              journey={journey}
+            />
+            <p>Mapa incluido en el dispositivo. Disponible sin internet.</p>
+          </section>
           <ol className="journey-steps">
             {journey.steps.map((step, i) => (
               <li key={`${step.lineId}-${i}`}>
@@ -1608,9 +1644,11 @@ function SourcesDialog({
           {transport === 'api' ? 'API del piloto' : 'En este dispositivo, sin servidor'}.
         </p>
         <p>
-          La cobertura de este piloto incluye las líneas 1, 2 y 3 de Metrorrey. No incluye
-          recorridos de autobús, tráfico en vivo, tarifas integradas ni pagos. El mapa es un esquema
-          de consulta y no ofrece navegación peatonal.
+          El planificador calcula conexiones de las líneas 1, 2 y 3 de Metrorrey. En Rutas y redes
+          puedes consultar los servicios y trazos de autobús documentados, con la fecha y fuente de
+          cada uno. Los autobuses sin paradas ordenadas y las líneas en construcción quedan fuera
+          del cálculo de viajes. No hay tráfico en vivo, tarifas integradas, pagos ni navegación
+          peatonal.
         </p>
       </div>
     </Dialog>

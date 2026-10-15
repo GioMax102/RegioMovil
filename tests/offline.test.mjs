@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const execute = promisify(execFile);
 const origin = 'https://regiomovil.test';
-const assets = ['index-Abc12345.js', 'index-Qwe56789.css', 'inter-latin-Dx4kXJAl.woff2', 'nested/montserrat-latin-l_AIctKy.woff2'];
+const assets = ['index-Abc12345.js', 'index-Qwe56789.css', 'inter-latin-Dx4kXJAl.woff2', 'nested/montserrat-latin-l_AIctKy.woff2', 'monterrey-map-Abc12345.svg'];
 let directory;
 let worker;
 
@@ -38,47 +38,75 @@ after(async () => { if (directory) await rm(directory, {recursive:true,force:tru
 function workerHarness(source = worker) {
   const listeners = new Map();
   const buckets = new Map();
+  const storedHeaders = new Map();
   const deleted = [];
   const fetched = [];
   const added = [];
   const opened = [];
   let offline = false;
+  let varyOrigin = false;
   let navigationText = 'fresh application shell';
   let navigationStatus = 200;
   let claims = 0;
   let waitingSkipped = 0;
   const address = input => new URL(typeof input === 'string' ? input : input.url, origin).href;
-  const response = text => new Response(text, {headers:{'Content-Type':'text/plain'}});
+  const response = (text, headers = {}) => new Response(text, {headers:{'Content-Type':'text/plain',...headers}});
   const cache = name => {
-    if (!buckets.has(name)) buckets.set(name, new Map());
+    if (!buckets.has(name)) {
+      buckets.set(name, new Map());
+      storedHeaders.set(name, new Map());
+    }
     return buckets.get(name);
   };
+  const requestHeaders = request => new Headers(typeof request === 'string' ? undefined : request.headers);
+  const save = (name, request, result) => {
+    cache(name).set(address(request), result.clone());
+    storedHeaders.get(name).set(address(request), requestHeaders(request));
+  };
+  function match(name, request, options = {}) {
+    const requested = new URL(address(request));
+    for (const [url, result] of cache(name)) {
+      const stored = new URL(url);
+      if (options.ignoreSearch) {requested.search='';stored.search='';}
+      if (stored.href !== requested.href) continue;
+      if (!options.ignoreVary) {
+        const vary = (result.headers.get('Vary') || '').split(',').map(header => header.trim().toLowerCase()).filter(Boolean);
+        const previous = storedHeaders.get(name).get(url) || new Headers();
+        const current = requestHeaders(request);
+        if (vary.some(header => header === '*' || previous.get(header) !== current.get(header))) continue;
+      }
+      return result.clone();
+    }
+  }
   async function network(input) {
     const url = address(input);
     fetched.push(url);
     if (offline) throw new TypeError('Network is offline');
     if (input?.mode === 'navigate') return new Response(navigationText, {status:navigationStatus});
-    return response(`downloaded: ${new URL(url).pathname}`);
+    return response(`downloaded: ${new URL(url).pathname}`, varyOrigin ? {Vary:'Origin'} : {});
   }
   const caches = {
     async open(name) {
       opened.push(name);
-      const bucket = cache(name);
+      cache(name);
       return {
         async addAll(requests) {
           added.push(...requests);
           for (const request of requests) {
             const result = await network(request);
             if (!result.ok) throw new TypeError('Failed precache');
-            bucket.set(address(request), result.clone());
+            save(name, request, result);
           }
         },
-        async put(request, result) { bucket.set(address(request), result.clone()); },
-        async match(request) { return bucket.get(address(request))?.clone(); },
+        async put(request, result) { save(name, request, result); },
+        async match(request, options) { return match(name, request, options); },
       };
     },
-    async match(request) {
-      for (const bucket of buckets.values()) if (bucket.has(address(request))) return bucket.get(address(request)).clone();
+    async match(request, options) {
+      for (const name of buckets.keys()) {
+        const result = match(name, request, options);
+        if (result) return result;
+      }
     },
     async keys() { return [...buckets.keys()]; },
     async delete(name) { deleted.push(name); return buckets.delete(name); },
@@ -94,8 +122,10 @@ function workerHarness(source = worker) {
     fetched,added,opened,deleted,buckets,
     get claims() {return claims;}, get waitingSkipped() {return waitingSkipped;},
     setOffline(value = true) {offline = value;},
+    setVaryOrigin(value = true) {varyOrigin = value;},
     setNavigation(text, status = 200) {navigationText = text;navigationStatus = status;},
     seed(name, path, text) {cache(name).set(address(path), response(text));},
+    async cached(path, headers) {return caches.match({url:address(path),headers});},
     async lifecycle(type) {
       const pending = [];
       listeners.get(type)({waitUntil(value) {pending.push(value);}});
@@ -132,6 +162,26 @@ test('finalizer precaches hashed JavaScript, CSS and local fonts before any page
     assert.match(await result.response.text(), /downloaded:/);
   }
   assert.equal(harness.fetched.length, requestsBefore, 'Precached resources must be usable without fetching the network.');
+});
+
+test('offline static assets survive Vary Origin differences between precache and CORS requests', async () => {
+  const harness = workerHarness();
+  harness.setVaryOrigin();
+  await harness.lifecycle('install');
+  harness.setOffline();
+  const requestsBefore = harness.fetched.length;
+  for (const asset of assets) {
+    const path = `/assets/${asset}`;
+    const headers = {Origin:origin};
+    assert.equal(await harness.cached(path,headers), undefined, 'A normal Vary match must reject the different Origin header.');
+    const result = await harness.fetch(path,{mode:'cors',headers});
+    assert.equal(result.intercepted, true);
+    assert.equal(result.response.status, 200);
+    assert.equal(await result.response.text(), `downloaded: ${path}`);
+  }
+  assert.equal(harness.fetched.length, requestsBefore, 'CORS assets must load from precache while offline.');
+  await assert.rejects(harness.fetch('/assets/index-Abc12345.js?different-revision=1',{headers:{Origin:origin}}), /Network is offline/);
+  assert.equal(harness.fetched.at(-1), `${origin}/assets/index-Abc12345.js?different-revision=1`, 'Ignoring Vary must preserve URL query matching.');
 });
 
 test('worker bypasses API, POST and other origins without reading or writing caches', async () => {
@@ -197,15 +247,16 @@ test('changing public shell content changes the worker version even when asset f
   assert.ok(!stats.files.some(file => file.file.endsWith('.map')));
 });
 
-test('current production build precaches every generated JS, CSS and font', async t => {
+test('current production build precaches every generated JS, CSS, font and offline map', async t => {
   let production;
   try {production = await readFile(join(root,'dist/sw.js'),'utf8');}
   catch (error) {if (error.code === 'ENOENT') {t.skip('Run npm run build to also verify the production artifact.');return;} throw error;}
   const harness = workerHarness(production);
   await harness.lifecycle('install');
-  const files = (await readdir(join(root,'dist/assets'))).filter(file => /\.(?:js|css|woff2)$/.test(file));
+  const files = (await readdir(join(root,'dist/assets'))).filter(file => /\.(?:js|css|woff2|svg)$/.test(file));
   assert.ok(files.some(file => /-[\w-]{8,}\.js$/.test(file)));
   assert.ok(files.some(file => /-[\w-]{8,}\.css$/.test(file)));
   assert.ok(files.filter(file => file.endsWith('.woff2')).length >= 2);
+  assert.ok(files.some(file => /^monterrey-map-.*\.svg$/.test(file)), 'The real Monterrey basemap must ship for offline journeys.');
   for (const file of files) assert.ok(harness.added.includes(`/assets/${file}`), `Production precache is missing ${file}`);
 });

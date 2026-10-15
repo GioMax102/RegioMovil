@@ -55,7 +55,9 @@ self.addEventListener('fetch', (event) => {
   }
   if (url.pathname.startsWith('/assets/') || CORE.includes(url.pathname))
     event.respondWith(
-      caches.match(event.request).then(
+      // Public static bytes do not vary by Origin. Module/font requests add that
+      // header while precache requests omit it; preserve the exact URL/search.
+      caches.match(event.request, { ignoreVary: true }).then(
         (cached) =>
           cached ||
           fetch(event.request).then(async (response) => {

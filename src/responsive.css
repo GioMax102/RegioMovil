@@ -100,7 +100,7 @@
   }
   .topbar {
     padding: 0 26px;
-    height: 68px;
+    min-height: 68px;
   }
   .workspace main {
     padding: 28px 26px 0;
@@ -571,8 +571,10 @@
     margin-left: 0;
   }
   .topbar {
-    height: 64px;
-    padding: 0 21px;
+    min-height: 68px;
+    padding: 12px 21px;
+    gap: 12px;
+    flex-wrap: wrap;
     background: #fff;
   }
   .breadcrumb {
@@ -600,7 +602,7 @@
     min-height: 35px;
   }
   .workspace main {
-    padding: 25px 20px 85px;
+    padding: 25px 20px calc(92px + var(--app-safe-bottom));
   }
   .page-heading {
     align-items: flex-start;
@@ -982,22 +984,34 @@
     background: #fffffff5;
     backdrop-filter: blur(12px);
     border-top: 1px solid #e0e6d5;
-    padding: 6px 8px calc(7px + env(safe-area-inset-bottom));
+    padding: 6px calc(8px + var(--app-safe-right)) calc(7px + var(--app-safe-bottom))
+      calc(8px + var(--app-safe-left));
     z-index: 25;
     gap: 1px;
   }
   .mobile-nav button {
-    display: flex;
+    display: grid;
+    grid-template-rows: 30px 16px;
     align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 6px;
+    justify-items: center;
+    align-content: center;
+    gap: 4px;
     flex: 1;
+    min-width: 0;
     min-height: 52px;
     color: #617157;
     font-size: max(0.55rem, 12px);
     position: relative;
     padding: 4px;
+    isolation: isolate;
+  }
+  .mobile-nav button > span {
+    white-space: nowrap;
+    line-height: 16px;
+  }
+  .mobile-nav button > svg {
+    grid-area: 1 / 1;
+    z-index: 1;
   }
   .mobile-nav button.active {
     color: #426d3b;
@@ -1005,16 +1019,15 @@
   }
   .mobile-nav button.active:before {
     content: '';
-    position: absolute;
+    grid-area: 1 / 1;
     background: #eef3e6;
     width: 48px;
     height: 28px;
     border-radius: 20px;
-    top: 0;
-    z-index: -1;
+    z-index: 0;
   }
   .toast {
-    bottom: 90px;
+    bottom: calc(90px + var(--app-safe-bottom));
     left: 50%;
     max-width: calc(100% - 30px);
     width: max-content;
@@ -1026,7 +1039,7 @@
     padding: 21px;
     max-width: 490px;
     border-radius: 14px;
-    max-height: 88dvh;
+    max-height: min(88dvh, calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 32px));
   }
   .dialog-heading h2 {
     font-size: 1.13rem;
@@ -1602,6 +1615,7 @@
   .mobile-brand .brand {
     font-size: 17px;
     gap: 8px;
+    white-space: nowrap;
   }
   .mobile-brand .brand > svg {
     width: 30px;
@@ -1790,9 +1804,6 @@
 .large-text .demo-banner p {
   flex-basis: 65%;
 }
-.topbar {
-  padding-top: env(safe-area-inset-top);
-}
 @media (max-width: 1250px) {
   .planner-heading .desktop-only {
     display: none;
@@ -1885,15 +1896,17 @@
     font-size: 11px;
   }
   .notification-button {
-    min-width: 40px;
-    min-height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
   .mobile-nav button {
     font-size: 11px;
   }
   .mobile-nav {
-    padding-left: 5px;
-    padding-right: 5px;
+    padding-left: calc(5px + var(--app-safe-left));
+    padding-right: calc(5px + var(--app-safe-right));
   }
   .mobile-nav button {
     min-height: 56px;

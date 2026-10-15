@@ -68,6 +68,7 @@ function verifyCopiedWeb(expected) {
 
 if (!process.argv.includes('--skip-web')) {
   run(process.execPath, ['node_modules/typescript/bin/tsc', '-b']);
+  run(process.execPath, ['scripts/prepare-catalog.mjs']);
   run(process.execPath, ['node_modules/vite/bin/vite.js', 'build']);
   run(process.execPath, ['scripts/finalize-web.mjs']);
 }

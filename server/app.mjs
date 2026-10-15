@@ -5,6 +5,7 @@ import { gzip, brotliCompress, constants as zlibConstants } from 'node:zlib';
 import { promisify } from 'node:util';
 import { buildBoard, getModelCard, planJourney, resolveStation, SCENARIOS, PREFERENCES } from './domain.mjs';
 import { createReportStore } from './storage.mjs';
+import { findServices, mergeCatalogs } from './catalog.mjs';
 
 const REPORT_CATEGORIES = ['crowding', 'climate', 'accessibility', 'condition'];
 export const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost', 'https://localhost', 'capacitor://localhost'];
@@ -47,9 +48,10 @@ async function readJson(request) {
   catch { throw new HttpError(400, 'INVALID_JSON', 'El JSON del reporte no es válido.'); }
 }
 
-export function createApp({ network, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12 } = {}) {
+export function createApp({ network, catalog = null, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12 } = {}) {
   if (!network?.stations?.length || !network?.lines?.length) throw new Error('A nonempty transit network is required.');
   if (allowedOrigins.includes('*')) throw new Error('CORS wildcard is not supported. Configure explicit origins.');
+  const serviceCatalog = mergeCatalogs(catalog ? [catalog] : []);
   const store = createReportStore(databasePath);
   const networkJson = JSON.stringify(network);
   const networkETag = `"${createHash('sha256').update(networkJson).digest('hex').slice(0, 20)}"`;
@@ -167,6 +169,28 @@ export function createApp({ network, databasePath = ':memory:', now = () => new 
           return send(response, 200, network, { ETag: networkETag, 'Cache-Control': 'public, max-age=86400' });
         }
         if (url.pathname === '/api/model') return send(response, 200, getModelCard(), { 'Cache-Control': 'public, max-age=3600' });
+        if (url.pathname === '/api/services') {
+          for (const key of url.searchParams.keys()) {
+            if (!['q', 'network', 'status'].includes(key) || url.searchParams.getAll(key).length !== 1) throw new HttpError(400, 'INVALID_SERVICE_FILTER', 'Usa una sola búsqueda, red o estado por consulta.');
+          }
+          let routes;
+          try { routes = findServices(serviceCatalog, Object.fromEntries(url.searchParams)); }
+          catch (error) {
+            if (error instanceof TypeError || error instanceof RangeError) throw new HttpError(400, 'INVALID_SERVICE_FILTER', error.message);
+            throw error;
+          }
+          return send(response, 200, { ...serviceCatalog, routes, total: routes.length }, { 'Cache-Control': 'public, max-age=3600' });
+        }
+        const serviceMatch = url.pathname.match(/^\/api\/services\/([^/]+)$/);
+        if (serviceMatch) {
+          let id;
+          try { id = decodeURIComponent(serviceMatch[1]); }
+          catch { throw new HttpError(400, 'INVALID_SERVICE_ID', 'El identificador del servicio no es válido.'); }
+          if (!id || id.length > 160 || /[\/\\\u0000-\u001f\u007f]/.test(id)) throw new HttpError(400, 'INVALID_SERVICE_ID', 'El identificador del servicio no es válido.');
+          const route = serviceCatalog.routes.find(route => route.id === id);
+          if (!route) throw new HttpError(404, 'SERVICE_NOT_FOUND', 'No encontramos ese servicio en el catálogo documentado.');
+          return send(response, 200, route, { 'Cache-Control': 'public, max-age=3600' });
+        }
         if (url.pathname === '/api/board') {
           const station = validStation(url.searchParams.get('station') || 'padre-mier');
           const scenario = url.searchParams.get('scenario') || 'normal';
@@ -202,7 +226,7 @@ export function createApp({ network, databasePath = ':memory:', now = () => new 
         const report = store.add({ stationId: station.id, category: body.category, detail }, date);
         return send(response, 201, { report, notice: 'Reporte guardado sin verificación. No se envió a una autoridad ni a un servicio de emergencia.' }, { Location: `/api/reports?station=${encodeURIComponent(station.id)}` });
       }
-      if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports'].includes(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
+      if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports', '/api/services'].includes(url.pathname) || /^\/api\/services\/[^/]+$/.test(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
       throw new HttpError(404, 'NOT_FOUND', 'No encontramos ese recurso.');
     } catch (error) {
       if (response.headersSent) { response.end(); return; }

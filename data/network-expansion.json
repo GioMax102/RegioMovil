@@ -1,0 +1,88 @@
+{
+  "verifiedAt": "2026-10-15",
+  "sources": [
+    {
+      "id": "metrorrey-expansion-mapa-2026",
+      "title": "Metrorrey · Mapa de Red, abril 2026",
+      "url": "https://www.metrorrey.mx/_files/ugd/f8686c_91419c4d7b504f9fab01aefc6a87412a.pdf",
+      "publishedAt": "2026-04",
+      "publishedAtPrecision": "month",
+      "verifiedAt": "2026-10-15",
+      "scope": "Nombres y secuencia esquemática de las líneas 4 y 6, ambas señaladas en construcción. El archivo no aporta coordenadas verificadas de las nuevas estaciones."
+    },
+    {
+      "id": "nl-expansion-estado-20261012",
+      "title": "Gobierno de NL · Muy pronto Nuevo León estrenará el nuevo Metro",
+      "url": "https://nl.gob.mx/es/boletines/muy-pronto-nuevo-leon-estrenara-el-nuevo-metro-samuel-garcia",
+      "publishedAt": "2026-10-12",
+      "verifiedAt": "2026-10-15",
+      "scope": "Estado de construcción de líneas 4 y 6 y extensión aeroportuaria; inauguración aún por anunciar. No acredita apertura al público."
+    },
+    {
+      "id": "nl-linea5-redisenio-20250226",
+      "title": "Gobierno de NL · Con más frentes de trabajo en las líneas 4 y 6 se garantiza la conclusión del metro",
+      "url": "https://www.nl.gob.mx/es/boletines/con-mas-frentes-de-trabajo-en-las-lineas-4-y-6-se-garantiza-la-conclusion-del-metro",
+      "publishedAt": "2025-02-26",
+      "verifiedAt": "2026-10-15",
+      "scope": "Documenta la propuesta denominada Línea 5 como Transmetro hacia La Estanzuela, en lugar de una línea ferroviaria. No proporciona un catálogo completo de paradas verificadas."
+    }
+  ],
+  "routes": [
+    {
+      "id": "L4",
+      "name": "Línea 4",
+      "mode": "metro",
+      "status": "construction",
+      "statusLabel": "En construcción",
+      "summary": "Corredor proyectado entre Tren del Norte y Ginecología. Consulta informativa; todavía no disponible para planear viajes.",
+      "stationNames": [
+        "Tren del Norte",
+        "Torre Rise",
+        "Nuevo Edificio Fuerza Civil",
+        "Pino Suárez",
+        "Puente del Papa",
+        "Macroplaza",
+        "Ginecología"
+      ],
+      "stationCount": 7,
+      "stationCountScope": "Referencias de estación representadas en el mapa oficial de abril de 2026; no es un total contractual ni un listado de estaciones abiertas.",
+      "municipalities": ["Monterrey"],
+      "sourceIds": ["metrorrey-expansion-mapa-2026", "nl-expansion-estado-20261012"],
+      "planningEligible": false,
+      "routeGeometryVerified": false,
+      "statusAsOf": "2026-10-12"
+    },
+    {
+      "id": "L6",
+      "name": "Línea 6 · Aeropuerto",
+      "mode": "metro",
+      "status": "construction",
+      "statusLabel": "En construcción",
+      "summary": "Corredor proyectado de Ginecología a Aeropuerto. Incluye la extensión aeroportuaria; todavía no disponible para planear viajes.",
+      "stationNames": [
+        "Ginecología",
+        "Parque Fundidora",
+        "Y Griega",
+        "Churubusco",
+        "Lindavista",
+        "Bonifacio Salinas",
+        "San Rafael",
+        "La Victoria",
+        "La Talaverna",
+        "Paseo La Fe",
+        "Isidoro Sepúlveda",
+        "Julián Treviño",
+        "El Milagro",
+        "Apodaca Centro",
+        "Aeropuerto"
+      ],
+      "stationCount": 15,
+      "stationCountScope": "Referencias de estación representadas en el mapa oficial de abril de 2026; no es un total contractual ni un listado de estaciones abiertas.",
+      "municipalities": ["Monterrey", "Guadalupe", "San Nicolás de los Garza", "Apodaca"],
+      "sourceIds": ["metrorrey-expansion-mapa-2026", "nl-expansion-estado-20261012"],
+      "planningEligible": false,
+      "routeGeometryVerified": false,
+      "statusAsOf": "2026-10-12"
+    }
+  ]
+}

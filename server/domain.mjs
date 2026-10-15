@@ -16,6 +16,8 @@ export function resolveStation(network, id) {
 const hash = value => [...String(value)].reduce((result, char) => Math.imul(result ^ char.charCodeAt(0), 16777619) >>> 0, 2166136261);
 const localHour = date => Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Monterrey', hour: 'numeric', hourCycle: 'h23' }).format(date));
 const crowdLabel = occupancy => occupancy >= 75 ? 'Alta' : occupancy >= 45 ? 'Media' : 'Baja';
+const planningLine = line => line.planningEligible !== false && !['construction', 'announced'].includes(line.status) &&
+  Array.isArray(line.stationIds) && line.stationIds.length >= 2;
 
 function inputs(station, scenario, hour, segmentsRemaining = 2, serviceGap = 4, lineId = 'L2') {
   return { segmentsRemaining, hour, peak: Number(scenario === 'peak'), rain: Number(scenario === 'rain'),
@@ -33,14 +35,14 @@ export function buildBoard(network, stationId = 'padre-mier', scenario = 'normal
   const random = seededRandom(hash(`${station.id}:${scenario}:${bucket}`));
   const hour = localHour(date);
   const arrivals = [];
-  const lines = network.lines.filter(line => line.stationIds.includes(station.id));
+  const lines = network.lines.filter(line => planningLine(line) && line.stationIds.includes(station.id));
   for (const line of lines) {
     const index = line.stationIds.indexOf(station.id);
     const terminals = [index > 0 ? line.stationIds[0] : null, index < line.stationIds.length - 1 ? line.stationIds.at(-1) : null].filter(Boolean);
     for (const [directionIndex, terminalId] of terminals.entries()) {
       const terminal = resolveStation(network, terminalId);
       const throughService = (network.throughServices || []).find(service => service.stationId === terminalId && service.lineIds.includes(line.id));
-      const continuation = throughService && network.lines.find(other => other.id !== line.id && throughService.lineIds.includes(other.id));
+      const continuation = throughService && network.lines.find(other => planningLine(other) && other.id !== line.id && throughService.lineIds.includes(other.id));
       const finalTerminalId = continuation ? continuation.stationIds[0] === terminalId ? continuation.stationIds.at(-1) : continuation.stationIds[0] : terminalId;
       const finalTerminal = resolveStation(network, finalTerminalId);
       const initialSegments = 1 + Math.floor(random() * 2);
@@ -89,6 +91,7 @@ export function buildGraph(network) {
   const stations = new Map(network.stations.map(station => [station.id, station]));
   const graph = new Map(network.stations.map(station => [station.id, []]));
   for (const line of network.lines) {
+    if (!planningLine(line)) continue;
     for (let index = 1; index < line.stationIds.length; index++) {
       const from = stations.get(line.stationIds[index - 1]);
       const to = stations.get(line.stationIds[index]);

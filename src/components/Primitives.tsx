@@ -121,7 +121,7 @@ export function Dialog({
     >
       <div className="dialog-heading">
         <h2 id="dialog-title">{title}</h2>
-        <button className="icon-button" onClick={onClose} aria-label="Cerrar ventana">
+        <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar ventana">
           <X size={21} />
         </button>
       </div>
@@ -137,6 +137,7 @@ export function Forecast({
   compact?: boolean;
 }) {
   const items = data.slice(0, compact ? 6 : 10);
+  const lowestOccupancy = Math.min(...items.map((item) => item.occupancy));
   return (
     <div
       className={`forecast ${compact ? 'compact' : ''}`}
@@ -149,7 +150,7 @@ export function Forecast({
             <span className="bar-value">{Math.round(item.occupancy)}%</span>
             <div className="bar-track">
               <div
-                className={`bar-fill ${item.occupancy >= 75 ? 'busy' : ''} ${i === 0 ? 'current' : ''}`}
+                className={`bar-fill ${item.occupancy >= 75 ? 'busy' : ''} ${item.occupancy === lowestOccupancy ? 'current least-crowded' : ''}`}
                 style={{ height: `${Math.max(item.occupancy, 4)}%` }}
               />
             </div>

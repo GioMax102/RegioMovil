@@ -83,7 +83,7 @@ El icono representa una montaña y un trayecto con dos paradas, en verde y lima.
 
 Verificado el **15 de octubre de 2026**, zona America/Monterrey, con JDK 21, SDK 36, Capacitor 8 y el wrapper Gradle del repositorio:
 
-- `node scripts/android-build.mjs --skip-web --offline`: correcto. El APK debug final ocupa 4,625,004 bytes (4.41 MiB). Su SHA-256 y fecha se guardan junto al archivo.
+- `node scripts/android-build.mjs --skip-web --offline`: correcto. El APK debug actualizado ocupa 4,401,698 bytes (4.20 MiB). Su SHA-256 y fecha se guardan junto al archivo.
 - `./gradlew :app:lintDebug :app:assembleRelease --no-daemon --max-workers=2 --offline`: correcto. Android Lint reporta **0 errores y 9 advertencias** sobre actualizaciones disponibles y recursos de la plantilla sin uso. El release con R8 y reducción de recursos compila; el APK unsigned resultante ocupa 1,042,292 bytes y requiere la firma de distribución.
 - `apksigner verify --verbose`: firma debug APK Signature Scheme v2 verificada.
 - Inspección del APK: el `index.html` empaquetado coincide con el bundle final, no incluye sourcemaps ni `server.url`, mantiene `allowMixedContent=false` y conserva sus fuentes e iconos locales. El manifiesto declara `INTERNET` y un permiso interno de firma de AndroidX, sin ubicación ni otros permisos personales.
@@ -96,3 +96,19 @@ Se comprobó instalación y arranque de una compilación intermedia en un emulad
 - [Capacitor: entorno Android](https://capacitorjs.com/docs/getting-started/environment-setup).
 - [Android: configurar dispositivos dedicados](https://developer.android.com/work/dpc/dedicated-devices).
 - [AndroidX: inicialización de SplashScreen](https://developer.android.com/reference/androidx/core/splashscreen/SplashScreen).
+
+## Correcciones visuales móviles del 15 de octubre de 2026
+
+Se configuró SystemBars con insets CSS de Capacitor y un fondo fijo para la barra de estado, también al desplazar contenido. La top nav reserva separación y controles de 44 px. La selección de la bottom nav comparte celda con su icono; «Mi movilidad» usa «Guardados» en móvil para mantener todas las etiquetas en una línea.
+
+La gráfica destaca el mínimo entre las horas visibles, incluidos empates. Origen y destino abren búsqueda por nombre, alias o municipio y una lista desplazable. El mapa real de Monterrey se empaqueta como SVG local con atribución OpenStreetMap/ODbL y aparece solo al abrir el detalle de un trayecto; los guardados se pueden volver a planear sin conexión.
+
+Verificación: TypeScript, build web, 42 pruebas automatizadas y compilación del APK debug correctos. Se comprobó el flujo en navegador móvil, el mapa sin conexión y anchos de 320, 360, 412, 768 y 1440 px sin desbordamiento horizontal. El APK conserva su firma debug v2 y sus assets coinciden con el bundle final. No había dispositivo ni emulador conectado; queda pendiente verificar visualmente los insets del sistema sobre el teléfono físico.
+
+También se verificó en navegador una recarga completa sin conexión antes de abrir el primer mapa. Se corrigió la recuperación de assets públicos precargados cuando las solicitudes CORS incluyen `Origin` y el servidor declara `Vary: Origin`; las respuestas de API continúan fuera de la caché.
+
+## Actualización del catálogo de ambas redes
+
+La compilación posterior a la integración de autobuses y ampliaciones de Metrorrey incluye 207 fichas y doce mapas de autobús. `node scripts/android-build.mjs --skip-web --offline` completó correctamente y generó un APK debug de **4,420,910 bytes**, con firma v2 válida. Se compararon los 27 archivos web dentro del ZIP con las huellas de `dist`: todos coinciden, incluidos catálogo y mapas. El SHA-256 final es `90613ad151a29cd502847c9059120e4d7696ee9baf19919dc5c20f38d7eb2aaf`.
+
+Las 59 pruebas automatizadas pasan. Se comprobó el catálogo y el detalle de mapa en navegador móvil y de escritorio; esta actualización no se ejecutó en Android físico ni en emulador. Los límites y los comandos comprobados están en [verificación](verificacion.md).

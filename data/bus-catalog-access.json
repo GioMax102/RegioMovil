@@ -1,0 +1,231 @@
+{
+  "verifiedAt": "2026-10-15",
+  "scope": [
+    "MuevoLeón",
+    "RegioRuta",
+    "Ecovía",
+    "Troncales e integradas",
+    "Transmetro"
+  ],
+  "datasets": [
+    {
+      "id": "2024_2025_tpe_publico_setme",
+      "title": "Información del Sistema de Transporte Público SETME 2024–2025",
+      "url": "https://catalogodatos.nl.gob.mx/dataset/2024_2025_tpe_publico_setme",
+      "publisher": "Instituto de Movilidad y Accesibilidad",
+      "licenseId": "odc-by",
+      "metadataModified": "2025-11-12T17:34:18.700799",
+      "resources": [
+        {
+          "name": "2024_2025_paradas_TP.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/89f1df19-85d2-4ac7-8239-dd2a852c7bb0/resource/9e424286-f05e-4b8c-a687-15685af39ba9/download/2024_2025_paradas_tp.csv"
+        },
+        {
+          "name": "2024_2025_rutas_empresas_TP.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/89f1df19-85d2-4ac7-8239-dd2a852c7bb0/resource/0f8bc318-7141-49ba-ab70-248cb20750e0/download/2024_2025_rutas_empresas_tp.csv"
+        },
+        {
+          "name": "2024_2025_unidades_TP.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/89f1df19-85d2-4ac7-8239-dd2a852c7bb0/resource/a6073571-6080-4ff9-9687-bebbda398cf4/download/2024_2025_unidades_tp.csv"
+        },
+        {
+          "name": "Diccionario_tpe_publico_SETME_2024_2025.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/89f1df19-85d2-4ac7-8239-dd2a852c7bb0/resource/fcf89177-400e-498e-98cf-7074a92ccc35/download/diccionario_tpe_publico_setme_2024_2025.csv"
+        }
+      ]
+    },
+    {
+      "id": "paradas",
+      "title": "Paradas",
+      "url": "https://catalogodatos.nl.gob.mx/dataset/paradas",
+      "publisher": "Instituto de Movilidad y Accesibilidad",
+      "licenseId": "cc-by",
+      "metadataModified": "2025-11-12T23:56:30.543883",
+      "resources": [
+        {
+          "name": "2024_2025_paradas_tp.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/8e733b18-0a06-4188-9041-9b6422b156b2/resource/96a453fd-95ee-4ee2-9529-15824922a1c7/download/2024_2025_paradas_tp.csv"
+        },
+        {
+          "name": "diccionario_2024_2025_paradas_tp.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/8e733b18-0a06-4188-9041-9b6422b156b2/resource/e6955f5b-93d2-489c-b2c9-e46535f6915f/download/diccionario_2024_2025_paradas_tp.csv"
+        }
+      ]
+    },
+    {
+      "id": "paradas-oficiales-stc-metrorrey",
+      "title": "Paradas Oficiales STC Metrorrey",
+      "url": "https://catalogodatos.nl.gob.mx/dataset/paradas-oficiales-stc-metrorrey",
+      "publisher": "Sistema de Transporte Colectivo Metrorrey",
+      "licenseId": null,
+      "metadataModified": "2025-11-12T23:57:20.266890",
+      "resources": [
+        {
+          "name": "2024_2025_paradas_STCM.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/74e80633-632c-4104-a84e-ce27f65802c4/resource/1606b958-185e-4dd9-b76e-29cf39f7c38b/download/2024_2025_paradas_stcm.csv"
+        },
+        {
+          "name": "diccionario_paradas_stcm_2024_2025.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/74e80633-632c-4104-a84e-ce27f65802c4/resource/0d71cfa6-b410-4f00-9848-875e8a7aa06b/download/diccionario_paradas_stcm_2024_2025.csv"
+        }
+      ]
+    },
+    {
+      "id": "rutas-por-empresa-stc-metrorrey",
+      "title": "Rutas por Empresa STC Metrorrey",
+      "url": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "publisher": "Sistema de Transporte Colectivo Metrorrey",
+      "licenseId": "cc-by",
+      "metadataModified": "2025-11-13T01:19:32.083103",
+      "resources": [
+        {
+          "name": "RutaEmpresa_STCM_2024_2025.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv"
+        },
+        {
+          "name": "Diccionario_RutaEmpresa_STCM_2024_2025.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/662c58e9-26a6-4a3e-ae62-00a7c3bbd9bc/download/diccionario_rutaempresa_stcm_2024_2025.csv"
+        }
+      ]
+    },
+    {
+      "id": "rutas-empresas",
+      "title": "Rutas y Empresas concesionarias",
+      "url": "https://catalogodatos.nl.gob.mx/dataset/rutas-empresas",
+      "publisher": "Instituto de Movilidad y Accesibilidad",
+      "licenseId": "cc-by",
+      "metadataModified": "2026-09-25T19:24:52.565912",
+      "resources": [
+        {
+          "name": "2024_2025_rutas_empresas_tp.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/a9cf7f08-2c6c-4f73-a304-7eb2406de1bf/resource/63e767f5-a29a-44a3-83c8-e39378e92fc8/download/2024_2025_rutas_empresas_tp.csv"
+        },
+        {
+          "name": "diccionario_2024_2025_rutas_empresas_tp.csv",
+          "format": "CSV",
+          "url": "https://catalogodatos.nl.gob.mx/dataset/a9cf7f08-2c6c-4f73-a304-7eb2406de1bf/resource/f458e80b-dd42-404e-9063-880954de57ed/download/diccionario_2024_2025_rutas_empresas_tp.csv"
+        }
+      ]
+    }
+  ],
+  "publicPortals": [
+    {
+      "name": "Regio Ruta",
+      "url": "https://www.monterrey.gob.mx/regio-ruta/",
+      "publisher": "Gobierno de Monterrey",
+      "licenseId": null,
+      "access": "public-html",
+      "sharedMapUrl": "https://www.google.com/maps/d/viewer?mid=1e1JycXnZrFLm5OR0wkNmMxluVo4e_Cw",
+      "result": "7 capas publicadas con 519 marcadores y 8 segmentos; copiadas como paquetes cartográficos de consulta, sin convertirlas en itinerarios calculables.",
+      "limitations": [
+        "La página no declara fecha de actualización ni licencia abierta.",
+        "Los mapas individuales/PDF y el mapa conjunto tienen diferencias; se conserva el mapa conjunto con A–G y nombres completos.",
+        "No se verificaron orden/sentidos de viaje, accesos, frecuencias por parada ni accesibilidad operativa."
+      ]
+    },
+    {
+      "name": "Muevo León · herramienta para pasajeros",
+      "url": "https://pasajero.lowcobalt.com/HPSTrackerV4/Pasajero.html",
+      "officialReferenceUrl": "https://nl.gob.mx/es/boletines/llega-sedes-mundialistas-con-rutas-dedicadas-son-gratuitas-y-seguras",
+      "access": "unavailable-from-runtime",
+      "result": "El portal está enlazado por un boletín oficial. HTTP/TLS y navegador devolvieron connection reset; no se verificó API pública ni licencia de datos.",
+      "limitations": [
+        "El texto indexado contiene Información de Demo. No se toma como telemetría verificada.",
+        "No se descargaron datos de cuentas ni de pasajeros."
+      ]
+    }
+  ],
+  "findings": {
+    "gtfsOrGeojsonFound": false,
+    "gtfsSearchScope": "Búsqueda en catálogo estatal: grupo Movilidad y Transporte, organización Metrorrey y API package_search q=transporte. La ausencia en estas consultas no demuestra que no exista otro feed público.",
+    "stcmRouteRows": 36,
+    "stcmBusRouteRows": 34,
+    "stcmBusStopRows": 34,
+    "stcmBusStopRowsWithCoordinates": 0,
+    "stcmBusStopPlaceholders": [
+      "SIN VALOR",
+      "SIN DATO"
+    ],
+    "stcmDataPeriod": "2024-10 a 2025-09",
+    "stcmAmbiguities": [
+      "Dos rutas aparecen con origen San Bernabé en rutas y Talleres en paradas.",
+      "tipo_servicio está vacío en catálogo de rutas.",
+      "El diccionario enumera modalidades 1–4; el corredor García–Monterrey–Guadalupe tiene código 9. Su alias Ecovía se verifica por informe financiero Metrorrey 2026, no por inferencia del código."
+    ]
+  },
+  "integratedFiles": {
+    "regioruta": "data/regioruta-services.json",
+    "stcm": "data/metrorrey-services.json",
+    "packs": [
+      {
+        "id": "regioruta-a",
+        "stops": 93,
+        "segments": 1,
+        "vertices": 579,
+        "stopOrderVerified": false
+      },
+      {
+        "id": "regioruta-b",
+        "stops": 113,
+        "segments": 1,
+        "vertices": 532,
+        "stopOrderVerified": false
+      },
+      {
+        "id": "regioruta-c",
+        "stops": 74,
+        "segments": 1,
+        "vertices": 157,
+        "stopOrderVerified": false
+      },
+      {
+        "id": "regioruta-d",
+        "stops": 61,
+        "segments": 1,
+        "vertices": 96,
+        "stopOrderVerified": false
+      },
+      {
+        "id": "regioruta-e",
+        "stops": 60,
+        "segments": 2,
+        "vertices": 158,
+        "stopOrderVerified": false
+      },
+      {
+        "id": "regioruta-f",
+        "stops": 58,
+        "segments": 1,
+        "vertices": 160,
+        "stopOrderVerified": false
+      },
+      {
+        "id": "regioruta-g",
+        "stops": 60,
+        "segments": 1,
+        "vertices": 439,
+        "stopOrderVerified": false
+      }
+    ]
+  },
+  "validation": {
+    "routeIdsUnique": true,
+    "allRegiorutaCoordinatesWithinZmmBounds": true,
+    "allCatalogBusRoutesPlanningIneligible": true,
+    "rawSourceSha256": {
+      "stcmRoutes": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+      "stcmStops": "567aa3d7fe420aa67721a383c936c22dad7ec6f85e483f82e1d3733645f45648"
+    }
+  }
+}

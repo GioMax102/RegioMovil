@@ -7,8 +7,9 @@ El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aqu
 ## Qué puedes usar
 
 - **Mi camino:** próximas unidades simuladas, intervalos de llegada, ocupación y aire acondicionado del escenario.
-- **Planear viaje:** origen y destino dentro de Metrorrey; compara menos tiempo, menos afluencia o menos transbordos. Explica la continuidad L2–L3 en Zaragoza.
+- **Planear viaje:** busca origen y destino por nombre, alias o municipio, o recorre la lista de estaciones de Metrorrey; compara menos tiempo, menos afluencia o menos transbordos. Explica la continuidad L2–L3 en Zaragoza.
 - **Estaciones:** búsqueda por nombre, alias y municipio, filtros de línea, pronóstico sintético y accesibilidad explícitamente sin verificar.
+- **Rutas y redes:** 207 fichas de servicios, variantes y ampliaciones; búsqueda por número o municipio, filtros de red y estado, 12 mapas de autobús y fuentes fechadas. Disponible en Estaciones → Rutas y redes.
 - **Mi movilidad:** estaciones y trayectos guardados en el dispositivo, acceso al proveedor oficial Urbani y medios de pago de Metrorrey.
 - **Modo parada:** `/?kiosk=1&locked=1&station=padre-mier` para un módulo dedicado, interfaz de consulta con lectura en voz alta cuando el dispositivo ofrece síntesis de voz. No muestra guardados personales ni permite reportar.
 - **Accesibilidad:** texto ampliado, contraste alto, controles con nombre, teclado, diálogos nativos y respeto de movimiento reducido.
@@ -19,7 +20,7 @@ El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aqu
 
 El catálogo usa **38 ubicaciones únicas** de estaciones de Metrorrey, coordenadas del portal de Datos Abiertos de Nuevo León y el mapa oficial de abril de 2026. Los conteos institucionales por línea pueden contar correspondencias más de una vez. El alias Parque Fundidora se conserva para Arena Monterrey.
 
-**Los arribos, el aforo, el clima de unidad, las incidencias y las duraciones son simulados.** No hay conexión contratada con GPS de concesionarios, sensores, tráfico de Waze o medios de pago. El alcance de rutas inicial son las líneas 1, 2 y 3 de Metrorrey; no se inventaron recorridos de autobús de la periferia. No hay saldos ficticios, cargos, NFC ni boletos válidos.
+**Los arribos, el aforo, el clima de unidad, las incidencias y las duraciones son simulados.** No hay conexión contratada con GPS de concesionarios, sensores, tráfico de Waze o medios de pago. El planificador calcula las líneas 1, 2 y 3 de Metrorrey. El catálogo adicional reúne Muevo León / urbanas IMA, RegioRuta, Transmetro, Ecovía / GMG y troncales e integradas; 12 trazos de autobús se consultan con sus puntos publicados. La L4 y L6 están señaladas en construcción. Las fichas sin orden de paradas y transbordos verificados no se convierten en itinerarios. No hay saldos ficticios, cargos, NFC ni boletos válidos.
 
 Ver [procedencia y límites](docs/datos-y-fuentes.md), [alcance y heurísticas](docs/producto-y-accesibilidad.md) y [modelo/API](docs/api.md).
 
@@ -85,7 +86,7 @@ tests/        Pruebas de API, dominio y modo offline
 docs/         Producto, fuentes, API, Android y verificación
 ```
 
-Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. No hay analítica, mapas externos, rastreo de ubicación ni petición de cuenta.
+Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. La base geográfica de Monterrey usa un extracto de OpenStreetMap empaquetado localmente, con atribución ODbL; se muestra al abrir el detalle de un trayecto. El recorrido se puede guardar y volver a planear sin internet. [Procedencia y licencia del mapa](src/data/monterrey-map.md). No hay analítica, peticiones a proveedores de mapas, rastreo de ubicación ni petición de cuenta.
 
 ## Ejecutar en contenedor
 
@@ -95,3 +96,7 @@ docker run --rm -p 127.0.0.1:3001:3001 -v regiomovil-data:/data regiomovil
 ```
 
 Para un servicio público faltan el dominio HTTPS, respaldo del volumen, monitoreo y política de moderación de reportes. Para pasar de simulación a información operativa hacen falta acuerdos de datos, validación con sensores/GPS, medición de frescura y pruebas con pasajeros. El contrato propuesto para fuentes reales se documenta en la API.
+
+## Próximas iteraciones
+
+El catálogo y los mapas de las nuevas redes ya están integrados. Consulta [cobertura, fuentes y límites](docs/integracion-rutas.md). La validación de sentidos, secuencias, transferencias y datos operativos para calcular viajes de autobús continúa como [trabajo pendiente](docs/proximas-iteraciones.md).

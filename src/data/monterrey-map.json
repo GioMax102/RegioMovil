@@ -1,0 +1,18 @@
+{
+  "source": "© OpenStreetMap contributors",
+  "copyrightUrl": "https://www.openstreetmap.org/copyright",
+  "license": "ODbL 1.0",
+  "snapshot": "2026-05-31T22:37:44Z",
+  "bounds": [-100.4, 25.63, -100.22, 25.8],
+  "origin": [-100.4, 25.8],
+  "longitudeFactor": 0.9010770213220916,
+  "unitsPerDegree": 100000,
+  "labels": [
+    { "name": "Fundidora", "lng": -100.28701, "lat": 25.67652 },
+    { "name": "Parque Niños Héroes", "lng": -100.31444, "lat": 25.71353 },
+    { "name": "Río Santa Catarina", "lng": -100.30585, "lat": 25.67411 },
+    { "name": "Alameda", "lng": -100.32149, "lat": 25.67613 }
+  ],
+  "width": 16219,
+  "height": 17000
+}
