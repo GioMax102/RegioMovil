@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         SplashScreen.installSplashScreen(this);
         EdgeToEdge.enable(this);
+        registerPlugin(RegioLocationPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

@@ -55,7 +55,7 @@ adb shell am start -n mx.regiomovil.app/.MainActivity
 
 En el emulador, `localhost` representa el propio Android. Para consultar el backend de una computadora se necesita un endpoint HTTPS alcanzable desde Android. El servidor web de desarrollo HTTP puede probarse en el navegador, pero el APK mantiene su política HTTPS. No cambiar globalmente `usesCleartextTraffic` ni añadir una URL de desarrollo permanente a Capacitor.
 
-La aplicación solicita únicamente `INTERNET`; seleccionar una estación no requiere ubicación, cuenta, cámara ni contactos. El modo avión permite comprobar la consulta y planificación locales. Los reportes requieren conexión a la API.
+En esta rama experimental el manifiesto incluye `INTERNET`, `ACCESS_COARSE_LOCATION` y `ACCESS_FINE_LOCATION`. Seleccionar una estación no solicita ubicación; el permiso aparece sólo al pulsar «Usar mi ubicación» en el modelo multimodal. Un plugin local usa LocationManager para obtener una sola posición en primer plano, con cancelación al salir y límite de veinte segundos. No requiere Google Play Services, servicio de fondo, cuenta, cámara ni contactos. La lectura aproximada también se admite si alcanza una precisión útil; de lo contrario se ofrece elegir una parada. El modo avión permite comprobar la planificación local entre puntos oficiales. Los reportes y la búsqueda de lugares desde Android requieren una API HTTPS configurada.
 
 Conviene compilar antes de arrancar el emulador cuando la computadora tiene poca memoria. El tamaño del APK y el arranque en emulador no demuestran autonomía, fluidez o consumo de memoria de un teléfono económico; esos criterios requieren medición sobre dispositivos físicos de destino.
 
@@ -112,3 +112,9 @@ También se verificó en navegador una recarga completa sin conexión antes de a
 La compilación posterior a la integración de autobuses y ampliaciones de Metrorrey incluye 207 fichas y doce mapas de autobús. `node scripts/android-build.mjs --skip-web --offline` completó correctamente y generó un APK debug de **4,420,910 bytes**, con firma v2 válida. Se compararon los 27 archivos web dentro del ZIP con las huellas de `dist`: todos coinciden, incluidos catálogo y mapas. El SHA-256 final es `90613ad151a29cd502847c9059120e4d7696ee9baf19919dc5c20f38d7eb2aaf`.
 
 Las 59 pruebas automatizadas pasan. Se comprobó el catálogo y el detalle de mapa en navegador móvil y de escritorio; esta actualización no se ejecutó en Android físico ni en emulador. Los límites y los comandos comprobados están en [verificación](verificacion.md).
+
+## Compilación de la rama experimental multimodal
+
+La entrega posterior de `codex/movilidad-multimodal` incluye la red adicional, el worker, búsqueda de lugares mediante API HTTPS y lectura de ubicación bajo petición. APK debug: **4,672,310 bytes**, firma v2 válida y SHA-256 `7facf970a9650f4100ee7f5537ab619c946c9beeb53ea48413f3b0a3ddb15743`. Sus 34 archivos web coinciden con `dist`, sin recursos obsoletos. Compilación y Lint correctos (0 errores, 9 advertencias); 96 pruebas automatizadas aprobadas.
+
+El APK conserva el modo local sin API remota configurada; para buscar lugares reales se necesita `VITE_API_BASE_URL` durante el build. Las limitaciones de hardware pendiente y la evidencia web están en [verificación del experimento](experimento-multimodal-verificacion.md).

@@ -4,6 +4,8 @@
 
 El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aquí en una experiencia verificable: red de transporte pública documentada, planeación sobre conexiones reales, escenarios de unidades, afluencia y condiciones, y fuentes visibles desde la interfaz.
 
+Esta rama, **`codex/movilidad-multimodal`**, añade un experimento en **Planear viaje → Metro + autobús**: combina las tres líneas de Metro y doce recorridos de autobús con 1,054 puntos publicados. Permite elegir lugares reales con internet y ubicación del dispositivo bajo petición; sin conexión restringe los extremos a puntos oficiales. El cálculo corre localmente en un worker y la red adicional se carga al abrir el modelo. [Cobertura, método y benchmark](docs/modelo-movilidad.md).
+
 ## Qué puedes usar
 
 - **Mi camino:** próximas unidades simuladas, intervalos de llegada, ocupación y aire acondicionado del escenario.
@@ -20,7 +22,7 @@ El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aqu
 
 El catálogo usa **38 ubicaciones únicas** de estaciones de Metrorrey, coordenadas del portal de Datos Abiertos de Nuevo León y el mapa oficial de abril de 2026. Los conteos institucionales por línea pueden contar correspondencias más de una vez. El alias Parque Fundidora se conserva para Arena Monterrey.
 
-**Los arribos, el aforo, el clima de unidad, las incidencias y las duraciones son simulados.** No hay conexión contratada con GPS de concesionarios, sensores, tráfico de Waze o medios de pago. El planificador calcula las líneas 1, 2 y 3 de Metrorrey. El catálogo adicional reúne Muevo León / urbanas IMA, RegioRuta, Transmetro, Ecovía / GMG y troncales e integradas; 12 trazos de autobús se consultan con sus puntos publicados. La L4 y L6 están señaladas en construcción. Las fichas sin orden de paradas y transbordos verificados no se convierten en itinerarios. No hay saldos ficticios, cargos, NFC ni boletos válidos.
+**Los arribos, el aforo, el clima de unidad, las incidencias y las duraciones son simulados.** No hay conexión contratada con GPS de concesionarios, sensores, tráfico de Waze o medios de pago. El planificador original calcula las líneas 1, 2 y 3 de Metrorrey. El catálogo adicional reúne Muevo León / urbanas IMA, RegioRuta, Transmetro, Ecovía / GMG y troncales e integradas. El modelo experimental infiere el orden espacial de doce trazos de autobús y sus enlaces a pie; no confirma sentidos, embarque o cruces seguros. Los servicios sin geometría y L4/L6 en construcción quedan fuera del cálculo. No hay saldos ficticios, cargos, NFC ni boletos válidos.
 
 Ver [procedencia y límites](docs/datos-y-fuentes.md), [alcance y heurísticas](docs/producto-y-accesibilidad.md) y [modelo/API](docs/api.md).
 
@@ -58,7 +60,7 @@ Requiere JDK 21 y Android SDK 36. Produce `output/android/regiomovil-debug.apk` 
 VITE_API_BASE_URL=https://tu-api.example pnpm android:build
 ```
 
-La URL se incorpora durante la compilación, debe usar HTTPS y no debe contener credenciales. El backend debe permitir el origen `https://localhost`. No se permite HTTP global ni se carga la aplicación desde un servidor remoto. [Compilación, kiosco y firma](docs/android.md).
+La URL se incorpora durante la compilación, debe usar HTTPS y no debe contener credenciales. El backend debe permitir el origen `https://localhost`. También es necesaria para buscar lugares desde el APK: sin API remota, las paradas y el modelo local siguen disponibles. La ubicación se obtiene una sola vez al pulsar su botón y requiere permiso del dispositivo. No se permite HTTP global ni se carga la aplicación desde un servidor remoto. [Compilación, kiosco y firma](docs/android.md).
 
 ## Pruebas y modelo
 
@@ -86,7 +88,7 @@ tests/        Pruebas de API, dominio y modo offline
 docs/         Producto, fuentes, API, Android y verificación
 ```
 
-Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. La base geográfica de Monterrey usa un extracto de OpenStreetMap empaquetado localmente, con atribución ODbL; se muestra al abrir el detalle de un trayecto. El recorrido se puede guardar y volver a planear sin internet. [Procedencia y licencia del mapa](src/data/monterrey-map.md). No hay analítica, peticiones a proveedores de mapas, rastreo de ubicación ni petición de cuenta.
+Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. La base geográfica de Monterrey usa un extracto de OpenStreetMap empaquetado localmente, con atribución ODbL; se muestra al abrir el detalle de un trayecto. [Procedencia y licencia del mapa](src/data/monterrey-map.md). El buscador de lugares consulta Nominatim sólo al confirmar una búsqueda, con cuota y caché en el backend. No hay analítica, seguimiento continuo de ubicación ni cuenta obligatoria. Los guardados del experimento contienen sólo IDs de transporte. [Búsqueda y privacidad](docs/lugares-y-privacidad.md).
 
 ## Ejecutar en contenedor
 

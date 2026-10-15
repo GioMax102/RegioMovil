@@ -1,7 +1,70 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X, Users, TrainFront, Snowflake, CircleHelp } from 'lucide-react';
 import { network } from '../api';
 import type { Arrival } from '../types';
+
+// A native modal blocks focus/clicks outside it, but mobile browsers can still scroll
+// its document. Keep one document lock until the final nested dialog has closed.
+const dialogScrollLocks = new WeakMap<Document, { count: number; restore: () => void }>();
+function lockDialogScroll(dialog: HTMLDialogElement) {
+  const doc = dialog.ownerDocument;
+  const existing = dialogScrollLocks.get(doc);
+  if (existing) existing.count += 1;
+  else {
+    const view = doc.defaultView!;
+    const { body, documentElement: root } = doc;
+    const scrollX = view.scrollX;
+    const scrollY = view.scrollY;
+    const properties = [
+      [root, ['overflow', 'overscroll-behavior', 'scroll-behavior']],
+      [body, ['position', 'top', 'left', 'width', 'overflow', 'padding-right']],
+    ] as const;
+    const original = properties.flatMap(([element, names]) =>
+      names.map((name) => ({
+        element,
+        name,
+        value: element.style.getPropertyValue(name),
+        priority: element.style.getPropertyPriority(name),
+      })),
+    );
+    const scrollbar = root.clientWidth ? Math.max(0, view.innerWidth - root.clientWidth) : 0;
+    if (scrollbar)
+      body.style.paddingRight = `${parseFloat(view.getComputedStyle(body).paddingRight || '0') + scrollbar}px`;
+    root.style.overflow = 'hidden';
+    root.style.overscrollBehavior = 'none';
+    body.style.position = 'fixed';
+    body.style.top = `${-scrollY}px`;
+    body.style.left = `${-scrollX}px`;
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+    dialogScrollLocks.set(doc, {
+      count: 1,
+      restore() {
+        for (const { element, name, value, priority } of original) {
+          if (value) element.style.setProperty(name, value, priority);
+          else element.style.removeProperty(name);
+        }
+        // Returning from a fixed body must not animate a page with smooth scrolling.
+        root.style.scrollBehavior = 'auto';
+        view.scrollTo(scrollX, scrollY);
+        const scrollBehavior = original.find((item) => item.name === 'scroll-behavior')!;
+        if (scrollBehavior.value)
+          root.style.setProperty('scroll-behavior', scrollBehavior.value, scrollBehavior.priority);
+        else root.style.removeProperty('scroll-behavior');
+      },
+    });
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const lock = dialogScrollLocks.get(doc);
+    if (lock && --lock.count === 0) {
+      dialogScrollLocks.delete(doc);
+      lock.restore();
+    }
+  };
+}
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -95,11 +158,18 @@ export function Dialog({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
     const dialog = ref.current!;
-    dialog.showModal();
+    const unlockScroll = lockDialogScroll(dialog);
+    try {
+      dialog.showModal();
+    } catch (error) {
+      unlockScroll();
+      throw error;
+    }
     const onCancel = (event: Event) => {
       event.preventDefault();
       closeRef.current();
@@ -108,19 +178,20 @@ export function Dialog({
     return () => {
       dialog.removeEventListener('cancel', onCancel);
       dialog.close();
+      unlockScroll();
     };
   }, []);
   return (
     <dialog
       ref={ref}
       className={`dialog ${wide ? 'wide' : ''}`}
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="dialog-heading">
-        <h2 id="dialog-title">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar ventana">
           <X size={21} />
         </button>

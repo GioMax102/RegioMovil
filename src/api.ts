@@ -97,7 +97,7 @@ export function writeStored(key: string, value: unknown) {
 
 // Only public route documents are stored here. Reports and API responses never enter this cache.
 const routeCache = 'regiomovil-public-routes-v1';
-async function readPublicDocument<T>(
+export async function readPublicDocument<T>(
   path: string,
   immutable = false,
 ): Promise<{ data: T; offline: boolean }> {

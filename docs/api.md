@@ -2,6 +2,8 @@
 
 El backend usa HTTP nativo y SQLite de Node.js 24, sin dependencias de servidor. El catálogo local contiene estaciones, líneas, correspondencias, lugares y fuentes oficiales fechadas. Las llegadas, ocupación, condiciones y duraciones son una **simulación**: no hay conexión con GPS ni con la operación de Metrorrey.
 
+En la rama experimental se añaden `GET /api/mobility/network`, `POST /api/mobility/plan` y `GET /api/places`. Sus contratos, límites, errores y privacidad están en [búsqueda de lugares](lugares-y-privacidad.md) y [modelo multimodal](modelo-movilidad.md). El cliente principal descarga sólo la red pública y calcula los trayectos en un worker local; las coordenadas GPS no se envían a esta API.
+
 ## Ejecutar
 
 ```bash

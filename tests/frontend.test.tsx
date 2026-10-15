@@ -33,6 +33,7 @@ Object.defineProperty(globalThis,'SpeechSynthesisUtterance',{value:Utterance,con
 const {render,cleanup,screen,within,waitFor,act} = await import('@testing-library/react');
 const {default:userEvent} = await import('@testing-library/user-event');
 const {default:App} = await import('../src/App');
+const {Dialog} = await import('../src/components/Primitives');
 type AppServer = ReturnType<typeof createApp>;
 let application: AppServer;
 let server: Server;
@@ -41,6 +42,10 @@ let user: ReturnType<typeof userEvent.setup>;
 let failRequests: (path:string,method:string)=>boolean = () => false;
 let holdStation: string|null = null;
 let holdReports = false;
+let tagPlanResponses = false;
+const heldPlanPreferences = new Set<string>();
+const heldPlanRequests: {preference:string;release:()=>void}[] = [];
+const processedPlanResponses: string[] = [];
 const heldRequests: (()=>void)[] = [];
 const requests: {path:string;method:string}[] = [];
 const completedRequests: {path:string;method:string}[] = [];
@@ -59,8 +64,16 @@ before(async () => {
     if (failRequests(url.pathname,method)) throw new TypeError('Network is offline in this test');
     if (url.pathname==='/api/board' && url.searchParams.get('station')===holdStation) await new Promise<void>(resolve=>heldRequests.push(resolve));
     if (url.pathname==='/api/reports' && method==='POST' && holdReports) await new Promise<void>(resolve=>heldRequests.push(resolve));
+    if (url.pathname==='/api/plan' && heldPlanPreferences.has(url.searchParams.get('preference')!))
+      await new Promise<void>(resolve=>heldPlanRequests.push({preference:url.searchParams.get('preference')!,release:resolve}));
     const response=await realFetch(url,init);
     completedRequests.push({path:url.pathname,method});
+    if (url.pathname==='/api/plan' && tagPlanResponses) {
+      const payload=await response.json();
+      payload.journeys=payload.journeys.map((journey:{title:string})=>({...journey,title:`${payload.preference}: ${journey.title}`}));
+      processedPlanResponses.push(payload.preference);
+      return new Response(JSON.stringify(payload),{status:response.status,headers:response.headers});
+    }
     return response;
   };
 });
@@ -70,6 +83,9 @@ beforeEach(() => {
   failRequests=()=>false;
   holdStation=null;
   holdReports=false;
+  tagPlanResponses=false;
+  heldPlanPreferences.clear();
+  processedPlanResponses.length=0;
   dom.window.localStorage.clear();
   dom.window.history.replaceState({},'','/');
   dom.window.document.documentElement.className='';
@@ -79,6 +95,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup(); // Unmounts effects and cancels polling, clock and toast timers.
   heldRequests.splice(0).forEach(release=>release());
+  heldPlanRequests.splice(0).forEach(request=>request.release());
 });
 
 after(async () => {
@@ -177,6 +194,123 @@ test('identical origin and destination produces an actionable error without requ
   await user.click(screen.getByRole('button',{name:'Encontrar mi ruta'}));
   assert.equal((await screen.findByRole('alert')).textContent,'Elige un destino diferente a tu origen.');
   assert.ok(!requests.some(request=>request.path.startsWith('/api/plan')));
+});
+
+test('saving from journey details persists the route and closes the detail, including an already saved route',async()=>{
+  await mount();
+  await planDefault();
+  let dialog=await openFirstJourney();
+  await user.click(within(dialog).getByRole('button',{name:'Guardar este trayecto'}));
+  assert.equal(screen.queryByRole('dialog'),null);
+  assertNoMap();
+  assert.deepEqual(JSON.parse(localStorage.getItem('regiomovil:journeys')!),[{from:'padre-mier',to:'universidad'}]);
+  dialog=await openFirstJourney();
+  await user.click(within(dialog).getByRole('button',{name:'Guardar este trayecto'}));
+  assert.equal(screen.queryByRole('dialog'),null);
+  assert.equal(JSON.parse(localStorage.getItem('regiomovil:journeys')!).length,1);
+  assert.ok(screen.getByRole('status').textContent?.includes('ya está en tus guardados'));
+});
+
+test('changing priority automatically refreshes existing results and ignores a slower obsolete priority response',async()=>{
+  tagPlanResponses=true;
+  await mount();
+  await planDefault();
+  const originalCards=document.querySelectorAll('.journey-card').length;
+  heldPlanPreferences.add('comfortable');
+  await user.click(screen.getByRole('button',{name:'Menos afluencia',exact:true}));
+  await waitFor(()=>assert.equal(heldPlanRequests.length,1));
+  assert.equal(document.querySelectorAll('.journey-card').length,originalCards,'The previous choices stay visible while their priority is refreshed.');
+  assert.ok(screen.getByRole('status').textContent?.includes('Actualizando opciones'));
+  assert.equal(document.querySelector('.plan-results')?.getAttribute('aria-busy'),'true');
+  await user.click(screen.getByRole('button',{name:'Menos transbordos',exact:true}));
+  await screen.findAllByRole('heading',{name:/^accessible:/});
+  assert.equal(document.querySelector('.plan-results')?.getAttribute('aria-busy'),'false');
+  await act(async()=>{
+    heldPlanPreferences.clear();
+    heldPlanRequests.splice(0).forEach(request=>request.release());
+    await waitFor(()=>assert.ok(processedPlanResponses.includes('comfortable')));
+  });
+  assert.ok(screen.getAllByRole('heading',{name:/^accessible:/}).length);
+  assert.equal(screen.queryAllByRole('heading',{name:/^comfortable:/}).length,0);
+  assert.equal(requests.filter(request=>request.path.startsWith('/api/plan')).length,3,'Each changed priority is requested without submitting the form again.');
+});
+
+test('editing a station invalidates a pending priority refresh without applying old results to the new form',async()=>{
+  tagPlanResponses=true;
+  await mount();
+  await planDefault();
+  heldPlanPreferences.add('comfortable');
+  await user.click(screen.getByRole('button',{name:'Menos afluencia',exact:true}));
+  await waitFor(()=>assert.equal(heldPlanRequests.length,1));
+  await choosePlannerStation('destino','Sendero');
+  assert.equal(screen.queryByRole('heading',{name:/opciones para tu camino/}),null);
+  assert.equal(document.querySelector('.plan-results')?.getAttribute('aria-busy'),'false');
+  await act(async()=>{
+    heldPlanPreferences.clear();
+    heldPlanRequests.splice(0).forEach(request=>request.release());
+    await waitFor(()=>assert.ok(processedPlanResponses.includes('comfortable')));
+  });
+  assert.equal(screen.queryByRole('heading',{name:/opciones para tu camino/}),null);
+  await user.click(screen.getByRole('button',{name:'Menos tiempo',exact:true}));
+  assert.equal(requests.filter(request=>request.path.startsWith('/api/plan')).length,2,'Changing a priority must not submit newly edited stations.');
+  assert.ok(screen.getByRole('button',{name:'Estación de destino: Sendero'}));
+});
+
+test('settings lock the background document and restore its existing styles and mobile scroll position on close',async()=>{
+  const previousBody=document.body.getAttribute('style');
+  const previousRoot=document.documentElement.getAttribute('style');
+  const scrollX=Object.getOwnPropertyDescriptor(window,'scrollX');
+  const scrollY=Object.getOwnPropertyDescriptor(window,'scrollY');
+  const originalScrollTo=window.scrollTo;
+  const restored:number[][]=[];
+  Object.defineProperty(window,'scrollX',{configurable:true,value:12});
+  Object.defineProperty(window,'scrollY',{configurable:true,value:640});
+  window.scrollTo=((x:number,y:number)=>restored.push([x,y])) as typeof window.scrollTo;
+  document.body.style.cssText='position: relative; top: 3px; padding-right: 7px; color: red;';
+  document.documentElement.style.cssText='overflow: auto; scroll-behavior: smooth;';
+  try {
+    await mount();
+    await user.click(screen.getByRole('button',{name:'Accesibilidad',exact:true}));
+    assert.equal(document.body.style.position,'fixed');
+    assert.equal(document.body.style.top,'-640px');
+    assert.equal(document.body.style.left,'-12px');
+    assert.equal(document.documentElement.style.overflow,'hidden');
+    await closeDialog();
+    assert.equal(document.body.style.position,'relative');
+    assert.equal(document.body.style.top,'3px');
+    assert.equal(document.body.style.paddingRight,'7px');
+    assert.equal(document.body.style.color,'red');
+    assert.equal(document.documentElement.style.overflow,'auto');
+    assert.equal(document.documentElement.style.scrollBehavior,'smooth');
+    assert.deepEqual(restored,[[12,640]]);
+  } finally {
+    cleanup();
+    if(previousBody===null)document.body.removeAttribute('style');else document.body.setAttribute('style',previousBody);
+    if(previousRoot===null)document.documentElement.removeAttribute('style');else document.documentElement.setAttribute('style',previousRoot);
+    if(scrollX)Object.defineProperty(window,'scrollX',scrollX);
+    if(scrollY)Object.defineProperty(window,'scrollY',scrollY);
+    window.scrollTo=originalScrollTo;
+  }
+});
+
+test('closing a nested dialog keeps the background locked until the final dialog unmounts',async()=>{
+  function NestedDialogs(){
+    const [inner,setInner]=React.useState(true);
+    return <Dialog title="Exterior" onClose={()=>{}}>
+      {inner&&<Dialog title="Interior" onClose={()=>setInner(false)}>Contenido</Dialog>}
+    </Dialog>;
+  }
+  render(<React.StrictMode><NestedDialogs/></React.StrictMode>);
+  assert.equal(screen.getAllByRole('dialog').length,2);
+  assert.equal(document.body.style.position,'fixed');
+  await user.click(within(screen.getByRole('dialog',{name:'Interior'})).getByRole('button',{name:'Cerrar ventana'}));
+  assert.equal(screen.queryByRole('dialog',{name:'Interior'}),null);
+  assert.ok(screen.getByRole('dialog',{name:'Exterior'}));
+  assert.equal(document.body.style.position,'fixed');
+  assert.equal(document.documentElement.style.overflow,'hidden');
+  cleanup();
+  assert.equal(document.body.style.position,'');
+  assert.equal(document.documentElement.style.overflow,'');
 });
 
 test('planner lists all 38 stations in its scroll container and selects an option without typing',async()=>{

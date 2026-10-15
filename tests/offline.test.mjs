@@ -247,7 +247,7 @@ test('changing public shell content changes the worker version even when asset f
   assert.ok(!stats.files.some(file => file.file.endsWith('.map')));
 });
 
-test('current production build precaches every generated JS, CSS, font and offline map', async t => {
+test('current production build precaches the base graph and stores deferred experiment assets when opened', async t => {
   let production;
   try {production = await readFile(join(root,'dist/sw.js'),'utf8');}
   catch (error) {if (error.code === 'ENOENT') {t.skip('Run npm run build to also verify the production artifact.');return;} throw error;}
@@ -258,5 +258,18 @@ test('current production build precaches every generated JS, CSS, font and offli
   assert.ok(files.some(file => /-[\w-]{8,}\.css$/.test(file)));
   assert.ok(files.filter(file => file.endsWith('.woff2')).length >= 2);
   assert.ok(files.some(file => /^monterrey-map-.*\.svg$/.test(file)), 'The real Monterrey basemap must ship for offline journeys.');
-  for (const file of files) assert.ok(harness.added.includes(`/assets/${file}`), `Production precache is missing ${file}`);
+  const stats = JSON.parse(await readFile(join(root,'dist/bundle-stats.json'),'utf8'));
+  const initial = stats.files.filter(file => file.file.startsWith('assets/')).map(file => `/${file.file}`);
+  for (const file of initial) assert.ok(harness.added.includes(file), `Production precache is missing ${file}`);
+  for (const file of files.filter(file => /\.(?:woff2|svg)$/.test(file))) assert.ok(initial.includes(`/assets/${file}`));
+  for (const path of stats.deferredAssets || []) {
+    assert.ok(!harness.added.includes(path), `${path} must not increase the initial install.`);
+    const opened = await harness.fetch(path);
+    assert.equal(opened.response.status, 200);
+  }
+  harness.setOffline();
+  for (const path of stats.deferredAssets || []) {
+    const offline = await harness.fetch(path);
+    assert.equal(offline.response.status, 200, `${path} should remain available after opening the experiment.`);
+  }
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowDownUp,
   ArrowRight,
@@ -44,7 +44,8 @@ import {
 import type { Arrival, Board, Journey, Page, Plan, Preference, Scenario, Station } from './types';
 import NetworkMap from './components/NetworkMap';
 import StationPicker from './components/StationPicker';
-import TransitCatalog from './components/TransitCatalog';
+const TransitCatalog = lazy(() => import('./components/TransitCatalog'));
+const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 import {
   ArrivalCard,
   Brand,
@@ -56,6 +57,7 @@ import {
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
+type PlanRequest = { from: string; to: string; preference: Preference; scenario: Scenario };
 const navItems: { id: Page; label: string; short: string; icon: typeof House }[] = [
   { id: 'home', label: 'Mi camino', short: 'Inicio', icon: House },
   { id: 'plan', label: 'Planear viaje', short: 'Planear', icon: Route },
@@ -94,6 +96,7 @@ export default function App() {
     ),
   );
   const [page, setPage] = useState<Page>('home');
+  const [plannerModel, setPlannerModel] = useState<'metro' | 'multimodal'>('metro');
   const [networkTab, setNetworkTab] = useState<'stations' | 'routes'>('stations');
   const [scenario, setScenario] = useState<Scenario>('normal');
   const [boardSnapshot, setBoard] = useState<Board | null>(null);
@@ -142,6 +145,7 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [now, setNow] = useState(new Date());
   const planGeneration = useRef(0);
+  const submittedPlan = useRef<PlanRequest | null>(null);
   const currentStation = network.stations.find((s) => s.id === station)!;
   const board =
     boardSnapshot?.stationId === station && boardSnapshot.scenario === scenario
@@ -245,19 +249,13 @@ export default function App() {
         : 'Estación eliminada de tus guardadas.',
     );
   }
-  async function searchJourney(event?: FormEvent) {
-    event?.preventDefault();
-    setPage('plan');
-    setPlanError('');
-    setPlan(null);
-    if (from === to) {
-      setPlanError('Elige un destino diferente a tu origen.');
-      return;
-    }
+  const calculateJourney = useCallback(async (request: PlanRequest, keepResults = false) => {
     const generation = ++planGeneration.current;
+    setPlanError('');
+    if (!keepResults) setPlan(null);
     setPlanning(true);
     try {
-      const result = await loadPlan(from, to, preference, scenario);
+      const result = await loadPlan(request.from, request.to, request.preference, request.scenario);
       if (generation === planGeneration.current) {
         setPlan(result.data);
         if (!result.data.journeys.length)
@@ -271,6 +269,21 @@ export default function App() {
     } finally {
       if (generation === planGeneration.current) setPlanning(false);
     }
+  }, []);
+  function searchJourney(event?: FormEvent) {
+    event?.preventDefault();
+    setPage('plan');
+    if (from === to) {
+      ++planGeneration.current;
+      submittedPlan.current = null;
+      setPlan(null);
+      setPlanning(false);
+      setPlanError('Elige un destino diferente a tu origen.');
+      return;
+    }
+    const request = { from, to, preference, scenario };
+    submittedPlan.current = request;
+    void calculateJourney(request);
   }
   function saveJourney() {
     if (savedJourneys.some((v) => v.from === from && v.to === to)) {
@@ -297,11 +310,28 @@ export default function App() {
     speechSynthesis.speak(utterance);
   }
   useEffect(() => {
+    const submitted = submittedPlan.current;
+    if (
+      submitted &&
+      submitted.from === from &&
+      submitted.to === to &&
+      submitted.scenario === scenario
+    ) {
+      if (submitted.preference !== preference) {
+        const request = { from, to, preference, scenario };
+        submittedPlan.current = request;
+        setJourney(null);
+        void calculateJourney(request, true);
+      }
+      return;
+    }
     ++planGeneration.current;
+    submittedPlan.current = null;
     setPlan(null);
     setPlanning(false);
     setPlanError('');
-  }, [from, to, preference, scenario]);
+    setJourney(null);
+  }, [from, to, preference, scenario, calculateJourney]);
   const filteredStations = network.stations.filter(
     (s) =>
       (lineFilter === 'all' || s.lineIds.includes(lineFilter)) &&
@@ -364,7 +394,6 @@ export default function App() {
               className={preference === item.id ? 'active' : ''}
               onClick={() => {
                 setPreference(item.id);
-                setPlan(null);
               }}
             >
               <item.icon size={15} />
@@ -622,7 +651,25 @@ export default function App() {
               <ArrowRight size={20} />
             </button>
           )}
-          {(page === 'home' || page === 'plan') && !kiosk && planner}
+          {page === 'plan' && !kiosk && (
+            <div className="planner-model-switch" role="group" aria-label="Modelo de planificación">
+              <button
+                aria-pressed={plannerModel === 'metro'}
+                onClick={() => setPlannerModel('metro')}
+              >
+                <TrainFront size={16} />
+                Metro
+              </button>
+              <button
+                aria-pressed={plannerModel === 'multimodal'}
+                onClick={() => setPlannerModel('multimodal')}
+              >
+                <Route size={16} />
+                Metro + autobús<small>Experimental</small>
+              </button>
+            </div>
+          )}
+          {(page === 'home' || (page === 'plan' && plannerModel === 'metro')) && !kiosk && planner}
 
           {page === 'home' && (
             <div className="dashboard-grid">
@@ -788,10 +835,28 @@ export default function App() {
             </div>
           )}
 
-          {page === 'plan' && (
+          {page === 'plan' && plannerModel === 'multimodal' && !kiosk && (
+            <Suspense
+              fallback={
+                <p role="status" className="panel empty-small">
+                  Abriendo el modelo de movilidad…
+                </p>
+              }
+            >
+              <MobilityPlanner scenario={scenario} />
+            </Suspense>
+          )}
+
+          {page === 'plan' && plannerModel === 'metro' && (
             <div className="plan-layout">
-              <section className="plan-results" aria-live="polite">
-                {planning && (
+              <section className="plan-results" aria-live="polite" aria-busy={planning}>
+                {planning && plan && (
+                  <p className="plan-updating" role="status">
+                    <Route size={16} aria-hidden="true" />
+                    Actualizando opciones según tu preferencia…
+                  </p>
+                )}
+                {planning && !plan && (
                   <div className="panel empty-state">
                     <Route size={32} />
                     <h2>Encontrando conexiones…</h2>
@@ -903,10 +968,18 @@ export default function App() {
               onKeyDown={(event) => {
                 if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
                 event.preventDefault();
-                const next = event.key === 'Home' ? 'stations' : event.key === 'End' ? 'routes'
-                  : networkTab === 'stations' ? 'routes' : 'stations';
+                const next =
+                  event.key === 'Home'
+                    ? 'stations'
+                    : event.key === 'End'
+                      ? 'routes'
+                      : networkTab === 'stations'
+                        ? 'routes'
+                        : 'stations';
                 setNetworkTab(next);
-                event.currentTarget.querySelector<HTMLButtonElement>(`#network-${next}-tab`)?.focus();
+                event.currentTarget
+                  .querySelector<HTMLButtonElement>(`#network-${next}-tab`)
+                  ?.focus();
               }}
             >
               <button
@@ -935,16 +1008,24 @@ export default function App() {
           )}
           {page === 'stations' && networkTab === 'routes' && (
             <div id="network-routes-panel" role="tabpanel" aria-labelledby="network-routes-tab">
-              <TransitCatalog
-                onPlanLine={(lineId) => {
-                  const line = network.lines.find((item) => item.id === lineId);
-                  if (!line) return;
-                  setFrom(line.stationIds[0]);
-                  setTo(line.stationIds[line.stationIds.length - 1]);
-                  setPlan(null);
-                  setPage('plan');
-                }}
-              />
+              <Suspense
+                fallback={
+                  <p role="status" className="empty-small">
+                    Abriendo las redes…
+                  </p>
+                }
+              >
+                <TransitCatalog
+                  onPlanLine={(lineId) => {
+                    const line = network.lines.find((item) => item.id === lineId);
+                    if (!line) return;
+                    setFrom(line.stationIds[0]);
+                    setTo(line.stationIds[line.stationIds.length - 1]);
+                    setPlan(null);
+                    setPage('plan');
+                  }}
+                />
+              </Suspense>
             </div>
           )}
           {page === 'stations' && networkTab === 'stations' && (
@@ -1574,7 +1655,13 @@ export default function App() {
             Los transbordos pueden implicar escaleras o recorridos a pie. No contamos con
             información operativa de elevadores.
           </p>
-          <button className="primary-button full-width" onClick={saveJourney}>
+          <button
+            className="primary-button full-width"
+            onClick={() => {
+              saveJourney();
+              setJourney(null);
+            }}
+          >
             <Bookmark size={17} />
             Guardar este trayecto
           </button>
