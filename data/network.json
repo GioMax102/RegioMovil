@@ -1,0 +1,684 @@
+{
+  "sources": [
+    {
+      "id": "nl-paradas-2025",
+      "title": "Datos Abiertos NL · Paradas Oficiales STC Metrorrey (corte septiembre 2025)",
+      "url": "https://catalogodatos.nl.gob.mx/dataset/paradas-oficiales-stc-metrorrey",
+      "verifiedAt": "2026-10-15",
+      "scope": "Coordenadas de 38 ubicaciones únicas, convertidas de grados/minutos/segundos a decimales. Son puntos aproximados de estación, no accesos peatonales. CSV publicado el 12 de noviembre de 2025."
+    },
+    {
+      "id": "metrorrey-mapa-2026",
+      "title": "Metrorrey · Mapa de Red (abril 2026)",
+      "url": "https://www.metrorrey.mx/_files/ugd/f8686c_91419c4d7b504f9fab01aefc6a87412a.pdf",
+      "verifiedAt": "2026-10-15",
+      "scope": "Nombres, orden, correspondencias y colores de líneas 1, 2 y 3. Denomina Arena Monterrey a la estación Parque Fundidora del CSV. Líneas 4 y 6 figuran en construcción y se excluyen del grafo de demostración."
+    },
+    {
+      "id": "metrorrey-servicio",
+      "title": "Metrorrey · Horarios y medios de pago",
+      "url": "https://www.metrorrey.mx/",
+      "verifiedAt": "2026-10-15",
+      "scope": "Horarios generales, medios de pago y consulta de avisos. La lista de elevadores/escaleras no confirma su funcionamiento actual; la accesibilidad operativa permanece sin verificar."
+    },
+    {
+      "id": "metrorrey-tarifa-2026",
+      "title": "Metrorrey · Imagen oficial de tarifa Metro",
+      "url": "https://static.wixstatic.com/media/f8686c_2da39eabac874445986cbf9f59968fcd~mv2.png",
+      "verifiedAt": "2026-10-15",
+      "scope": "Imagen enlazada desde metrorrey.mx: tarifa Metro de 9.90 MXN al consultar. Referencia fechada, sujeta a cambios. RegioMovil no cobra pasajes."
+    },
+    {
+      "id": "nl-guia-turistica-2025",
+      "title": "Secretaría de Turismo NL · Guía turística Metrorrey",
+      "url": "https://www.nl.gob.mx/sites/default/files/repositorio/Dependencias/Secretar%C3%ADa%20de%20Turismo/Micrositios/Guia_Sostenibilidad/20251113_guia_turistica_metrorrey.pdf",
+      "verifiedAt": "2026-10-15",
+      "scope": "Destinos y continuidad de Línea 2 a 3 por Zaragoza sin descender. Los destinos de búsqueda se anclan a una estación; no son un levantamiento de accesos."
+    },
+    {
+      "id": "uanl-transporte-2023",
+      "title": "UANL · Transporte público en Ciudad Universitaria",
+      "url": "https://www.uanl.mx/wp-content/uploads/2023/03/Mesa-12-anexo.pdf",
+      "verifiedAt": "2026-10-15",
+      "scope": "Confirma conexión de Ciudad Universitaria con Universidad y Niños Héroes de Línea 2."
+    },
+    {
+      "id": "nl-direcciones",
+      "title": "Gobierno de Nuevo León · Directorio histórico de ubicaciones de estaciones",
+      "url": "https://subasta.nl.gob.mx/docs/2_935.pdf",
+      "verifiedAt": "2026-10-15",
+      "scope": "Contraste de municipios para líneas 1 y 2. Referencia histórica sin validez para operación ni accesibilidad actuales."
+    },
+    {
+      "id": "nl-infraestructura",
+      "title": "Gobierno de Nuevo León · Anexo estadístico de infraestructura",
+      "url": "https://www.nl.gob.mx/sites/default/files/migrate-files/3er_informe_2015-2021_anexo_estadistico_.pdf",
+      "verifiedAt": "2026-10-15",
+      "scope": "Contraste histórico del municipio San Nicolás de los Garza para la estación Hospital Metropolitano. No certifica condiciones operativas actuales."
+    },
+    {
+      "id": "urbani",
+      "title": "Urbani · Sitio oficial",
+      "url": "https://www.urbani.com.mx/",
+      "verifiedAt": "2026-10-15",
+      "scope": "Enlace al proveedor de pago QR y recargas. No existe integración de saldo ni emisión de boletos en el prototipo."
+    },
+    {
+      "id": "nl-muevo-leon",
+      "title": "Instituto de Movilidad y Accesibilidad · Atención ciudadana",
+      "url": "https://www.imanuevoleon.mx/atencionciudadana",
+      "verifiedAt": "2026-10-15",
+      "scope": "Información oficial de medios de pago y atención de movilidad en Nuevo León."
+    }
+  ],
+  "lines": [
+    {
+      "id": "L1",
+      "name": "Línea 1",
+      "color": "#F9B12C",
+      "stationIds": [
+        "talleres",
+        "san-bernabe",
+        "unidad-modelo",
+        "aztlan",
+        "penitenciaria",
+        "alfonso-reyes",
+        "mitras",
+        "simon-bolivar",
+        "hospital",
+        "edison",
+        "central",
+        "cuauhtemoc",
+        "del-golfo",
+        "felix-u-gomez",
+        "fundidora",
+        "y-griega",
+        "eloy-cavazos",
+        "lerdo-de-tejada",
+        "exposicion"
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "Línea 2",
+      "color": "#44BB62",
+      "stationIds": [
+        "sendero",
+        "santiago-tapia",
+        "san-nicolas",
+        "anahuac",
+        "universidad",
+        "ninos-heroes",
+        "regina",
+        "general-anaya",
+        "cuauhtemoc",
+        "alameda",
+        "fundadores",
+        "padre-mier",
+        "zaragoza"
+      ]
+    },
+    {
+      "id": "L3",
+      "name": "Línea 3",
+      "color": "#ED1C24",
+      "stationIds": [
+        "zaragoza",
+        "santa-lucia",
+        "colonia-obrera",
+        "felix-u-gomez",
+        "metalurgicos",
+        "moderna",
+        "ruiz-cortines",
+        "los-angeles",
+        "hospital-metropolitano"
+      ]
+    }
+  ],
+  "stations": [
+    {
+      "id": "talleres",
+      "name": "Talleres",
+      "municipality": "Monterrey",
+      "lat": 25.759167,
+      "lng": -100.368333,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "san-bernabe",
+      "name": "San Bernabé",
+      "municipality": "Monterrey",
+      "lat": 25.748333,
+      "lng": -100.361389,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "unidad-modelo",
+      "name": "Unidad Modelo",
+      "municipality": "Monterrey",
+      "lat": 25.741667,
+      "lng": -100.354722,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "aztlan",
+      "name": "Aztlán",
+      "municipality": "Monterrey",
+      "lat": 25.731944,
+      "lng": -100.347222,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "penitenciaria",
+      "name": "Penitenciaría",
+      "municipality": "Monterrey",
+      "lat": 25.723056,
+      "lng": -100.3425,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "alfonso-reyes",
+      "name": "Alfonso Reyes",
+      "municipality": "Monterrey",
+      "lat": 25.715833,
+      "lng": -100.342222,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "mitras",
+      "name": "Mitras",
+      "municipality": "Monterrey",
+      "lat": 25.705556,
+      "lng": -100.342222,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "simon-bolivar",
+      "name": "Simón Bolívar",
+      "municipality": "Monterrey",
+      "lat": 25.698611,
+      "lng": -100.343056,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "hospital",
+      "name": "Hospital",
+      "municipality": "Monterrey",
+      "lat": 25.691667,
+      "lng": -100.343889,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "edison",
+      "name": "Edison",
+      "municipality": "Monterrey",
+      "lat": 25.686667,
+      "lng": -100.333611,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "central",
+      "name": "Central",
+      "municipality": "Monterrey",
+      "lat": 25.686944,
+      "lng": -100.324167,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "cuauhtemoc",
+      "name": "Cuauhtémoc",
+      "municipality": "Monterrey",
+      "lat": 25.686111,
+      "lng": -100.316667,
+      "lineIds": [
+        "L1",
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "del-golfo",
+      "name": "Del Golfo",
+      "municipality": "Monterrey",
+      "lat": 25.684722,
+      "lng": -100.306389,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "felix-u-gomez",
+      "name": "Félix U. Gómez",
+      "municipality": "Monterrey",
+      "lat": 25.683889,
+      "lng": -100.296667,
+      "lineIds": [
+        "L1",
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025",
+      "aliases": [
+        "Félix Uresti Gómez",
+        "Felix U Gomez"
+      ]
+    },
+    {
+      "id": "fundidora",
+      "name": "Arena Monterrey",
+      "municipality": "Monterrey",
+      "lat": 25.683611,
+      "lng": -100.288056,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025",
+      "aliases": [
+        "Parque Fundidora",
+        "Fundidora"
+      ],
+      "nameSourceId": "metrorrey-mapa-2026"
+    },
+    {
+      "id": "y-griega",
+      "name": "Y Griega",
+      "municipality": "Monterrey",
+      "lat": 25.683056,
+      "lng": -100.279444,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "eloy-cavazos",
+      "name": "Eloy Cavazos",
+      "municipality": "Guadalupe",
+      "lat": 25.68,
+      "lng": -100.263889,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "lerdo-de-tejada",
+      "name": "Lerdo de Tejada",
+      "municipality": "Guadalupe",
+      "lat": 25.679722,
+      "lng": -100.252222,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "exposicion",
+      "name": "Exposición",
+      "municipality": "Guadalupe",
+      "lat": 25.679444,
+      "lng": -100.245278,
+      "lineIds": [
+        "L1"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "sendero",
+      "name": "Sendero",
+      "municipality": "General Escobedo",
+      "lat": 25.768611,
+      "lng": -100.292778,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "santiago-tapia",
+      "name": "Santiago Tapia",
+      "municipality": "San Nicolás de los Garza",
+      "lat": 25.759167,
+      "lng": -100.295556,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025",
+      "aliases": [
+        "Tapia"
+      ]
+    },
+    {
+      "id": "san-nicolas",
+      "name": "San Nicolás",
+      "municipality": "San Nicolás de los Garza",
+      "lat": 25.7525,
+      "lng": -100.297778,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "anahuac",
+      "name": "Anáhuac",
+      "municipality": "San Nicolás de los Garza",
+      "lat": 25.739444,
+      "lng": -100.3025,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "universidad",
+      "name": "Universidad",
+      "municipality": "San Nicolás de los Garza",
+      "lat": 25.724167,
+      "lng": -100.308056,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "ninos-heroes",
+      "name": "Niños Héroes",
+      "municipality": "Monterrey",
+      "lat": 25.716944,
+      "lng": -100.310833,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "regina",
+      "name": "Regina",
+      "municipality": "Monterrey",
+      "lat": 25.708056,
+      "lng": -100.313889,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "general-anaya",
+      "name": "General Anaya",
+      "municipality": "Monterrey",
+      "lat": 25.696667,
+      "lng": -100.316667,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "alameda",
+      "name": "Alameda",
+      "municipality": "Monterrey",
+      "lat": 25.676944,
+      "lng": -100.318056,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "fundadores",
+      "name": "Fundadores",
+      "municipality": "Monterrey",
+      "lat": 25.672222,
+      "lng": -100.318611,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "padre-mier",
+      "name": "Padre Mier",
+      "municipality": "Monterrey",
+      "lat": 25.668611,
+      "lng": -100.315278,
+      "lineIds": [
+        "L2"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "zaragoza",
+      "name": "General I. Zaragoza",
+      "municipality": "Monterrey",
+      "lat": 25.6675,
+      "lng": -100.31,
+      "lineIds": [
+        "L2",
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025",
+      "aliases": [
+        "Zaragoza",
+        "General Zaragoza"
+      ]
+    },
+    {
+      "id": "santa-lucia",
+      "name": "Santa Lucía",
+      "municipality": "Monterrey",
+      "lat": 25.671389,
+      "lng": -100.298333,
+      "lineIds": [
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "colonia-obrera",
+      "name": "Colonia Obrera",
+      "municipality": "Monterrey",
+      "lat": 25.676667,
+      "lng": -100.297778,
+      "lineIds": [
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025",
+      "aliases": [
+        "Col. Obrera"
+      ]
+    },
+    {
+      "id": "metalurgicos",
+      "name": "Metalúrgicos",
+      "municipality": "Monterrey",
+      "lat": 25.689722,
+      "lng": -100.295833,
+      "lineIds": [
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "moderna",
+      "name": "Moderna",
+      "municipality": "Monterrey",
+      "lat": 25.700278,
+      "lng": -100.2925,
+      "lineIds": [
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "ruiz-cortines",
+      "name": "Ruiz Cortines",
+      "municipality": "Monterrey",
+      "lat": 25.705,
+      "lng": -100.286944,
+      "lineIds": [
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "los-angeles",
+      "name": "Los Ángeles",
+      "municipality": "Monterrey",
+      "lat": 25.708611,
+      "lng": -100.283611,
+      "lineIds": [
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    },
+    {
+      "id": "hospital-metropolitano",
+      "name": "Hospital Metropolitano",
+      "municipality": "San Nicolás de los Garza",
+      "lat": 25.713611,
+      "lng": -100.273333,
+      "lineIds": [
+        "L3"
+      ],
+      "accessibility": "unknown",
+      "sourceId": "nl-paradas-2025"
+    }
+  ],
+  "places": [
+    {
+      "id": "ciudad-universitaria",
+      "name": "Ciudad Universitaria · UANL",
+      "lat": 25.724167,
+      "lng": -100.308056,
+      "stationId": "universidad",
+      "coordinateRole": "station-anchor",
+      "sourceId": "uanl-transporte-2023"
+    },
+    {
+      "id": "macroplaza",
+      "name": "Macroplaza",
+      "lat": 25.6675,
+      "lng": -100.31,
+      "stationId": "zaragoza",
+      "coordinateRole": "station-anchor",
+      "sourceId": "nl-guia-turistica-2025"
+    },
+    {
+      "id": "parque-fundidora",
+      "name": "Parque Fundidora",
+      "lat": 25.683611,
+      "lng": -100.288056,
+      "stationId": "fundidora",
+      "coordinateRole": "station-anchor",
+      "sourceId": "nl-guia-turistica-2025"
+    },
+    {
+      "id": "barrio-antiguo",
+      "name": "Barrio Antiguo",
+      "lat": 25.6675,
+      "lng": -100.31,
+      "stationId": "zaragoza",
+      "coordinateRole": "station-anchor",
+      "sourceId": "nl-guia-turistica-2025"
+    },
+    {
+      "id": "calle-morelos",
+      "name": "Peatonal Morelos",
+      "lat": 25.668611,
+      "lng": -100.315278,
+      "stationId": "padre-mier",
+      "coordinateRole": "station-anchor",
+      "sourceId": "nl-guia-turistica-2025"
+    },
+    {
+      "id": "central-autobuses",
+      "name": "Central de Autobuses",
+      "lat": 25.686111,
+      "lng": -100.316667,
+      "stationId": "cuauhtemoc",
+      "coordinateRole": "station-anchor",
+      "sourceId": "nl-guia-turistica-2025"
+    }
+  ],
+  "throughServices": [
+    {
+      "stationId": "zaragoza",
+      "lineIds": [
+        "L2",
+        "L3"
+      ],
+      "sourceId": "nl-guia-turistica-2025"
+    }
+  ]
+}

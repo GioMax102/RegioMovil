@@ -33,3 +33,14 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Web / API
+node_modules/
+dist/
+.data/
+.pnpm-store/
+.env
+.env.local
+output/
+test-results/
+*.tsbuildinfo
