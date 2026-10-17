@@ -24,7 +24,7 @@ const steps: MobilityStep[] = [
     from: 'Museo',
     to: 'Parada',
     geometry: [
-      [-100.45, 25.6],
+      [-100.78, 25.6],
       [-100.4, 25.64],
       [-100.37, 25.67],
     ],
@@ -61,7 +61,30 @@ const coordinates = (element: Element) =>
     .split(' ')
     .map((pair) => pair.split(',').map(Number));
 
-test('el mapa conserva cada geometría y color por modo y encuadra todo el trayecto, incluso fuera del fondo local', () => {
+test('phone-shaped map viewports keep endpoints and the regional base in frame without letterboxing', async () => {
+  const { fitMapProjection, projectMapCoordinate, constrainMapView, ZMM_BOUNDS } =
+    await import('../src/mobility/mapGeography');
+  const geometry: [number, number][] = [
+    [-100.4008, 25.7662],
+    [-100.2893, 25.6507],
+  ];
+  const viewport = { width: 670, height: 532 };
+  const projection = fitMapProjection(geometry, viewport);
+  const view = constrainMapView({ zoom: 1, x: 0, y: 0 }, projection, viewport);
+  for (const coordinate of geometry) {
+    const [x, y] = projectMapCoordinate(coordinate, projection);
+    assert.ok(x + view.x > 20 && x + view.x < viewport.width - 20);
+    assert.ok(y + view.y > 20 && y + view.y < viewport.height - 20);
+  }
+  const topLeft = projectMapCoordinate([ZMM_BOUNDS[0], ZMM_BOUNDS[3]], projection);
+  const bottomRight = projectMapCoordinate([ZMM_BOUNDS[2], ZMM_BOUNDS[1]], projection);
+  assert.ok(topLeft[0] + view.x <= 0 && topLeft[1] + view.y <= 0);
+  assert.ok(
+    bottomRight[0] + view.x >= viewport.width && bottomRight[1] + view.y >= viewport.height,
+  );
+});
+
+test('el mapa conserva geometrías y colores y encuadra el trayecto sobre el fondo regional ampliado', () => {
   const dom = map();
   try {
     const svg = dom.window.document.querySelector('svg')!;
@@ -97,8 +120,8 @@ test('el mapa conserva cada geometría y color por modo y encuadra todo el traye
       `translate(${coordinates(traces[2]).at(-1)!.join(' ')})`,
     );
     assert.match(svg.getAttribute('aria-label')!, /A es el origen y B el destino/);
-    assert.match(svg.getAttribute('aria-label')!, /área vacía no muestra calles/);
-    assert.ok(svg.textContent?.includes('Mapa base parcial'));
+    assert.ok(!svg.getAttribute('aria-label')?.includes('área vacía'));
+    assert.ok(!svg.textContent?.includes('Mapa base parcial'));
     assert.equal(
       svg.querySelector('pattern'),
       null,

@@ -26,7 +26,7 @@ Las pruebas incluyen: selección de ambos extremos en mapa y buscador; confirmac
 
 Se revisó el flujo en navegador a 390 × 844. La consulta real a la API corregida devolvió los dos lugares y tres conexiones; el mapa y el detalle se mostraron sin pantalla de error. Las capturas y el APK están en `output/qa` y `output/android`, respectivamente. Las mediciones de escritorio y pruebas estructurales no sustituyen evaluación de TalkBack, memoria o rendimiento en un teléfono modesto.
 
-El proveedor de calles recibe las solicitudes de los mosaicos visibles, que revelan aproximadamente la zona explorada. La búsqueda de lugares recibe únicamente el texto confirmado; no se envía el GPS a esa búsqueda. Las coordenadas precisas se calculan localmente y se guardan sólo tras la acción explícita de guardar el trayecto. Los tiempos, esperas y afluencia permanecen simulados y los sentidos de autobús requieren validación operativa.
+El proveedor de calles recibe las solicitudes de los mosaicos visibles, que revelan aproximadamente la zona explorada. La búsqueda de lugares recibe únicamente el texto escrito tras una pausa de 650 ms, mediante Photon; no se envía el GPS a esa búsqueda. Las coordenadas precisas se calculan localmente y se guardan sólo tras la acción explícita de guardar el trayecto. Los tiempos, esperas y afluencia permanecen simulados y los sentidos de autobús requieren validación operativa.
 
 ## Activación del backend en esta sesión
 

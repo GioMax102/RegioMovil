@@ -8,23 +8,65 @@ export async function loadMobilityNetwork(): Promise<MobilityNetwork> {
   return data;
 }
 
+export class PlaceLookupError extends Error {
+  constructor(
+    message: string,
+    public retryAfter = 0,
+  ) {
+    super(message);
+  }
+}
+
 export async function searchPlaces(query: string, signal: AbortSignal): Promise<Place[]> {
   const base = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
   if (!base && location.hostname === 'localhost' && location.protocol === 'https:')
     throw new Error(
       'Este APK necesita una API HTTPS configurada para buscar lugares. Puedes elegir paradas.',
     );
-  const response = await fetch(`${base}/api/places?q=${encodeURIComponent(query.trim())}`, {
-    signal,
-    cache: 'no-store',
-  });
-  const payload = await response.json();
-  if (!response.ok)
-    throw new Error(
-      payload.error?.message ||
-        'El buscador no está disponible. Elige una parada o inténtalo después.',
+  const request = new AbortController();
+  const cancel = () => request.abort();
+  signal.addEventListener('abort', cancel, { once: true });
+  if (signal.aborted) request.abort();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    request.abort();
+  }, 8500);
+  try {
+    const response = await fetch(
+      `${base}/api/places/suggest?q=${encodeURIComponent(query.trim())}`,
+      {
+        signal: request.signal,
+        cache: 'no-store',
+      },
     );
-  return payload.places;
+    const payload = await response.json();
+    if (!response.ok)
+      throw new PlaceLookupError(
+        payload.error?.message ||
+          'El buscador no está disponible. Elige una parada o inténtalo después.',
+        response.status === 429 ? Number(response.headers.get('Retry-After')) || 1 : 0,
+      );
+    if (!Array.isArray(payload.places))
+      throw new Error('No pudimos leer las sugerencias. Prueba otro nombre.');
+    return payload.places
+      .slice(0, 6)
+      .filter(
+        (place: Place) =>
+          typeof place?.id === 'string' &&
+          typeof place.name === 'string' &&
+          typeof place.displayName === 'string' &&
+          Number.isFinite(place.lat) &&
+          Number.isFinite(place.lng),
+      );
+  } catch (error) {
+    if (timedOut && !signal.aborted)
+      throw new Error('Las sugerencias tardaron demasiado. Prueba otro nombre o elige una parada.');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener('abort', cancel);
+  }
 }
 
 /** A single worker owns the graph; precise endpoints remain in this device's memory. */

@@ -7,6 +7,7 @@ import { buildBoard, getModelCard, planJourney, resolveStation, SCENARIOS, PREFE
 import { createReportStore } from './storage.mjs';
 import { findServices, mergeCatalogs } from './catalog.mjs';
 import { createPlaceSearch, PlaceSearchError } from './places.mjs';
+import { createPlaceSuggestions } from './place-suggestions.mjs';
 import { planMobility } from './mobility.mjs';
 
 const REPORT_CATEGORIES = ['crowding', 'climate', 'accessibility', 'condition'];
@@ -50,11 +51,12 @@ async function readJson(request, context = 'el reporte') {
   catch { throw new HttpError(400, 'INVALID_JSON', 'El JSON de la solicitud no es válido.'); }
 }
 
-export function createApp({ network, catalog = null, mobilityNetwork = null, placesOptions, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12 } = {}) {
+export function createApp({ network, catalog = null, mobilityNetwork = null, placesOptions, placeSuggestionsOptions, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12 } = {}) {
   if (!network?.stations?.length || !network?.lines?.length) throw new Error('A nonempty transit network is required.');
   if (allowedOrigins.includes('*')) throw new Error('CORS wildcard is not supported. Configure explicit origins.');
   const serviceCatalog = mergeCatalogs(catalog ? [catalog] : []);
   const searchPlaces = createPlaceSearch(placesOptions);
+  const suggestPlaces = createPlaceSuggestions(placeSuggestionsOptions);
   const store = createReportStore(databasePath);
   const networkJson = JSON.stringify(network);
   const networkETag = `"${createHash('sha256').update(networkJson).digest('hex').slice(0, 20)}"`;
@@ -175,9 +177,9 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
           if (!mobilityNetwork) throw new HttpError(503, 'MOBILITY_UNAVAILABLE', 'La red experimental no está preparada. Puedes usar el planificador de Metro.');
           return send(response, 200, mobilityNetwork, { 'Cache-Control': 'public, max-age=3600' });
         }
-        if (url.pathname === '/api/places') {
+        if (url.pathname === '/api/places' || url.pathname === '/api/places/suggest') {
           if ([...url.searchParams.keys()].some(key => key !== 'q') || url.searchParams.getAll('q').length !== 1) throw new HttpError(400, 'INVALID_PLACE_QUERY', 'Envía un solo nombre de lugar con el parámetro q.');
-          return send(response, 200, await searchPlaces(url.searchParams.get('q')));
+          return send(response, 200, await (url.pathname === '/api/places/suggest' ? suggestPlaces : searchPlaces)(url.searchParams.get('q')));
         }
         if (url.pathname === '/api/model') return send(response, 200, getModelCard(), { 'Cache-Control': 'public, max-age=3600' });
         if (url.pathname === '/api/services') {
@@ -256,7 +258,7 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
         const report = store.add({ stationId: station.id, category: body.category, detail }, date);
         return send(response, 201, { report, notice: 'Reporte guardado sin verificación. No se envió a una autoridad ni a un servicio de emergencia.' }, { Location: `/api/reports?station=${encodeURIComponent(station.id)}` });
       }
-      if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports', '/api/services', '/api/places', '/api/mobility/network', '/api/mobility/plan'].includes(url.pathname) || /^\/api\/services\/[^/]+$/.test(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
+      if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports', '/api/services', '/api/places', '/api/places/suggest', '/api/mobility/network', '/api/mobility/plan'].includes(url.pathname) || /^\/api\/services\/[^/]+$/.test(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
       throw new HttpError(404, 'NOT_FOUND', 'No encontramos ese recurso.');
     } catch (error) {
       if (response.headersSent) { response.end(); return; }

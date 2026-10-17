@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { createApp } from '../server/app.mjs';
 import { createPlaceSearchState } from '../server/places.mjs';
+import { createPlaceSuggestionState } from '../server/place-suggestions.mjs';
 
 const network = { stations: [{ id: 'a', name: 'A', lat: 25.67, lng: -100.32 }, { id: 'b', name: 'B', lat: 25.68, lng: -100.32 }], lines: [{ id: 'L1', name: 'Línea 1', stationIds: ['a', 'b'] }] };
 const mobilityNetwork = {
@@ -118,4 +119,23 @@ test('transport filters keep arbitrary endpoint coordinates and addresses instea
   assert.equal(response.body.from.lat, body.from.lat);
   assert.ok(response.body.journeys.every(journey => journey.steps.every(step => step.mode !== 'bus')));
   assert.equal((await request('/api/mobility/plan', { method: 'POST', body: { ...body, transport: 'invented' } })).body.error.code, 'INVALID_TRANSPORT');
+});
+
+
+test('automatic place suggestions share the guarded API without accepting GPS or client providers', async t => {
+  let calls = 0;
+  const { request } = fixture(t, { placeSuggestionsOptions: { state: createPlaceSuggestionState(), now: () => 0, transport: async () => { calls++; return new Response(JSON.stringify({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-100.282186, 25.6771028] }, properties: { osm_type: 'W', osm_id: 30987006, name: 'Parque Fundidora', city: 'Monterrey', countrycode: 'MX' } }] })); } } });
+  for (const url of ['/api/places/suggest', '/api/places/suggest?q=Fundidora&q=Tec', '/api/places/suggest?q=Fundidora&lat=25.67', '/api/places/suggest?q=Fundidora&provider=https://example.org', '/api/places/suggest?q=25.67,-100.31']) assert.equal((await request(url)).status, 400);
+  assert.equal((await request('/api/places/suggest?q=Fundidora', { method: 'POST' })).status, 405);
+  assert.equal((await request('/api/places/suggest?q=Fundidora', { headers: { origin: 'https://evil.example' } })).status, 403);
+  assert.equal(calls, 0);
+  const response = await request('/api/places/suggest?q=Fundidora');
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.equal(response.body.places[0].name, 'Parque Fundidora');
+  assert.equal((await request('/api/places/suggest?q=Fundidora')).body.cached, true);
+  const busy = await request('/api/places/suggest?q=Macroplaza');
+  assert.equal(busy.status, 429);
+  assert.equal(busy.headers.get('Retry-After'), '1');
+  assert.equal(calls, 1);
 });

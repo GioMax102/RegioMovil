@@ -3,7 +3,7 @@ import { findPlaceReferences } from './place-references.mjs';
 export const ZMM_BOUNDS = [-100.9, 25.35, -99.8, 26.1];
 export const PLACE_ATTRIBUTION = Object.freeze({ text: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright', license: 'ODbL' });
 export const DEFAULT_PLACE_PROVIDER = 'https://nominatim.openstreetmap.org/search';
-const DEFAULT_USER_AGENT = 'RegioMovil/1.0 (ZMM transit experiment; https://github.com/GioMax102/RegioMovil)';
+export const DEFAULT_USER_AGENT = 'RegioMovil/1.0 (ZMM transit experiment; https://github.com/GioMax102/RegioMovil)';
 const CACHE_TTL = 3_600_000;
 const MAX_UPSTREAM_BYTES = 128 * 1024;
 
@@ -16,7 +16,7 @@ export class PlaceSearchError extends Error {
 export const createPlaceSearchState = () => ({ cache: new Map(), lastStarted: -Infinity, inFlight: false, blockedUntil: -Infinity });
 const sharedState = createPlaceSearchState();
 
-function queryText(input) {
+export function queryText(input) {
   if (typeof input !== 'string') throw new PlaceSearchError(400, 'INVALID_PLACE_QUERY', 'Escribe un lugar, calle o dirección de 3 a 120 caracteres.');
   const query = input.trim().normalize('NFC').replace(/ +/g, ' ');
   if ([...query].length < 3 || [...query].length > 120 || /[\u0000-\u001f\u007f]/.test(query)) throw new PlaceSearchError(400, 'INVALID_PLACE_QUERY', 'Escribe un lugar, calle o dirección de 3 a 120 caracteres, sin controles.');
@@ -24,14 +24,14 @@ function queryText(input) {
   return query;
 }
 
-function providerAddress(value) {
+export function providerAddress(value) {
   let url;
   try { url = new URL(value); } catch { throw new TypeError('PLACES_PROVIDER_URL must be an HTTPS search URL.'); }
   if (url.protocol !== 'https:' || url.username || url.password || url.hash || url.search) throw new TypeError('PLACES_PROVIDER_URL must be an HTTPS search URL without credentials, query or fragment.');
   return url;
 }
 
-async function boundedJson(response) {
+export async function boundedJson(response) {
   if (Number(response.headers.get('content-length')) > MAX_UPSTREAM_BYTES) throw new PlaceSearchError(502, 'PLACES_INVALID_RESPONSE', 'El buscador devolvió una respuesta demasiado grande. Intenta con otro nombre.');
   if (!response.body?.getReader) throw new PlaceSearchError(502, 'PLACES_INVALID_RESPONSE', 'El buscador no devolvió una respuesta válida.');
   const reader = response.body.getReader();
@@ -50,7 +50,7 @@ async function boundedJson(response) {
   catch { throw new PlaceSearchError(502, 'PLACES_INVALID_RESPONSE', 'El buscador no devolvió lugares válidos. Intenta de nuevo.'); }
 }
 
-function cleanText(value, limit = 180) {
+export function cleanText(value, limit = 180) {
   return typeof value === 'string' && !/[\u0000-\u001f\u007f]/.test(value) ? value.trim().slice(0, limit) : '';
 }
 

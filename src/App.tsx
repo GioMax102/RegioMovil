@@ -32,18 +32,22 @@ import {
 } from 'lucide-react';
 import { loadBoard, network, readStored, sendReport, writeStored, type Transport } from './api';
 import type { Arrival, Board, Page, Preference, Scenario, Station } from './types';
-const TransitCatalog = lazy(() => import('./components/TransitCatalog'));
+const NetworkExplorer = lazy(() => import('./components/NetworkExplorer'));
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
 import type { MobilityEndpoint } from './mobility/types';
 import { ArrivalCard, Brand, Dialog, Forecast, LineBadge } from './components/Primitives';
+import HomeDashboard from './components/HomeDashboard';
+import { useAppearance } from './appearance';
+import { AppearanceSettings } from './components/AppearanceSettings';
+import { ActionFeedback } from './components/ActionFeedback';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
 const navItems: { id: Page; label: string; short: string; icon: typeof House }[] = [
   { id: 'home', label: 'Mi camino', short: 'Inicio', icon: House },
   { id: 'plan', label: 'Planear viaje', short: 'Planear', icon: Route },
-  { id: 'stations', label: 'Estaciones', short: 'Red', icon: TrainFront },
+  { id: 'stations', label: 'Red de transporte', short: 'Red', icon: TrainFront },
   { id: 'mobility', label: 'Mi movilidad', short: 'Guardados', icon: Bookmark },
 ];
 const scenarioLabels: Record<Scenario, string> = {
@@ -72,6 +76,7 @@ export default function App() {
   const params = new URLSearchParams(location.search);
   const [kiosk, setKiosk] = useState(params.get('kiosk') === '1');
   const lockedKiosk = params.get('locked') === '1';
+  const appearance = useAppearance(!lockedKiosk);
   const [station, setStation] = useState(
     validStation(
       params.get('station') || (kiosk ? 'padre-mier' : readStored('station', 'padre-mier')),
@@ -86,7 +91,7 @@ export default function App() {
       }
     | undefined
   >();
-  const [networkTab, setNetworkTab] = useState<'stations' | 'routes'>('stations');
+  const [networkTab, setNetworkTab] = useState<'stations' | 'routes'>('routes');
   const [scenario, setScenario] = useState<Scenario>('normal');
   const [boardSnapshot, setBoard] = useState<Board | null>(null);
   const [transport, setTransport] = useState<Transport>('local');
@@ -397,7 +402,7 @@ export default function App() {
             )}
           </div>
         </header>
-        <main id="main-content" tabIndex={-1}>
+        <main id="main-content" tabIndex={-1} key={page} className="page-transition">
           <div className={`page-heading ${page === 'home' || kiosk ? '' : 'compact-heading'}`}>
             <div>
               {(page === 'home' || kiosk) && (
@@ -479,7 +484,29 @@ export default function App() {
               <ArrowRight size={20} />
             </button>
           )}
-          {page === 'home' && (
+          {page === 'home' && !kiosk && (
+            <HomeDashboard
+              station={currentStation}
+              board={board}
+              loading={loading}
+              favorite={favorites.includes(station)}
+              onFavorite={() => toggleFavorite(station)}
+              onArrival={setArrival}
+              onSaved={() => setPage('mobility')}
+              onNetwork={() => {
+                setNetworkTab('routes');
+                setPage('stations');
+              }}
+              onStationDetails={() => {
+                setNetworkTab('stations');
+                setPage('stations');
+                setLineFilter('all');
+                setStationQuery(currentStation.name);
+              }}
+              onReport={() => setModal('report')}
+            />
+          )}
+          {page === 'home' && kiosk && (
             <div className="dashboard-grid">
               <div className="dashboard-main">
                 <section className="panel map-panel">
@@ -714,7 +741,7 @@ export default function App() {
                   </p>
                 }
               >
-                <TransitCatalog
+                <NetworkExplorer
                   onPlanLine={(lineId) => {
                     const line = network.lines.find((item) => item.id === lineId);
                     if (!line) return;
@@ -1075,12 +1102,7 @@ export default function App() {
           </button>
         </nav>
       )}
-      {toast && (
-        <div className="toast" role="status">
-          <Check size={18} />
-          {toast}
-        </div>
-      )}
+      <ActionFeedback key={toast} message={toast} />
       {modal === 'station' && (
         <Dialog title="¿Desde dónde te mueves?" onClose={() => setModal(null)}>
           <p className="dialog-intro">Elige una estación de la red. No necesitamos tu ubicación.</p>
@@ -1124,6 +1146,7 @@ export default function App() {
       {modal === 'settings' && (
         <Dialog title="A tu manera" onClose={() => setModal(null)}>
           <p className="dialog-intro">Pequeños ajustes para un camino más fácil.</p>
+          {!lockedKiosk && <AppearanceSettings appearance={appearance} />}
           <div className="setting-row">
             <span>
               <strong>Texto más grande</strong>
@@ -1385,10 +1408,10 @@ function SourcesDialog({
         </p>
         <p>
           El planificador combina Metro, Transmetro, RegioRuta, Ecovía/GMG y rutas urbanas con
-          puntos y trazos documentados. En autobuses, el orden y los sentidos se infieren del mapa
-          y siguen sin validación operativa. En Rutas y redes puedes consultar la fecha y fuente de
-          cada servicio. Las líneas en construcción y los servicios sin geometría suficiente
-          quedan fuera del cálculo. No hay tráfico en vivo, tarifas integradas, pagos ni navegación
+          puntos y trazos documentados. En autobuses, el orden y los sentidos se infieren del mapa y
+          siguen sin validación operativa. En Rutas y redes puedes consultar la fecha y fuente de
+          cada servicio. Las líneas en construcción y los servicios sin geometría suficiente quedan
+          fuera del cálculo. No hay tráfico en vivo, tarifas integradas, pagos ni navegación
           peatonal.
         </p>
       </div>

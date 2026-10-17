@@ -1,6 +1,9 @@
 .journey-detail {
   min-width: 0;
 }
+.journey-detail .mobility-map > svg {
+  background: #edf3ee;
+}
 .journey-detail .journey-detail-summary {
   display: flex;
   flex-wrap: wrap;
@@ -113,6 +116,37 @@
   color: var(--muted);
   font-size: max(0.86em, 12px);
   font-weight: 400;
+}
+.journey-detail-steps > .journey-detail-transfer {
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  padding: 5px 0 10px;
+}
+.journey-detail-transfer .mobility-step-icon.transfer {
+  background: var(--pale, #eaf3ef);
+  color: var(--green);
+  width: 26px;
+  height: 26px;
+  margin-left: 2px;
+}
+.journey-detail-transfer-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1px 9px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: max(0.86em, 12px);
+  line-height: 1.45;
+}
+.journey-detail-transfer-body > strong {
+  color: var(--green);
+  font-size: inherit;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.journey-detail-transfer-body > span {
+  white-space: nowrap;
 }
 .journey-detail > .journey-detail-sources {
   border-top: 1px solid var(--line);

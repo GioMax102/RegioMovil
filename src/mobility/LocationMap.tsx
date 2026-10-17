@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { LocateFixed, Minus, Plus, RotateCcw } from 'lucide-react';
 import geography from '../data/monterrey-map.json';
-import { isRegionalCoordinate } from './mapGeography';
+import { isRegionalCoordinate, simplifyOverviewGeometry } from './mapGeography';
 import {
   CITY_CENTER,
   constrainRegionalView,
@@ -12,7 +12,7 @@ import {
   type MapSize,
   type RegionalView,
 } from './regionalViewport';
-import type { MobilityJourney, MobilityNetwork, MobilityStop } from './types';
+import type { MobilityJourney, MobilityNetwork, MobilityRoute, MobilityStop } from './types';
 import './locationMap.css';
 
 const localMapUrl = new URL('../assets/monterrey-map.svg', import.meta.url).href;
@@ -24,6 +24,7 @@ export default function LocationMap({
   field,
   focus,
   journey,
+  contextRoutes,
   onPick,
   onStopSelect,
 }: {
@@ -34,8 +35,9 @@ export default function LocationMap({
   field?: 'from' | 'to' | null;
   focus?: MapPosition | null;
   journey?: MobilityJourney | null;
-  onPick: (point: MapPosition) => void;
-  onStopSelect: (stop: MobilityStop) => void;
+  contextRoutes?: MobilityRoute[];
+  onPick?: (point: MapPosition) => void;
+  onStopSelect?: (stop: MobilityStop) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<MapSize>({ width: 720, height: 420 });
@@ -66,6 +68,21 @@ export default function LocationMap({
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const mapId = useId().replace(/:/g, '');
+  const contextPaths = useMemo(
+    () =>
+      (contextRoutes ?? network.routes.filter((route) => route.mode === 'metro')).flatMap((route) =>
+        route.segments.map((segment) => ({
+          geometry: simplifyOverviewGeometry(segment.coordinates),
+          lineId: route.id,
+          mode: route.mode,
+        })),
+      ),
+    [contextRoutes, network],
+  );
+  const contextSignature = contextRoutes
+    ?.map((route) => route.id)
+    .sort()
+    .join('|');
   function move(next: RegionalView) {
     const safe = constrainRegionalView(next, sizeRef.current);
     viewRef.current = safe;
@@ -97,7 +114,7 @@ export default function LocationMap({
     if (focus && isRegionalCoordinate([focus.lng, focus.lat])) move({ ...focus, zoom: 14 });
   }, [focus?.lat, focus?.lng]);
   useEffect(() => {
-    if (field) onPickRef.current(viewRef.current);
+    if (field) onPickRef.current?.(viewRef.current);
   }, [field]);
   useEffect(() => {
     if (!journey || field) return;
@@ -107,6 +124,15 @@ export default function LocationMap({
       .map(([lng, lat]) => ({ lng, lat }));
     move(fitRegionalPositions(points, sizeRef.current));
   }, [journey?.id, field]);
+  useEffect(() => {
+    if (!contextRoutes || journey || field) return;
+    move(
+      fitRegionalPositions(
+        contextPaths.flatMap((path) => path.geometry).map(([lng, lat]) => ({ lng, lat })),
+        sizeRef.current,
+      ),
+    );
+  }, [contextSignature, journey?.id, field, size.width, size.height]);
   useEffect(() => {
     if (online) setTileFailed(false);
   }, [online]);
@@ -169,7 +195,7 @@ export default function LocationMap({
   }
   function zoom(amount: number) {
     const next = move({ ...viewRef.current, zoom: viewRef.current.zoom + amount });
-    if (field) onPickRef.current(next);
+    if (field) onPickRef.current?.(next);
   }
   function release(event: React.PointerEvent<SVGSVGElement>, cancelled = false) {
     if (!pointers.current.has(event.pointerId)) return;
@@ -186,7 +212,7 @@ export default function LocationMap({
     if (cancelled) {
       if (startView) move(startView);
     } else if (field) {
-      if (multiTouch) onPickRef.current(viewRef.current);
+      if (multiTouch) onPickRef.current?.(viewRef.current);
       else if (active?.id === event.pointerId) {
         const rect = event.currentTarget.getBoundingClientRect();
         if (
@@ -203,8 +229,8 @@ export default function LocationMap({
             center.y + (event.clientY - rect.top - rect.height / 2) / scale,
           );
           const next = move({ ...point, zoom: viewRef.current.zoom });
-          onPickRef.current(next);
-        } else if (active.moved) onPickRef.current(viewRef.current);
+          onPickRef.current?.(next);
+        } else if (active.moved) onPickRef.current?.(viewRef.current);
       }
     }
     try {
@@ -216,17 +242,7 @@ export default function LocationMap({
   }
   const baseNW = project({ lng: geography.bounds[0], lat: geography.bounds[3] });
   const baseSE = project({ lng: geography.bounds[2], lat: geography.bounds[1] });
-  const paths =
-    journey?.steps ||
-    network.routes
-      .filter((route) => route.mode === 'metro')
-      .flatMap((route) =>
-        route.segments.map((segment) => ({
-          geometry: segment.coordinates,
-          lineId: route.id,
-          mode: route.mode,
-        })),
-      );
+  const paths = journey?.steps || contextPaths;
   return (
     <div className={`location-map ${field ? 'choosing' : ''}`}>
       <div ref={container} className="location-map-canvas">
@@ -252,7 +268,7 @@ export default function LocationMap({
                 ...worldPosition(center.x + x / scale, center.y + y / scale),
                 zoom: viewRef.current.zoom,
               });
-              if (field) onPickRef.current(next);
+              if (field) onPickRef.current?.(next);
             } else if (['+', '=', '-'].includes(event.key)) {
               event.preventDefault();
               zoom(event.key === '-' ? -1 : 1);
@@ -351,6 +367,28 @@ export default function LocationMap({
                 onError={() => setTileFailed(true)}
               />
             ))}
+            {(!online || tileFailed) && (
+              <g aria-hidden="true" fill="#567063" fontSize="11" fontWeight="500">
+                {geography.labels.map((label) => {
+                  const p = project(label);
+                  if (p.x < 10 || p.x > size.width - 10 || p.y < 15 || p.y > size.height - 15)
+                    return null;
+                  return (
+                    <text
+                      key={label.name}
+                      x={p.x}
+                      y={p.y}
+                      textAnchor="middle"
+                      paintOrder="stroke"
+                      stroke="#edf3ee"
+                      strokeWidth="3"
+                    >
+                      {label.name}
+                    </text>
+                  );
+                })}
+              </g>
+            )}
             {paths.map((step, index) => (
               <polyline
                 key={`${step.lineId}-${index}`}
@@ -388,13 +426,13 @@ export default function LocationMap({
                   onPointerDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onStopSelect(stop);
+                    onStopSelect?.(stop);
                   }}
                   onKeyDown={(event) => {
                     if (['Enter', ' '].includes(event.key)) {
                       event.preventDefault();
                       event.stopPropagation();
-                      onStopSelect(stop);
+                      onStopSelect?.(stop);
                     }
                   }}
                 >
@@ -456,7 +494,7 @@ export default function LocationMap({
                 (point): point is MapPosition => !!point,
               );
               const next = move(fitRegionalPositions(positions, size));
-              if (field) onPickRef.current(next);
+              if (field) onPickRef.current?.(next);
             }}
           >
             <LocateFixed size={19} />
@@ -480,8 +518,10 @@ export default function LocationMap({
       <p className="location-map-caption">
         {field
           ? 'Mueve el mapa o toca un punto y confirma abajo.'
-          : 'Explora tu zona. Elige los puntos y compara cómo llegar.'}
-        {!online || tileFailed ? ' Mapa local: las calles tienen cobertura parcial.' : ''}
+          : contextRoutes
+            ? 'Explora los trazos publicados de los servicios seleccionados.'
+            : 'Explora tu zona. Elige los puntos y compara cómo llegar.'}
+        {!online || tileFailed ? ' Mapa local simplificado con vialidades principales.' : ''}
       </p>
     </div>
   );

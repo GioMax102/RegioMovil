@@ -725,10 +725,10 @@
   margin: 0 0 6px;
 }
 
-/* Map and trip card share one workspace; the map is the starting point on a phone. */
+/* Ask for the endpoints first, then show the map in the same reading order. */
 .mobility-plan-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(290px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   align-items: start;
   margin-bottom: 26px;
@@ -774,10 +774,10 @@
 }
 .mobility-plan-workspace .mobility-form {
   padding: 20px;
-  margin-top: 52px;
+  margin-top: 0;
 }
 .mobility-plan-workspace .mobility-fields {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
   position: relative;
 }
@@ -1045,5 +1045,28 @@
   .mobility-plan-workspace .mobility-swap {
     top: 18px;
     right: calc(50% - 22px);
+  }
+}
+
+/* One direct sequence: endpoints, priorities, map and available connections. */
+.mobility-plan-workspace .mobility-swap {
+  top: 17px;
+  right: calc(50% - 22px);
+  background: var(--surface);
+  border-color: var(--surface);
+}
+.mobility-plan-workspace .mobility-priorities button {
+  min-height: 44px;
+}
+.mobility-plan-workspace .mobility-endpoint {
+  padding-right: 12px;
+}
+@media (max-width: 760px) {
+  .mobility-plan-workspace .mobility-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mobility-plan-workspace .mobility-swap {
+    right: 60px;
+    top: 62px;
   }
 }

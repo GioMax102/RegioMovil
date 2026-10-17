@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LocateFixed, Minus, Plus } from 'lucide-react';
 import geography from '../data/monterrey-map.json';
 import type { Coordinates, MobilityJourney, MobilityNetwork } from './types';
@@ -20,6 +20,28 @@ export default function MobilityMap({
   network: MobilityNetwork;
 }) {
   const [rawView, setView] = useState({ zoom: 1, x: 0, y: 0 });
+  const canvas = useRef<SVGSVGElement>(null);
+  const [viewport, setViewport] = useState<{ width: number; height: number }>(MAP_VIEWPORT);
+  useEffect(() => {
+    const element = canvas.current;
+    if (!element) return;
+    const measure = () => {
+      const bounds = element.getBoundingClientRect();
+      if (bounds.width <= 0 || bounds.height <= 0) return;
+      const height = (MAP_VIEWPORT.width * bounds.height) / bounds.width;
+      setViewport((previous) =>
+        Math.abs(previous.height - height) < 0.5 ? previous : { width: MAP_VIEWPORT.width, height },
+      );
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const drag = useRef<{
     pointerId: number;
     x: number;
@@ -56,19 +78,26 @@ export default function MobilityMap({
     ),
   );
   const projection = useMemo(
-    () => fitMapProjection(paths.flatMap((step) => step.geometry)),
-    [paths],
+    () =>
+      fitMapProjection(
+        paths.flatMap((step) => step.geometry),
+        viewport,
+      ),
+    [paths, viewport],
   );
-  const view = constrainMapView(rawView, projection);
+  const view = constrainMapView(rawView, projection, viewport);
   const point = (coordinate: Coordinates) => projectMapCoordinate(coordinate, projection);
   const first = paths[0]?.geometry[0],
     last = paths.at(-1)?.geometry.at(-1);
   const changeZoom = (amount: number) =>
-    setView((current) => constrainMapView({ ...current, zoom: current.zoom + amount }, projection));
+    setView((current) =>
+      constrainMapView({ ...current, zoom: current.zoom + amount }, projection, viewport),
+    );
   return (
     <div className="mobility-map">
       <svg
-        viewBox={`0 0 ${MAP_VIEWPORT.width} ${MAP_VIEWPORT.height}`}
+        ref={canvas}
+        viewBox={`0 0 ${viewport.width} ${viewport.height}`}
         role="img"
         tabIndex={0}
         aria-label={`Mapa experimental de ${journey.steps[0]?.from || 'origen'} a ${journey.steps.at(-1)?.to || 'destino'}. A es el origen y B el destino. Las caminatas punteadas son conexiones aproximadas. La exploración está limitada a la zona metropolitana de Monterrey. Usa las flechas para explorar y las teclas más y menos para acercar o alejar.${partialBase ? ' El mapa base cubre solo parte del recorrido; el área vacía no muestra calles.' : ''}`}
@@ -83,10 +112,11 @@ export default function MobilityMap({
           if (direction) {
             event.preventDefault();
             setView((current) => {
-              const safe = constrainMapView(current, projection);
+              const safe = constrainMapView(current, projection, viewport);
               return constrainMapView(
                 { ...safe, x: safe.x + direction[0], y: safe.y + direction[1] },
                 projection,
+                viewport,
               );
             });
           } else if (['+', '=', '-'].includes(event.key)) {
@@ -132,7 +162,7 @@ export default function MobilityMap({
           // release/cancel may clear the ref before this updater is evaluated.
           const x = active.startX + (event.clientX - active.x) * ratio;
           const y = active.startY + (event.clientY - active.y) * ratio;
-          setView((current) => constrainMapView({ ...current, x, y }, projection));
+          setView((current) => constrainMapView({ ...current, x, y }, projection, viewport));
         }}
         onPointerUp={(event) => {
           if (drag.current?.pointerId === event.pointerId) drag.current = null;
@@ -144,16 +174,15 @@ export default function MobilityMap({
           if (drag.current?.pointerId === event.pointerId) drag.current = null;
         }}
       >
-        <rect width="670" height="410" fill="#edf5f1" />
+        <rect width={viewport.width} height={viewport.height} fill="#edf3ee" />
         <g
           data-map-viewport=""
-          transform={`translate(${view.x} ${view.y}) translate(335 205) scale(${view.zoom}) translate(-335 -205)`}
+          transform={`translate(${view.x} ${view.y}) translate(${viewport.width / 2} ${viewport.height / 2}) scale(${view.zoom}) translate(${-viewport.width / 2} ${-viewport.height / 2})`}
         >
           <g
             transform={`translate(${projection.x} ${projection.y}) scale(${projection.scale})`}
             opacity="0.82"
           >
-            <rect x="0" y="0" width={geography.width} height={geography.height} fill="#f7faf5" />
             <image
               href={mapUrl}
               x="0"
@@ -164,7 +193,28 @@ export default function MobilityMap({
                 geography.longitudeFactor
               }
               height={(geography.bounds[3] - geography.bounds[1]) * geography.unitsPerDegree}
+              preserveAspectRatio="none"
             />
+          </g>
+          <g aria-hidden="true" fill="#567063" fontSize="11" fontWeight="500">
+            {geography.labels.map((label) => {
+              const [x, y] = point([label.lng, label.lat]);
+              if (x < 10 || x > viewport.width - 10 || y < 15 || y > viewport.height - 15)
+                return null;
+              return (
+                <text
+                  key={label.name}
+                  x={x}
+                  y={y}
+                  textAnchor="middle"
+                  paintOrder="stroke"
+                  stroke="#edf3ee"
+                  strokeWidth="3"
+                >
+                  {label.name}
+                </text>
+              );
+            })}
           </g>
           {paths.map((step, index) => {
             const color =
@@ -214,8 +264,16 @@ export default function MobilityMap({
         </g>
         {partialBase && (
           <g aria-hidden="true">
-            <rect x="12" y="374" width="135" height="24" rx="6" fill="#fff" fillOpacity="0.94" />
-            <text x="21" y="390" fill="#285843" fontSize="11" fontWeight="600">
+            <rect
+              x="12"
+              y={viewport.height - 36}
+              width="135"
+              height="24"
+              rx="6"
+              fill="#fff"
+              fillOpacity="0.94"
+            />
+            <text x="21" y={viewport.height - 20} fill="#285843" fontSize="11" fontWeight="600">
               Mapa base parcial
             </text>
           </g>

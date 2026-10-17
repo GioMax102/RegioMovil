@@ -1,0 +1,61 @@
+# Planeación, red y apariencia · 17 de octubre de 2026
+
+La planeación empieza por origen y destino, seguidos por las prioridades y el mapa.
+Ambos extremos aceptan lugares, calles, direcciones, ubicación autorizada o un punto
+en el mapa. Los filtros de transporte se aplican a las alternativas encontradas.
+
+El buscador consulta Photon automáticamente después de una pausa de 650 ms, a partir
+de tres caracteres. Cancela consultas anteriores, respeta la composición del teclado
+y admite navegación por flechas. Los resultados mantienen su dirección publicada y
+eliminan objetos duplicados con el mismo nombre y dirección. Sin conexión muestra
+paradas oficiales y lugares incluidos en trayectos guardados. Estos últimos abren su
+paquete existente; no habilitan un cálculo nuevo con coordenadas arbitrarias.
+Véase [búsqueda y privacidad](lugares-y-privacidad.md).
+
+Los enlaces a pie entre dos transportes de menos de tres minutos y 250 metros se
+presentan como cambios de transporte compactos. Las caminatas inicial y final, así
+como las conexiones más largas, conservan sus etapas. La presentación no modifica
+las geometrías, tiempos ni distancias guardadas.
+
+El fondo local utiliza un extracto real de OpenStreetMap que cubre todo el rectángulo
+de exploración de la ZMM, con un SVG de 508 355 bytes. El mapa del detalle adapta su
+proyección al espacio disponible en celulares para evitar franjas por diferencia de
+proporción y conservar visibles los extremos. La exploración mantiene sus límites
+regionales. [Procedencia del mapa](../src/data/monterrey-map.md).
+
+Inicio ofrece planeación, acceso a guardados y a Red, dos próximas unidades y un
+pronóstico breve. Red abre el mapa de sistemas y el catálogo de 214 fichas; sus
+filtros sincronizan mapa y lista. Los 54 recorridos con geometría documentada se
+cargan al entrar a Red, con una simplificación visual de hasta 200 puntos por
+segmento. Los datos del motor y los detalles conservan la geometría completa. Los
+servicios en construcción permanecen en las fichas y fuera del cálculo.
+
+Ajustes incorpora tema del sistema, claro u oscuro y un control de animaciones.
+Se conservan en este dispositivo; las solicitudes de movimiento reducido del sistema
+siempre se respetan. Guardar y navegar utilizan confirmaciones breves, también
+visibles con las animaciones apagadas. Los módulos públicos bloqueados no leen ni
+escriben las preferencias personales de apariencia.
+
+## Verificación
+
+- `./regiomovil build`: TypeScript y empaquetado correctos; recursos iniciales de
+  487 KiB. Los estilos y scripts mantienen sus presupuestos de transferencia.
+- `./regiomovil test`: 159 pruebas, sin fallos. Incluyen orden del formulario,
+  paquetes offline desde el buscador, sugerencias automáticas y cancelación,
+  transbordos cortos, encuadre regional, persistencia de apariencia y navegación.
+- Navegador a 390 × 844: búsqueda real de Parque Fundidora, Las Estaciones al Tec
+  mediante Transmetro y Metro, guardado, mapas claro/oscuro y filtro RegioRuta
+  sincronizado con sus siete fichas; sin desbordamiento horizontal.
+- `./regiomovil android --dev-local-api`: APK debug compilado y firma v2 verificada.
+  Se restauró después la compilación web sin dirección de API fija.
+- Servidor reiniciado y comprobado en `http://localhost:4173/api/health`.
+  No había un dispositivo ADB conectado al intentar restablecer el túnel USB.
+
+Las capturas de verificación están en `output/qa/`, y el APK en
+`output/android/regiomovil-debug.apk` (ambos ignorados por Git).
+
+Los tiempos, la afluencia y las condiciones de las unidades siguen siendo simulados.
+La disponibilidad de trazos no confirma la operación actual ni el sentido o el orden
+de paradas de un autobús. El servicio público de Photon es configurable y no ofrece
+un SLA para un despliegue de producción; los límites y alternativas están documentados
+en la política de búsqueda enlazada arriba.

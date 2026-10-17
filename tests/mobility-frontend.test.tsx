@@ -251,7 +251,7 @@ before(async () => {
     );
     requests.push(url.pathname + url.search);
     if (offline) throw new TypeError('Offline in this test');
-    if (url.pathname === '/api/places') {
+    if (url.pathname === '/api/places/suggest') {
       const query = url.searchParams.get('q')!;
       placeQueries.push(query);
       if (/las estaciones|tec de monterrey/i.test(query)) return realFetch(url, init);
@@ -345,11 +345,10 @@ async function choosePlace(
   assert.equal(
     placeQueries.length,
     previousQueries,
-    'Typing only filters the local index; no external autocomplete.',
+    'The debounce avoids sending a request for every keystroke.',
   );
   if (enter) await user.type(input, '{Enter}');
-  else
-    await user.click(within(dialog).getByRole('button', { name: 'Buscar lugares y direcciones' }));
+  // Suggestions use Photon automatically after the typing debounce.
   const places = await within(dialog).findByRole('region', { name: 'Lugares y direcciones' });
   await user.click(await within(places).findByRole('button', { name: label }));
 }
@@ -381,6 +380,12 @@ test('App defers the multimodal network, then connects RegioRuta A33 Mederos wit
   assert.ok(!requests.includes('/mobility-network.json'));
   assert.equal(locationCalls, 0);
   const model = await openModel();
+  const form = model.querySelector('.mobility-form')!;
+  const planningMap = model.querySelector('.mobility-map-panel')!;
+  assert.ok(
+    form.compareDocumentPosition(planningMap) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'Origin and destination precede the map in both visual and accessible reading order.',
+  );
   assert.equal(mobilityModuleLoads, 1);
   assert.equal(requests.filter((path) => path === '/mobility-network.json').length, 1);
   assert.equal(screen.queryByRole('button', { name: 'Encontrar mi ruta' }), null);
@@ -635,6 +640,17 @@ test('foreground GPS remains in memory until explicit labelled offline saving an
     screen.getByRole('dialog', { name: 'Museo · ruta guardada' }),
     'Connectivity changes preserve the saved detail.',
   );
+  await user.click(within(snapshot).getByRole('button', { name: 'Cerrar ventana' }));
+  await user.click(screen.getByRole('button', { name: /^Destino:/ }));
+  const picker = screen.getByRole('dialog', { name: '¿A dónde vas?' });
+  await user.type(within(picker).getByRole('searchbox', { name: 'Buscar destino' }), 'Museo');
+  await user.click(within(picker).getByRole('button', { name: /Ver trayecto · Museo/ }));
+  assert.ok(screen.getByRole('dialog', { name: 'Museo · ruta guardada' }));
+  assert.equal(
+    plannedRequests.length,
+    1,
+    'The offline search opens saved coordinates without a new routing request.',
+  );
 });
 
 test('a cached model works offline with official bus and Metro stops while GPS and online place search are unavailable', async () => {
@@ -677,10 +693,7 @@ test('searching a real place online uses the API, and losing connection clears t
     within(picker).getByRole('searchbox', { name: 'Buscar destino' }),
     'Ciudad Universitaria UANL',
   );
-  assert.equal(placeQueries.length, 0, 'The query is sent only after the explicit search.');
-  await user.click(
-    within(picker).getByRole('button', { name: 'Buscar lugares y direcciones', exact: true }),
-  );
+  assert.equal(placeQueries.length, 0, 'Suggestions wait for a pause in typing.');
   await user.click(
     await within(picker).findByRole('button', {
       name: /Ciudad Universitaria UANL Ciudad Universitaria/,

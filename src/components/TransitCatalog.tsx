@@ -17,6 +17,7 @@ import { loadRoutePack, loadTransitCatalog, network } from '../api';
 import type { RoutePack, TransitCatalogData, TransitRoute } from '../types';
 import { Dialog } from './Primitives';
 import NetworkMap from './NetworkMap';
+import './transit-catalog.css';
 
 export const serviceColors: Record<string, string> = {
   metrorrey: '#365d46',
@@ -39,14 +40,27 @@ const statusLabels = {
 };
 const dateLabel = (date: string | null) => (date ? date.slice(0, 10) : 'Fecha no indicada');
 
-export default function TransitCatalog({ onPlanLine }: { onPlanLine: (lineId: string) => void }) {
+export default function TransitCatalog({
+  onPlanLine,
+  networkFilter,
+  onNetworkFilterChange,
+}: {
+  onPlanLine: (lineId: string) => void;
+  networkFilter?: string;
+  onNetworkFilterChange?: (networkId: string) => void;
+}) {
   const [catalog, setCatalog] = useState<TransitCatalogData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [revision, setRevision] = useState(0);
   const [query, setQuery] = useState('');
-  const [networkId, setNetworkId] = useState('all');
+  const [localNetworkId, setLocalNetworkId] = useState('all');
+  const networkId = networkFilter ?? localNetworkId;
+  const setNetworkId = (id: string) => {
+    setLocalNetworkId(id);
+    onNetworkFilterChange?.(id);
+  };
   const [status, setStatus] = useState('all');
   const [limit, setLimit] = useState(24);
   const [selected, setSelected] = useState<TransitRoute | null>(null);
@@ -361,8 +375,8 @@ function ServiceDetails({
           {!pack.stopOrderVerified && (
             <p className="notice">
               <Info size={17} />
-              El orden operativo de las paradas no está verificado. El planificador experimental
-              usa este recorrido con orden y sentidos inferidos del mapa; el sentido de abordaje
+              El orden operativo de las paradas no está verificado. El planificador experimental usa
+              este recorrido con orden y sentidos inferidos del mapa; el sentido de abordaje
               necesita confirmación.
             </p>
           )}

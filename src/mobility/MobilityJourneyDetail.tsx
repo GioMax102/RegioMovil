@@ -1,6 +1,7 @@
 import { ArrowRight, BusFront, Clock3, Footprints, Repeat2, TrainFront } from 'lucide-react';
 import MobilityMap from './MobilityMap';
 import { networkLabel } from './networks';
+import { presentJourneySteps } from './journeyPresentation';
 import type { MobilityJourney, MobilityNetwork } from './types';
 import './journeyDetail.css';
 
@@ -43,41 +44,61 @@ export default function MobilityJourneyDetail({
         Tiempos estimados con simulación · Caminatas aproximadas.
       </p>
       <ol className="journey-detail-steps" aria-label="Etapas del trayecto">
-        {journey.steps.map((step, index) => (
-          <li key={`${step.lineId}:${step.fromId}:${step.toId}:${index}`}>
-            <span className={`mobility-step-icon ${step.mode}`}>
-              {step.mode === 'walk' ? (
-                <Footprints size={16} aria-hidden="true" />
-              ) : step.mode === 'bus' ? (
-                <BusFront size={16} aria-hidden="true" />
-              ) : (
-                <TrainFront size={16} aria-hidden="true" />
-              )}
-            </span>
-            <div className="journey-detail-step-body">
-              {step.mode === 'bus' && (
-                <span className="journey-detail-network">{networkLabel(step.networkId)}</span>
-              )}
-              <h3>{step.mode === 'walk' ? 'Camina' : step.lineName}</h3>
-              <div className="journey-detail-endpoints">
-                <span>{step.from}</span>
-                <ArrowRight size={12} aria-label="hasta" />
-                <span>{step.to}</span>
+        {presentJourneySteps(journey.steps).map((entry) => {
+          const { step, index } = entry;
+          if (entry.kind === 'transfer')
+            return (
+              <li
+                className="journey-detail-transfer"
+                key={`transfer:${step.fromId}:${step.toId}:${index}`}
+              >
+                <span className="mobility-step-icon transfer">
+                  <Repeat2 size={15} aria-hidden="true" />
+                </span>
+                <div className="journey-detail-transfer-body">
+                  <strong>Cambia a {entry.nextTransport.lineName}</strong>
+                  <span>
+                    {Math.round(step.distanceMeters)} m entre paradas · {step.minutes} min
+                  </span>
+                </div>
+              </li>
+            );
+          return (
+            <li key={`${step.lineId}:${step.fromId}:${step.toId}:${index}`}>
+              <span className={`mobility-step-icon ${step.mode}`}>
+                {step.mode === 'walk' ? (
+                  <Footprints size={16} aria-hidden="true" />
+                ) : step.mode === 'bus' ? (
+                  <BusFront size={16} aria-hidden="true" />
+                ) : (
+                  <TrainFront size={16} aria-hidden="true" />
+                )}
+              </span>
+              <div className="journey-detail-step-body">
+                {step.mode === 'bus' && (
+                  <span className="journey-detail-network">{networkLabel(step.networkId)}</span>
+                )}
+                <h3>{step.mode === 'walk' ? 'Camina' : step.lineName}</h3>
+                <div className="journey-detail-endpoints">
+                  <span>{step.from}</span>
+                  <ArrowRight size={12} aria-label="hasta" />
+                  <span>{step.to}</span>
+                </div>
+                {step.mode === 'bus' && step.directionVerified !== true && (
+                  <span className="journey-detail-caution">Sentido por confirmar</span>
+                )}
               </div>
-              {step.mode === 'bus' && step.directionVerified !== true && (
-                <span className="journey-detail-caution">Sentido por confirmar</span>
-              )}
-            </div>
-            <div className="journey-detail-step-meta">
-              <span>{step.minutes} min</span>
-              <small>
-                {step.mode === 'walk'
-                  ? `${Math.round(step.distanceMeters)} m`
-                  : `${step.stationCount} tramos`}
-              </small>
-            </div>
-          </li>
-        ))}
+              <div className="journey-detail-step-meta">
+                <span>{step.minutes} min</span>
+                <small>
+                  {step.mode === 'walk'
+                    ? `${Math.round(step.distanceMeters)} m`
+                    : `${step.stationCount} tramos`}
+                </small>
+              </div>
+            </li>
+          );
+        })}
       </ol>
       <details className="journey-detail-sources">
         <summary>Fuentes y límites</summary>

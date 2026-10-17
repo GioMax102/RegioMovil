@@ -35,6 +35,51 @@ export function clampRegionalCoordinate([lng, lat]: Coordinates): Coordinates {
   ];
 }
 
+/** Detail journeys keep every point; this bounded simplification is only for network overview. */
+export function simplifyOverviewGeometry(
+  coordinates: readonly Coordinates[],
+  maximumPoints = 200,
+): Coordinates[] {
+  const points = coordinates.filter(isRegionalCoordinate);
+  if (points.length <= maximumPoints) return points;
+  const simplify = (tolerance: number) => {
+    const kept = new Set([0, points.length - 1]);
+    const pending: [number, number][] = [[0, points.length - 1]];
+    while (pending.length) {
+      const [start, end] = pending.pop()!;
+      const a = points[start],
+        b = points[end];
+      const dx = (b[0] - a[0]) * geography.longitudeFactor,
+        dy = b[1] - a[1];
+      const length = dx * dx + dy * dy;
+      let furthest = -1,
+        distance = tolerance ** 2;
+      for (let index = start + 1; index < end; index++) {
+        const x = (points[index][0] - a[0]) * geography.longitudeFactor,
+          y = points[index][1] - a[1];
+        const ratio = length ? Math.max(0, Math.min(1, (x * dx + y * dy) / length)) : 0;
+        const squared = (x - dx * ratio) ** 2 + (y - dy * ratio) ** 2;
+        if (squared > distance) {
+          distance = squared;
+          furthest = index;
+        }
+      }
+      if (furthest >= 0) {
+        kept.add(furthest);
+        pending.push([start, furthest], [furthest, end]);
+      }
+    }
+    return [...kept].sort((a, b) => a - b).map((index) => points[index]);
+  };
+  let tolerance = 0.00002;
+  let simplified = points;
+  while (simplified.length > Math.max(2, maximumPoints)) {
+    simplified = simplify(tolerance);
+    tolerance *= 2;
+  }
+  return simplified;
+}
+
 function geographic([lng, lat]: Coordinates): Coordinates {
   return [
     (lng - geography.origin[0]) * geography.unitsPerDegree * geography.longitudeFactor,
@@ -45,7 +90,10 @@ function geographic([lng, lat]: Coordinates): Coordinates {
 const regionTopLeft = geographic([ZMM_BOUNDS[0], ZMM_BOUNDS[3]]);
 const regionBottomRight = geographic([ZMM_BOUNDS[2], ZMM_BOUNDS[1]]);
 
-export function fitMapProjection(coordinates: readonly Coordinates[]): MapProjection {
+export function fitMapProjection(
+  coordinates: readonly Coordinates[],
+  viewport: { width: number; height: number } = MAP_VIEWPORT,
+): MapProjection {
   let minX = Infinity,
     maxX = -Infinity,
     minY = Infinity,
@@ -63,17 +111,21 @@ export function fitMapProjection(coordinates: readonly Coordinates[]): MapProjec
     [maxX, maxY] = geographic([-100.28, 25.64]);
   }
   const minimumScale = Math.max(
-    MAP_VIEWPORT.width / (regionBottomRight[0] - regionTopLeft[0]),
-    MAP_VIEWPORT.height / (regionBottomRight[1] - regionTopLeft[1]),
+    viewport.width / (regionBottomRight[0] - regionTopLeft[0]),
+    viewport.height / (regionBottomRight[1] - regionTopLeft[1]),
   );
   const scale = Math.max(
     minimumScale,
-    Math.min(550 / Math.max(maxX - minX, 1400), 300 / Math.max(maxY - minY, 1000)),
+    // Leave room for endpoint markers and the controls even in narrow dialogs.
+    Math.min(
+      480 / Math.max(maxX - minX, 1400),
+      (viewport.height - 150) / Math.max(maxY - minY, 1000),
+    ),
   );
   return {
     scale,
-    x: MAP_VIEWPORT.width / 2 - ((minX + maxX) / 2) * scale,
-    y: MAP_VIEWPORT.height / 2 - ((minY + maxY) / 2) * scale,
+    x: viewport.width / 2 - ((minX + maxX) / 2) * scale,
+    y: viewport.height / 2 - ((minY + maxY) / 2) * scale,
   };
 }
 
@@ -98,10 +150,14 @@ export function unprojectMapCoordinate(
 
 // Translate only as far as the regional rectangle permits. Finite fallbacks also
 // protect against cancelled gestures, a zero-sized element, or malformed input.
-export function constrainMapView(view: MapView, projection: MapProjection): MapView {
+export function constrainMapView(
+  view: MapView,
+  projection: MapProjection,
+  viewport: { width: number; height: number } = MAP_VIEWPORT,
+): MapView {
   const zoom = Math.min(5, Math.max(1, Number.isFinite(view.zoom) ? view.zoom : 1));
-  const centerX = MAP_VIEWPORT.width / 2,
-    centerY = MAP_VIEWPORT.height / 2;
+  const centerX = viewport.width / 2,
+    centerY = viewport.height / 2;
   const left = centerX + (regionTopLeft[0] * projection.scale + projection.x - centerX) * zoom;
   const right = centerX + (regionBottomRight[0] * projection.scale + projection.x - centerX) * zoom;
   const top = centerY + (regionTopLeft[1] * projection.scale + projection.y - centerY) * zoom;
@@ -113,7 +169,7 @@ export function constrainMapView(view: MapView, projection: MapProjection): MapV
       : Math.min(maximum, Math.max(minimum, Number.isFinite(value) ? value : 0));
   return {
     zoom,
-    x: clampPan(view.x, MAP_VIEWPORT.width - right, -left),
-    y: clampPan(view.y, MAP_VIEWPORT.height - bottom, -top),
+    x: clampPan(view.x, viewport.width - right, -left),
+    y: clampPan(view.y, viewport.height - bottom, -top),
   };
 }

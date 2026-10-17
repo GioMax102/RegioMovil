@@ -204,7 +204,7 @@ async function closeDialog() {
 test('initial board comes from the real API and unit details explain simulation and unknown accessibility', async () => {
   await mount();
   await screen.findByText('API conectada');
-  assert.equal(screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ }).length, 3);
+  assert.equal(screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ }).length, 2);
   const first = screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ })[0];
   assert.match(first.getAttribute('aria-label') || '', /Afluencia simulada (Baja|Media|Alta)/);
   assert.match(
@@ -298,7 +298,8 @@ test('closing a nested dialog keeps the background locked until the final dialog
 
 test('station search resolves the Fundidora alias to Arena Monterrey and refreshes its API board', async () => {
   await mount();
-  await navigate('Estaciones');
+  await navigate('Red de transporte');
+  await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
   await user.type(
     screen.getByRole('textbox', { name: 'Buscar estación por nombre o municipio' }),
     'Fundidora',
@@ -344,6 +345,39 @@ test('accessibility settings persist and the peak scenario refreshes prediction 
   await user.click(screen.getByRole('button', { name: 'Ver avisos' }));
   assert.ok(
     within(screen.getByRole('dialog')).getByRole('heading', { name: 'Simulación de hora pico' }),
+  );
+});
+
+test('appearance controls persist a dark theme and allow disabling navigation motion', async () => {
+  await mount();
+  await user.click(screen.getByRole('button', { name: 'Accesibilidad', exact: true }));
+  const dialog = screen.getByRole('dialog', { name: 'A tu manera' });
+  await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Tema' }), 'dark');
+  await user.click(within(dialog).getByRole('switch', { name: 'Animaciones', exact: true }));
+  assert.equal(document.documentElement.dataset.theme, 'dark');
+  assert.equal(document.documentElement.dataset.motion, 'reduced');
+  assert.deepEqual(JSON.parse(localStorage.getItem('regiomovil:appearance:v1')!), {
+    theme: 'dark',
+    animations: false,
+  });
+  await closeDialog();
+  cleanup();
+  await mount();
+  assert.equal(document.documentElement.dataset.theme, 'dark');
+  assert.equal(document.documentElement.dataset.motion, 'reduced');
+});
+
+test('Home offers direct saved and network access while Red opens the system map and catalog', async () => {
+  await mount();
+  assert.ok(screen.getByRole('button', { name: /Tus rutas guardadas/ }));
+  assert.equal(screen.queryByRole('heading', { name: 'Encuentra tu ruta.' }), null);
+  await user.click(screen.getByRole('button', { name: /Explorar la red/ }));
+  await screen.findByRole('heading', { name: 'Una ciudad, más caminos.' });
+  await screen.findByRole('heading', { name: 'Encuentra tu ruta.' });
+  assert.equal(screen.queryByRole('heading', { name: 'Las próximas unidades' }), null);
+  assert.equal(
+    screen.getByRole('tab', { name: /Rutas y redes/ }).getAttribute('aria-selected'),
+    'true',
   );
 });
 
@@ -483,7 +517,8 @@ test('a late response from a closed report cannot close or erase a new draft', a
 
 test('opening the current station from home resets a previous line filter', async () => {
   await mount();
-  await navigate('Estaciones');
+  await navigate('Red de transporte');
+  await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
   const filters = within(screen.getByRole('group', { name: 'Filtrar por línea' }));
   await user.click(filters.getByRole('button', { name: 'Línea 1', exact: true }));
   assert.equal(
@@ -574,7 +609,7 @@ test('returning to a visible document refreshes the board immediately without wa
     );
     assert.equal(
       screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ }).length,
-      3,
+      2,
     );
   } finally {
     if (descriptor) Object.defineProperty(document, 'hidden', descriptor);

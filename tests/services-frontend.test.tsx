@@ -3,6 +3,7 @@ import test, { before, after, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer, type Server } from 'node:http';
 import { once } from 'node:events';
+import { registerHooks } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
@@ -40,6 +41,11 @@ Object.defineProperty(globalThis, 'caches', { configurable: true, value: {
     async match(input: string) { return cachedResponses.get(cacheKey(input))?.clone(); },
     async delete(input: { url: string }) { return cachedResponses.delete(cacheKey(input)); },
   }; },
+} });
+
+const sourceHooks = registerHooks({ load(url, context, nextLoad) {
+  if (url.endsWith('.css')) return { format: 'module', source: '', shortCircuit: true };
+  return nextLoad(url, context);
 } });
 
 // App and Testing Library must see the DOM before their modules are initialized.
@@ -90,6 +96,7 @@ after(async () => {
   globalThis.fetch = realFetch;
   if (server) { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
   application?.close();
+  sourceHooks.deregister();
   dom.window.close();
   for (const [name, descriptor] of previousGlobals) {
     if (descriptor) Object.defineProperty(globalThis, name, descriptor);
@@ -127,7 +134,8 @@ test('App exposes Rutas y redes, filters seven RegioRuta services and loads maps
   await screen.findByText('API conectada');
   assert.ok(!requests.some(path => path.startsWith('/transit-catalog.json')));
   const navigation = within(screen.getByRole('navigation', { name: 'Navegación principal' }));
-  await user.click(navigation.getByRole('button', { name: 'Estaciones', exact: true }));
+  await user.click(navigation.getByRole('button', { name: 'Red de transporte', exact: true }));
+  await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
   screen.getByRole('tab', { name: 'Estaciones de Metro' }).focus();
   await user.keyboard('{ArrowRight}');
   await screen.findByText('214 rutas · 6 redes');

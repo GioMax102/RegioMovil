@@ -5,7 +5,7 @@ import { registerHooks } from 'node:module';
 import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { ZMM_BOUNDS } from '../src/mobility/mapGeography';
+import { ZMM_BOUNDS, simplifyOverviewGeometry } from '../src/mobility/mapGeography';
 import {
   CITY_CENTER,
   constrainRegionalView,
@@ -15,7 +15,12 @@ import {
   worldPosition,
   type MapPosition,
 } from '../src/mobility/regionalViewport';
-import type { MobilityNetwork, MobilityStop } from '../src/mobility/types';
+import type {
+  Coordinates,
+  MobilityNetwork,
+  MobilityRoute,
+  MobilityStop,
+} from '../src/mobility/types';
 
 const styleHook = registerHooks({
   load(url, context, nextLoad) {
@@ -277,7 +282,7 @@ test('un error de tesela conserva el mapa local y ofrece reintentar sin navegar 
   await act(async () => tile.dispatchEvent(new dom.window.Event('error')));
   assert.ok(svg.querySelector('image[href*="monterrey-map.svg"]'));
   assert.equal(svg.querySelector('image[href^="https://tile.openstreetmap.org/"]'), null);
-  assert.match(container.textContent!, /cobertura parcial/);
+  assert.match(container.textContent!, /Mapa local simplificado/);
   const retry = [...container.querySelectorAll('button')].find((button) =>
     button.textContent?.includes('Reintentar calles'),
   )!;
@@ -322,4 +327,84 @@ test('un pellizco conserva el centro y confirma una sola vez al levantar cualqui
   });
   assert.equal(picks.length, 0);
   assert.doesNotMatch(svg.outerHTML, /NaN|Infinity/);
+});
+
+test('network context draws only selected services and keeps exploration across an equivalent render', async () => {
+  const dense: Coordinates[] = Array.from({ length: 1001 }, (_, index) => [
+    -100.4 + index * 0.0001,
+    25.7 + Math.sin(index / 15) * 0.015,
+  ]);
+  const bus = {
+    id: 'test-bus',
+    mode: 'bus',
+    color: '#146db3',
+    segments: [{ id: 'bus-segment', coordinates: dense }],
+  } as MobilityRoute;
+  const metro = {
+    id: 'test-metro',
+    mode: 'metro',
+    color: '#19a260',
+    segments: [
+      {
+        id: 'metro-segment',
+        coordinates: [
+          [-100.31, 25.67],
+          [-100.29, 25.73],
+        ],
+      },
+    ],
+  } as MobilityRoute;
+  const contextNetwork = { ...network, routes: [bus, metro] };
+  const { svg, container } = await mount({
+    network: contextNetwork,
+    field: null,
+    contextRoutes: [bus],
+  });
+  assert.ok(svg.querySelector('[data-line="test-bus"]'));
+  assert.equal(svg.querySelector('[data-line="test-metro"]'), null);
+  const trace = svg.querySelector('[data-line="test-bus"]')!;
+  assert.ok(trace.getAttribute('points')!.split(' ').length <= 200);
+  assert.match(container.textContent!, /trazos publicados/);
+  await act(async () => key(svg, 'ArrowRight'));
+  const moved = trace.getAttribute('points');
+  await act(async () =>
+    activeRoot!.render(
+      <LocationMap
+        network={contextNetwork}
+        online={false}
+        field={null}
+        contextRoutes={[bus]}
+        onPick={() => {}}
+        onStopSelect={() => {}}
+      />,
+    ),
+  );
+  assert.equal(
+    svg.querySelector('[data-line="test-bus"]')!.getAttribute('points'),
+    moved,
+    'A new array with the same services must not reset user pan.',
+  );
+  await act(async () =>
+    activeRoot!.render(
+      <LocationMap
+        network={contextNetwork}
+        online={false}
+        field={null}
+        contextRoutes={[metro]}
+        onPick={() => {}}
+        onStopSelect={() => {}}
+      />,
+    ),
+  );
+  assert.equal(svg.querySelector('[data-line="test-bus"]'), null);
+  assert.ok(svg.querySelector('[data-line="test-metro"]'));
+  const overview = simplifyOverviewGeometry(dense);
+  assert.ok(overview.length <= 200);
+  assert.equal(overview[0], dense[0]);
+  assert.equal(overview.at(-1), dense.at(-1));
+  assert.ok(
+    overview.every((point) => dense.includes(point)),
+    'Simplification uses only real vertices.',
+  );
+  assert.equal(dense.length, 1001, 'The source network geometry stays intact.');
 });

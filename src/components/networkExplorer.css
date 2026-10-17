@@ -1,0 +1,72 @@
+.network-overview {
+  padding: 24px;
+  margin-bottom: 28px;
+  min-width: 0;
+}
+.network-overview h2 {
+  font-size: 1.3rem;
+}
+.network-overview > p {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: -5px 0 18px;
+}
+.network-system-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 17px;
+}
+.network-system-filters button {
+  padding: 9px 14px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  color: var(--dark);
+  background: var(--surface);
+  font-size: 0.8rem;
+}
+.network-system-filters button[aria-pressed='true'] {
+  color: var(--dark);
+  background: var(--soft);
+  border-color: var(--green);
+  font-weight: 700;
+}
+.network-overview .location-map-canvas {
+  height: 340px;
+}
+.network-coverage-note {
+  display: flex;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.73rem;
+  line-height: 1.5;
+  margin-top: 14px;
+}
+.network-coverage-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.network-overview .network-map-empty {
+  margin: 15px 0;
+  background: var(--soft);
+  padding: 24px;
+  border-radius: 14px;
+}
+@media (max-width: 760px) {
+  .network-overview {
+    padding: 18px;
+    margin-bottom: 22px;
+  }
+  .network-overview .location-map-canvas {
+    height: 290px;
+  }
+  .network-system-filters {
+    gap: 6px;
+  }
+  .network-system-filters button {
+    font-size: 0.75rem;
+    padding: 8px 12px;
+  }
+}

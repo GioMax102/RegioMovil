@@ -2466,3 +2466,35 @@ strong {
     animation: none !important;
   }
 }
+
+.network-section-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 23px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 13px;
+  flex-wrap: wrap;
+}
+.network-section-tabs button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.network-section-tabs button[aria-selected='true'] {
+  background: var(--soft);
+  color: var(--green);
+  font-weight: 600;
+}
+.network-new-label {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--soft);
+  color: var(--green);
+}

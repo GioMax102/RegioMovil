@@ -2,17 +2,127 @@
   "source": "© OpenStreetMap contributors",
   "copyrightUrl": "https://www.openstreetmap.org/copyright",
   "license": "ODbL 1.0",
-  "snapshot": "2026-05-31T22:37:44Z",
-  "bounds": [-100.4, 25.63, -100.22, 25.8],
-  "origin": [-100.4, 25.8],
+  "snapshot": "2026-10-17T09:00:50Z",
+  "retrieved": "2026-10-17",
+  "sourceSha256": "775d54dd70ef3f587d4258c64c019aad5a80d8fc7dc6f0b06f3f4a5459702f79",
+  "bounds": [
+    -100.9,
+    25.35,
+    -99.8,
+    26.1
+  ],
+  "origin": [
+    -100.9,
+    26.1
+  ],
   "longitudeFactor": 0.9010770213220916,
   "unitsPerDegree": 100000,
   "labels": [
-    { "name": "Fundidora", "lng": -100.28701, "lat": 25.67652 },
-    { "name": "Parque Niños Héroes", "lng": -100.31444, "lat": 25.71353 },
-    { "name": "Río Santa Catarina", "lng": -100.30585, "lat": 25.67411 },
-    { "name": "Alameda", "lng": -100.32149, "lat": 25.67613 }
+    {
+      "name": "Apodaca",
+      "lng": -100.1887501,
+      "lat": 25.7816542,
+      "sourceId": "node/1038490154"
+    },
+    {
+      "name": "San Nicolás de los Garza",
+      "lng": -100.289648,
+      "lat": 25.7558021,
+      "sourceId": "node/1038661885"
+    },
+    {
+      "name": "Santa Catarina",
+      "lng": -100.4616371,
+      "lat": 25.6745052,
+      "sourceId": "node/1038661887"
+    },
+    {
+      "name": "Guadalupe",
+      "lng": -100.2151753,
+      "lat": 25.6751114,
+      "sourceId": "node/1038661889"
+    },
+    {
+      "name": "San Pedro Garza García",
+      "lng": -100.4018251,
+      "lat": 25.6651753,
+      "sourceId": "node/1038661890"
+    },
+    {
+      "name": "Salinas Victoria",
+      "lng": -100.2922877,
+      "lat": 25.9634174,
+      "sourceId": "node/1043929298"
+    },
+    {
+      "name": "Benito Juárez",
+      "lng": -100.0907766,
+      "lat": 25.6467011,
+      "sourceId": "node/1043929303"
+    },
+    {
+      "name": "General Escobedo",
+      "lng": -100.3224334,
+      "lat": 25.808517,
+      "sourceId": "node/1043929307"
+    },
+    {
+      "name": "Santiago",
+      "lng": -100.1513376,
+      "lat": 25.4243595,
+      "sourceId": "node/1043929322"
+    },
+    {
+      "name": "Ciénega de Flores",
+      "lng": -100.1662028,
+      "lat": 25.956169,
+      "sourceId": "node/1154886835"
+    },
+    {
+      "name": "Carmen",
+      "lng": -100.3613419,
+      "lat": 25.9368419,
+      "sourceId": "node/1155340353"
+    },
+    {
+      "name": "General Zuazua",
+      "lng": -100.1078021,
+      "lat": 25.8953873,
+      "sourceId": "node/1155340416"
+    },
+    {
+      "name": "García",
+      "lng": -100.5931005,
+      "lat": 25.8121949,
+      "sourceId": "node/1305142475"
+    },
+    {
+      "name": "Pesquería",
+      "lng": -100.0520621,
+      "lat": 25.7851361,
+      "sourceId": "node/1821596481"
+    },
+    {
+      "name": "Monterrey",
+      "lng": -100.315258,
+      "lat": 25.6802019,
+      "sourceId": "node/4145210488"
+    }
   ],
-  "width": 16219,
-  "height": 17000
+  "width": 99118,
+  "height": 75000,
+  "simplificationTolerance": 15,
+  "features": {
+    "tertiary": 6972,
+    "secondary": 2783,
+    "trunk": 1163,
+    "motorway": 536,
+    "primary": 2258,
+    "park": 415,
+    "stream": 1509,
+    "water": 164,
+    "river": 97
+  },
+  "placesSourceSha256": "3b86b7fd856c832e62ee11e5621f9ae332165824bcb02ddd4c37dd54dc70d6de",
+  "placesSnapshot": "2026-10-17T09:03:51Z"
 }
