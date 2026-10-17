@@ -157,7 +157,7 @@ export async function loadTransitCatalog() {
 }
 export async function loadRoutePack(route: TransitRoute) {
   if (!route.geometryPack || !/^[a-zA-Z0-9][a-zA-Z0-9-]{0,100}$/.test(route.geometryPack))
-    throw new Error('Esta ruta todavía no tiene un trazo verificado disponible.');
+    throw new Error('Esta ruta todavía no tiene un trazo publicado disponible.');
   const result = await readPublicDocument<RoutePack>(
     `/route-packs/${route.geometryPack}.json${route.geometryRevision ? `?v=${route.geometryRevision}` : ''}`,
     !!route.geometryRevision,

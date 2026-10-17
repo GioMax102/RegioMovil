@@ -71,3 +71,7 @@ Realizar dos ciclos formativos con participantes de la ZMM que usen transporte p
 Usar tareas iguales: encontrar una estación conocida por su alias, interpretar una unidad simulada, comparar alternativas, corregir un destino y consultar una limitación de accesibilidad. Evaluar Android y parada por separado. Registrar éxito sin ayuda, tiempo, errores, comprensión y esfuerzo percibido; una encuesta aislada no demuestra utilidad.
 
 Meta formativa propuesta: al menos 80 % de tareas completadas sin intervención y ninguna confusión crítica entre simulación y operación real. Un estudio pequeño detecta problemas, no representa estadísticamente a toda la población. Corregir los hallazgos y repetir antes de declarar la aplicación accesible, intuitiva o apta para un despliegue público.
+
+## Viajes cotidianos y jerarquía visual
+
+Planear usa un único buscador de lugares, direcciones y paradas para ambos extremos. Los filtros Metro, Autobús y Metro + autobús actúan sobre los resultados sin cambiar esos extremos. El acceso de Inicio dirige al mismo planificador. Los paquetes de hasta ocho alternativas se guardan por acción explícita, con etiqueta y fecha, y se abren desde Guardados sin volver a buscar el destino. Los colores usan blanco limpio, menta y esmeralda; los tiempos, la prioridad seleccionada y la acción principal reciben el énfasis. Fuentes y supuestos permanecen disponibles en los detalles sin repetir textos largos en cada pantalla. Ver [evaluación de propuestas](iteracion-viajes-cotidianos.md).

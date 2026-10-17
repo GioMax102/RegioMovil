@@ -361,8 +361,9 @@ function ServiceDetails({
           {!pack.stopOrderVerified && (
             <p className="notice">
               <Info size={17} />
-              El orden operativo de las paradas no está verificado. Este recorrido se muestra para
-              consulta; todavía no se usa para calcular transbordos.
+              El orden operativo de las paradas no está verificado. El planificador experimental
+              usa este recorrido con orden y sentidos inferidos del mapa; el sentido de abordaje
+              necesita confirmación.
             </p>
           )}
         </>

@@ -16,6 +16,7 @@ case "${1:-start}" in
   start) exec "$app_node" --env-file-if-exists=.env server/index.mjs ;;
   build) "$app_node" node_modules/typescript/bin/tsc -b; "$app_node" scripts/prepare-catalog.mjs; "$app_node" scripts/prepare-mobility.mjs; "$app_node" node_modules/vite/bin/vite.js build; exec "$app_node" scripts/finalize-web.mjs ;;
   test) exec "$app_node" --import tsx --test tests/*.test.mjs tests/*.test.tsx ;;
-  android) exec "$app_node" scripts/android-build.mjs ;;
-  *) echo "Uso: ./regiomovil [dev|start|build|test|android]" >&2; exit 1 ;;
+  android) shift; exec "$app_node" scripts/android-build.mjs "$@" ;;
+  android-connect) shift; exec "$app_node" scripts/android-connect.mjs "$@" ;;
+  *) echo "Uso: ./regiomovil [dev|start|build|test|android|android-connect]" >&2; exit 1 ;;
 esac

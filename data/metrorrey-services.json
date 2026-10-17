@@ -24,6 +24,16 @@
       "scope": "Apartado 11.2 identifica el corredor Transmetro García–Monterrey–Guadalupe como antes Ecovía. Se usa únicamente para el alias del corredor.",
       "publishedAt": "2026-04-30",
       "license": "not-specified"
+    },
+    {
+      "id": "metrorrey-transmetro-maps-20261016",
+      "title": "Metrorrey · Mapas oficiales de rutas Transmetro y GMG",
+      "url": "https://www.metrorrey.mx/",
+      "publisher": "Sistema de Transporte Colectivo Metrorrey",
+      "verifiedAt": "2026-10-16",
+      "publishedAt": null,
+      "license": "not-specified",
+      "scope": "32 mapas My Maps enlazados desde Rutas Transmetro; se conserva trazo, marcadores, URL de descarga y SHA-256 de cada KML. No acredita estado de servicio en vivo ni frecuencias."
     }
   ],
   "routes": [
@@ -35,7 +45,7 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Exposición",
       "to": "21 de Enero",
@@ -43,14 +53,16 @@
         "Col. Zaragoza"
       ],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1JTgMhFAcMvoMod2SRvKAnWh-iQnP7RY",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-exposicion-col-zaragoza-21-de-enero",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -59,7 +71,8 @@
         "registeredUnits": 2,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 40
     },
     {
       "id": "transmetro-exposicion-juarez-valle-del-roble",
@@ -167,20 +180,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Exposición",
       "to": "Pablo Livas",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1-AOrLDXxPoJwrhc-X8NGvaxouYe8eRc",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-exposicion-pablo-livas",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -189,7 +204,8 @@
         "registeredUnits": 21,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 17
     },
     {
       "id": "transmetro-cuauhtemoc-san-agustin-gomez-morin",
@@ -199,7 +215,7 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Cuauhtémoc",
       "to": "Gómez Morín",
@@ -207,14 +223,16 @@
         "San Agustín"
       ],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1VS_KrIdfH7d3Dd95vsEz_drNYf_AIRE",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-cuauhtemoc-san-agustin-gomez-morin",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -223,7 +241,8 @@
         "registeredUnits": 13,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 38
     },
     {
       "id": "transmetro-hospital-metropolitano-anillo-electrico-directo",
@@ -233,20 +252,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Hospital Metropolitano",
       "to": "Anillo Eléctrico (Directo)",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1-qdasexvl-Xp3d6l5L4YZS79kHcsrfA",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-hospital-metropolitano-anillo-electrico-directo",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -255,7 +276,8 @@
         "registeredUnits": 3,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 34
     },
     {
       "id": "transmetro-hospital-metropolitano-anillo-electrico-u-laboral",
@@ -265,20 +287,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Hospital Metropolitano",
       "to": "Anillo Eléctrico (U. Laboral)",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1NoEk1lfGg5cbrcQ1MPw7ofuCeuaXDfU",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-hospital-metropolitano-anillo-electrico-u-laboral",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -287,7 +311,8 @@
         "registeredUnits": 3,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 51
     },
     {
       "id": "transmetro-hospital-metropolitano-casa-blanca",
@@ -297,20 +322,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Hospital Metropolitano",
       "to": "Casa Blanca",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1P1nUsBD-N1xRbIt2r1758KyVEiqNNxY",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-hospital-metropolitano-casa-blanca",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -319,7 +346,8 @@
         "registeredUnits": 11,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 47
     },
     {
       "id": "transmetro-hospital-metropolitano-diego-diaz-de-berlanga",
@@ -329,20 +357,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Hospital Metropolitano",
       "to": "Diego Díaz de Berlanga",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1PcQc3zS8KRoVprlEVv6vIkhYJoNuEcs",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-hospital-metropolitano-diego-diaz-de-berlanga",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -351,7 +381,8 @@
         "registeredUnits": 21,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 59
     },
     {
       "id": "transmetro-hospital-metropolitano-romulo-garza",
@@ -361,20 +392,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Hospital Metropolitano",
       "to": "Rómulo Garza",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1HafEQ8lkxxdfwmlms8ipsyOaAaYAUgI",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-hospital-metropolitano-romulo-garza",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -383,7 +416,8 @@
         "registeredUnits": 14,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 67
     },
     {
       "id": "transmetro-garza-sada-carretera-nacional",
@@ -420,25 +454,27 @@
     {
       "id": "transmetro-felix-u-gomez-la-estanzuela",
       "code": "TM",
-      "name": "Félix U. Gómez – La Estanzuela",
+      "name": "Félix U. Gómez – Carretera Nacional – La Estanzuela",
       "officialName": "FELIXU_GOMEZ-LAESTANZUELA",
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Félix U. Gómez",
       "to": "La Estanzuela",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=19agPE-_QOH380jlCWjrioqlnffCHmNc",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-felix-u-gomez-la-estanzuela",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -447,7 +483,8 @@
         "registeredUnits": 10,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 42
     },
     {
       "id": "transmetro-san-bernabe-julio-a-roca",
@@ -457,21 +494,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "San Bernabé",
       "to": "Julio A. Roca",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=13TfLrdgRRJkbdiuQZrZHJ7J51iB7z4s",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-san-bernabe-julio-a-roca",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar.",
-        "El CSV de rutas denomina San Bernabé a este origen; el CSV de paradas lo denomina Talleres. Se conserva el nombre del catálogo sin asumir equivalencia operativa."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -480,7 +518,8 @@
         "registeredUnits": 9,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 24
     },
     {
       "id": "transmetro-san-bernabe-no-reeleccion",
@@ -490,21 +529,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "San Bernabé",
       "to": "No Reelección",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=158b0mrgZ83t425h9sdO4BrngkGE2jWY",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-san-bernabe-no-reeleccion",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar.",
-        "El CSV de rutas denomina San Bernabé a este origen; el CSV de paradas lo denomina Talleres. Se conserva el nombre del catálogo sin asumir equivalencia operativa."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -513,7 +553,8 @@
         "registeredUnits": 12,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 27
     },
     {
       "id": "transmetro-mederos-el-uro",
@@ -555,20 +596,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Mitras",
       "to": "Villas de San Francisco",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1bPhuGxL9wPGVy2ogTfYbVKKOQkvmQAo",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-mitras-villas-de-san-francisco",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -577,7 +620,8 @@
         "registeredUnits": 13,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 114
     },
     {
       "id": "transmetro-palmiras-buenavista-villas-san-francisco",
@@ -651,7 +695,7 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Sendero",
       "to": "Pedregal",
@@ -659,14 +703,16 @@
         "Casco"
       ],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1Crezt6oW2plXA7pr_SBStbxOLW4Pk_k",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-sendero-casco-pedregal",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -675,7 +721,8 @@
         "registeredUnits": 7,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 48
     },
     {
       "id": "transmetro-sendero-miravista",
@@ -685,20 +732,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Sendero",
       "to": "Miravista",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1Nm-PFuuB0cTfEj5WEXRWhhc63aUvutI",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-sendero-miravista",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -707,7 +756,8 @@
         "registeredUnits": 4,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 44
     },
     {
       "id": "transmetro-hospital-metropolitano-prados-del-nogalar",
@@ -776,12 +826,12 @@
     {
       "id": "transmetro-universidad-e-zapata-cumbres",
       "code": "TM",
-      "name": "Universidad – E. Zapata – Cumbres",
+      "name": "Universidad – Emiliano Zapata – Cumbres",
       "officialName": "UNIVERSIDAD-E_ZAPATA-CUMBRES",
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Universidad",
       "to": "Cumbres",
@@ -789,14 +839,16 @@
         "E. Zapata"
       ],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1U7wqHEcBXBZwwzVEbIzwRPU8Oq8GesE",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-universidad-e-zapata-cumbres",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -805,7 +857,8 @@
         "registeredUnits": 7,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 49
     },
     {
       "id": "transmetro-talleres-cabezada-la-alianza",
@@ -815,7 +868,7 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Talleres",
       "to": "La Alianza",
@@ -823,14 +876,16 @@
         "Cabezada"
       ],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1YiGZZU_EPm6vnzV27c5t-rFOpf_LgvE",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-talleres-cabezada-la-alianza",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -839,30 +894,33 @@
         "registeredUnits": 21,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 42
     },
     {
       "id": "transmetro-universidad-hospital-metropolitano",
       "code": "TM",
-      "name": "Universidad – Hospital Metropolitano",
+      "name": "Universidad – Arboledas San Jorge – Hospital Metropolitano",
       "officialName": "UNIVERSIDAD-HOSPITALMETROPOLITANO",
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Universidad",
       "to": "Hospital Metropolitano",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=15daNDj7MWmmRINrptcbvYwZ3w3VlGzY",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-universidad-hospital-metropolitano",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -871,7 +929,8 @@
         "registeredUnits": 3,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 46
     },
     {
       "id": "transmetro-sendero-metroplex",
@@ -881,20 +940,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Sendero",
       "to": "Metroplex",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1AQHcEtIvN8D59ViI14gwXnpc3e2UVCM",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-sendero-metroplex",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -903,7 +964,8 @@
         "registeredUnits": 10,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 52
     },
     {
       "id": "transmetro-universidad-las-puentes",
@@ -913,20 +975,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Universidad",
       "to": "Las Puentes",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1RSTDaNdd-mHq-rf2KFNeQ1oedvqVKQY",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-universidad-las-puentes",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -935,7 +999,8 @@
         "registeredUnits": 8,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 31
     },
     {
       "id": "transmetro-universidad-santo-domingo",
@@ -945,20 +1010,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Universidad",
       "to": "Santo Domingo",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=10NE6Cuzfg1vL3ZFDez4I-yyrLyj0NOw",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-universidad-santo-domingo",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -967,7 +1034,8 @@
         "registeredUnits": 12,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 35
     },
     {
       "id": "transmetro-universidad-asarco-nuevo-sur-mederos",
@@ -1007,25 +1075,27 @@
     {
       "id": "transmetro-sendero-apodaca",
       "code": "TM",
-      "name": "Sendero – Apodaca",
+      "name": "Sendero – San Nicolás – Apodaca",
       "officialName": "SENDERO-APODACA",
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Sendero",
       "to": "Apodaca",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1r8EoXv22nAO913eOWJI1pfTPOckM8M0",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-sendero-apodaca",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -1034,7 +1104,8 @@
         "registeredUnits": 16,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 39
     },
     {
       "id": "transmetro-sendero-fomerrey-9",
@@ -1044,20 +1115,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Sendero",
       "to": "Fomerrey 9",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=16TaHWoT-tFlQ158bsHCaBtiBdCF8tYc",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-sendero-fomerrey-9",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -1066,7 +1139,8 @@
         "registeredUnits": 18,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 39
     },
     {
       "id": "transmetro-sendero-monterreal",
@@ -1076,20 +1150,22 @@
       "networkId": "transmetro",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "Sendero",
       "to": "Monterreal",
       "via": [],
       "sourceIds": [
-        "nl-stcm-rutas-2025"
+        "nl-stcm-rutas-2025",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1I8Eux8bKoijRn7iphuX25mI95k7W1gE",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "transmetro-sendero-monterreal",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -1098,7 +1174,8 @@
         "registeredUnits": 10,
         "fareMxn": 15,
         "sourceId": "nl-stcm-rutas-2025"
-      }
+      },
+      "publishedStopCount": 30
     },
     {
       "id": "ecovia-garcia-monterrey-guadalupe",
@@ -1108,7 +1185,7 @@
       "networkId": "ecovia",
       "mode": "bus",
       "status": "published",
-      "statusAsOf": "2025-09-30",
+      "statusAsOf": null,
       "municipalities": [],
       "from": "García",
       "to": "Guadalupe",
@@ -1117,16 +1194,16 @@
       ],
       "sourceIds": [
         "nl-stcm-rutas-2025",
-        "nl-stcm-gmg-2026"
+        "nl-stcm-gmg-2026",
+        "metrorrey-transmetro-maps-20261016"
       ],
-      "officialUrl": "https://catalogodatos.nl.gob.mx/dataset/rutas-por-empresa-stc-metrorrey",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1lKh6m1HsGuhjFalhIou2eHPmhWp_-aw",
       "planningEligible": false,
-      "geometryPack": null,
+      "geometryPack": "ecovia-garcia-monterrey-guadalupe",
       "notes": [
-        "Registro histórico de septiembre de 2025; la operación actual debe confirmarse con Metrorrey.",
-        "El CSV de paradas STCM no aporta coordenadas para este corredor; recorrido y conexiones pendientes de validar.",
-        "El archivo clasifica este corredor como modalidad 9. No se infieren estaciones a partir de las localidades del nombre.",
-        "Metrorrey lo identifica en su informe financiero del primer trimestre de 2026 como Transmetro García–Monterrey–Guadalupe, antes Ecovía. La categoría Ecovía conserva ese nombre conocido para facilitar la búsqueda."
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
       ],
       "historicalService": {
         "period": "2025-09",
@@ -1139,7 +1216,184 @@
       "aliases": [
         "Ecovía",
         "Transmetro García – Monterrey – Guadalupe"
-      ]
+      ],
+      "publishedStopCount": 39
+    },
+    {
+      "id": "transmetro-san-bernabe-no-reeleccion-marmol",
+      "code": "TM",
+      "name": "San Bernabé – No Reelección (Vía Mármol)",
+      "networkId": "transmetro",
+      "mode": "bus",
+      "municipalities": [],
+      "from": null,
+      "to": null,
+      "via": [],
+      "sourceIds": [
+        "metrorrey-transmetro-maps-20261016"
+      ],
+      "planningEligible": false,
+      "notes": [
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
+      ],
+      "status": "published",
+      "statusAsOf": null,
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1PMsEcdqKxf17KiDnaf4R2B7VDsHKjbQ",
+      "geometryPack": "transmetro-san-bernabe-no-reeleccion-marmol",
+      "publishedStopCount": 38
+    },
+    {
+      "id": "transmetro-cuauhtemoc-centro-chipinque",
+      "code": "TM",
+      "name": "Cuauhtémoc – Centro – Chipinque",
+      "networkId": "transmetro",
+      "mode": "bus",
+      "municipalities": [],
+      "from": null,
+      "to": null,
+      "via": [],
+      "sourceIds": [
+        "metrorrey-transmetro-maps-20261016"
+      ],
+      "planningEligible": false,
+      "notes": [
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
+      ],
+      "status": "published",
+      "statusAsOf": null,
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1SiRAwsb7r_4J7o9KJrbjW5aLXpwoYRE",
+      "geometryPack": "transmetro-cuauhtemoc-centro-chipinque",
+      "publishedStopCount": 33
+    },
+    {
+      "id": "transmetro-cuauhtemoc-centro-chipinque-directo",
+      "code": "TM",
+      "name": "Cuauhtémoc – Centro – Chipinque (Directo)",
+      "networkId": "transmetro",
+      "mode": "bus",
+      "municipalities": [],
+      "from": null,
+      "to": null,
+      "via": [],
+      "sourceIds": [
+        "metrorrey-transmetro-maps-20261016"
+      ],
+      "planningEligible": false,
+      "notes": [
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
+      ],
+      "status": "published",
+      "statusAsOf": null,
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1w3-G4XB-D-ubHukBaMhSHv3rbJ78u80",
+      "geometryPack": "transmetro-cuauhtemoc-centro-chipinque-directo",
+      "publishedStopCount": 27
+    },
+    {
+      "id": "transmetro-alameda-praderas",
+      "code": "TM",
+      "name": "Alameda – Praderas",
+      "networkId": "transmetro",
+      "mode": "bus",
+      "municipalities": [],
+      "from": null,
+      "to": null,
+      "via": [],
+      "sourceIds": [
+        "metrorrey-transmetro-maps-20261016"
+      ],
+      "planningEligible": false,
+      "notes": [
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
+      ],
+      "status": "published",
+      "statusAsOf": null,
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1WfqI1ayUqs1Wl4NRb71gLUPeIYBKigE",
+      "geometryPack": "transmetro-alameda-praderas",
+      "publishedStopCount": 175
+    },
+    {
+      "id": "transmetro-felix-u-gomez-dos-rios",
+      "code": "TM",
+      "name": "Félix U. Gómez – Dos Ríos",
+      "networkId": "transmetro",
+      "mode": "bus",
+      "municipalities": [],
+      "from": null,
+      "to": null,
+      "via": [],
+      "sourceIds": [
+        "metrorrey-transmetro-maps-20261016"
+      ],
+      "planningEligible": false,
+      "notes": [
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
+      ],
+      "status": "published",
+      "statusAsOf": null,
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1zvQRiqtpQhktJpJXXIN1L-j6-D4zM4g",
+      "geometryPack": "transmetro-felix-u-gomez-dos-rios",
+      "publishedStopCount": 108
+    },
+    {
+      "id": "transmetro-exposicion-san-cristobal",
+      "code": "TM",
+      "name": "Exposición – San Cristóbal",
+      "networkId": "transmetro",
+      "mode": "bus",
+      "municipalities": [],
+      "from": null,
+      "to": null,
+      "via": [],
+      "sourceIds": [
+        "metrorrey-transmetro-maps-20261016"
+      ],
+      "planningEligible": false,
+      "notes": [
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
+      ],
+      "status": "published",
+      "statusAsOf": null,
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1jQZbnYwahIOQSBb4FLsGUJHqRh-g41I",
+      "geometryPack": "transmetro-exposicion-san-cristobal",
+      "publishedStopCount": 168
+    },
+    {
+      "id": "transmetro-alimentadora-los-cristales-la-estanzuela",
+      "code": "TM",
+      "name": "Alimentadora Los Cristales – La Estanzuela",
+      "networkId": "transmetro",
+      "mode": "bus",
+      "municipalities": [],
+      "from": null,
+      "to": null,
+      "via": [],
+      "sourceIds": [
+        "metrorrey-transmetro-maps-20261016"
+      ],
+      "planningEligible": false,
+      "notes": [
+        "Mapa de recorrido y paradas publicado por Metrorrey en su sitio oficial; consultado el 16 de octubre de 2026.",
+        "Disponible para calcular combinaciones experimentales; sentido, orden, operación actual y accesibilidad sin verificar.",
+        "El mapa publicado no indica fecha de actualización; la fecha de consulta no acredita una inauguración."
+      ],
+      "status": "published",
+      "statusAsOf": null,
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1C3DKzjYUgt2IWGbt8V1zRymZQhh3Vb4",
+      "geometryPack": "transmetro-alimentadora-los-cristales-la-estanzuela",
+      "publishedStopCount": 50
     }
-  ]
+  ],
+  "verifiedAt": "2026-10-16"
 }

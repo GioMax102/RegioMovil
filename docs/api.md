@@ -186,3 +186,12 @@ Propuesta de flujo: un recolector del servidor consulta solo destinos HTTPS conf
 Cada valor deberá llevar `source`, `observedAt`, `receivedAt` y estado `fresh|stale|unavailable`, sin reutilizar `generatedAt` como prueba de actualidad. Las [buenas prácticas de GTFS Realtime](https://gtfs.org/documentation/realtime/realtime-best-practices/) recomiendan actualizar el feed al menos cada 30 segundos y no superar 90 segundos de edad en posiciones/actualizaciones de viajes ni 10 minutos en alertas. El contrato con el operador fijará umbrales y cobertura reales.
 
 Si el feed falta, está vencido o carece de aforo, mostrar «Sin dato operativo» y la última observación con fecha. La simulación seguirá siendo una opción identificada aparte; nunca rellenará silenciosamente datos reales. Un contrato versionado deberá permitir `null` en ocupación/ETA desconocidas y distinguir horario programado, observación y predicción. Antes de activar la fuente, probar fixtures de cancelación, IDs desconocidos, datos parciales y vencidos; medir cobertura, latencia y error con observaciones reales y partición temporal. Ninguna métrica sintética del piloto autoriza el indicador «en vivo».
+
+
+## Buscador único y transporte (16 de octubre de 2026)
+
+`GET /api/places?q=...` acepta el nombre de un lugar, calle o dirección y devuelve `name`, `displayName`, `address` y coordenadas de referencia; no es un directorio completo ni garantiza el acceso peatonal. La interfaz sólo consulta el proveedor al confirmar la búsqueda, y combina esas respuestas con las estaciones/paradas locales.
+
+`POST /api/mobility/plan` acepta los mismos extremos para `transport: "all"` (predeterminado) y `transport: "metro"`. El filtro cambia los servicios utilizados, no sustituye lugares por estaciones. Las rutas devueltas incluyen `modes`, `serviceIds` y `coverage` (redes, límite de alternativas, `exhaustive: false`). Se devuelven hasta ocho combinaciones distintas por consulta, dentro de 24,000 expansiones. `diagnostics.reason` distingue falta de paradas cercanas, red desconectada y límite de cálculo. Sin conexión, los extremos deben ser puntos oficiales.
+
+La app filtra las alternativas ya calculadas con Todas, Metro, Autobús y Metro + autobús, sin volver a buscar los puntos. [Fuentes y cobertura actual](cobertura-autobuses-20261016.md).

@@ -1,13 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  ArrowDownUp,
   ArrowRight,
   ArrowUpRight,
   Bookmark,
   Check,
   ChevronDown,
   ChevronRight,
-  Clock3,
   CloudRain,
   ExternalLink,
   Flag,
@@ -32,32 +30,16 @@ import {
   Bell,
   X,
 } from 'lucide-react';
-import {
-  loadBoard,
-  loadPlan,
-  network,
-  readStored,
-  sendReport,
-  writeStored,
-  type Transport,
-} from './api';
-import type { Arrival, Board, Journey, Page, Plan, Preference, Scenario, Station } from './types';
-import NetworkMap from './components/NetworkMap';
-import StationPicker from './components/StationPicker';
+import { loadBoard, network, readStored, sendReport, writeStored, type Transport } from './api';
+import type { Arrival, Board, Page, Preference, Scenario, Station } from './types';
 const TransitCatalog = lazy(() => import('./components/TransitCatalog'));
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
-import {
-  ArrivalCard,
-  Brand,
-  Dialog,
-  Forecast,
-  LineBadge,
-  Occupancy,
-} from './components/Primitives';
+const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
+import type { MobilityEndpoint } from './mobility/types';
+import { ArrivalCard, Brand, Dialog, Forecast, LineBadge } from './components/Primitives';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
-type PlanRequest = { from: string; to: string; preference: Preference; scenario: Scenario };
 const navItems: { id: Page; label: string; short: string; icon: typeof House }[] = [
   { id: 'home', label: 'Mi camino', short: 'Inicio', icon: House },
   { id: 'plan', label: 'Planear viaje', short: 'Planear', icon: Route },
@@ -96,7 +78,14 @@ export default function App() {
     ),
   );
   const [page, setPage] = useState<Page>('home');
-  const [plannerModel, setPlannerModel] = useState<'metro' | 'multimodal'>('metro');
+  const [initialMobilityTrip, setInitialMobilityTrip] = useState<
+    | {
+        from: MobilityEndpoint;
+        to: MobilityEndpoint;
+        preference: Preference;
+      }
+    | undefined
+  >();
   const [networkTab, setNetworkTab] = useState<'stations' | 'routes'>('stations');
   const [scenario, setScenario] = useState<Scenario>('normal');
   const [boardSnapshot, setBoard] = useState<Board | null>(null);
@@ -104,8 +93,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<Modal>(null);
   const [arrival, setArrival] = useState<Arrival | null>(null);
-  const [journey, setJourney] = useState<Journey | null>(null);
-  const [mapStation, setMapStation] = useState(station);
   const [toast, setToast] = useState('');
   const [largeText, setLargeText] = useState(readStored('largeText', false));
   const [contrast, setContrast] = useState(readStored('contrast', false));
@@ -134,18 +121,10 @@ export default function App() {
         )
       : [];
   });
-  const [from, setFrom] = useState(station);
-  const [to, setTo] = useState('universidad');
-  const [preference, setPreference] = useState<Preference>('fastest');
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [planning, setPlanning] = useState(false);
-  const [planError, setPlanError] = useState('');
   const [stationQuery, setStationQuery] = useState('');
   const [lineFilter, setLineFilter] = useState('all');
   const [online, setOnline] = useState(navigator.onLine);
   const [now, setNow] = useState(new Date());
-  const planGeneration = useRef(0);
-  const submittedPlan = useRef<PlanRequest | null>(null);
   const currentStation = network.stations.find((s) => s.id === station)!;
   const board =
     boardSnapshot?.stationId === station && boardSnapshot.scenario === scenario
@@ -185,8 +164,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
-    setFrom(station);
-    setPlan(null);
     if (!kiosk) writeStored('station', station);
   }, [station, kiosk]);
   useEffect(() => {
@@ -220,11 +197,15 @@ export default function App() {
       setPage('home');
       setModal(null);
       setArrival(null);
-      setJourney(null);
     }
   }, [kiosk]);
 
   const announce = useCallback((message: string) => setToast(message), []);
+  function openMobilityPlanner() {
+    setInitialMobilityTrip(undefined);
+    setPage('plan');
+    window.scrollTo({ top: 0 });
+  }
   function toggleKiosk() {
     if (lockedKiosk) return;
     const next = !kiosk;
@@ -249,52 +230,6 @@ export default function App() {
         : 'Estación eliminada de tus guardadas.',
     );
   }
-  const calculateJourney = useCallback(async (request: PlanRequest, keepResults = false) => {
-    const generation = ++planGeneration.current;
-    setPlanError('');
-    if (!keepResults) setPlan(null);
-    setPlanning(true);
-    try {
-      const result = await loadPlan(request.from, request.to, request.preference, request.scenario);
-      if (generation === planGeneration.current) {
-        setPlan(result.data);
-        if (!result.data.journeys.length)
-          setPlanError(
-            'No encontramos una conexión en la red disponible. Prueba con otra estación.',
-          );
-      }
-    } catch {
-      if (generation === planGeneration.current)
-        setPlanError('No pudimos calcular este viaje. Intenta de nuevo.');
-    } finally {
-      if (generation === planGeneration.current) setPlanning(false);
-    }
-  }, []);
-  function searchJourney(event?: FormEvent) {
-    event?.preventDefault();
-    setPage('plan');
-    if (from === to) {
-      ++planGeneration.current;
-      submittedPlan.current = null;
-      setPlan(null);
-      setPlanning(false);
-      setPlanError('Elige un destino diferente a tu origen.');
-      return;
-    }
-    const request = { from, to, preference, scenario };
-    submittedPlan.current = request;
-    void calculateJourney(request);
-  }
-  function saveJourney() {
-    if (savedJourneys.some((v) => v.from === from && v.to === to)) {
-      announce('Este trayecto ya está en tus guardados.');
-      return;
-    }
-    const next = [...savedJourneys, { from, to }];
-    setSavedJourneys(next);
-    writeStored('journeys', next);
-    announce('Trayecto guardado. Vuelve a planearlo sin conexión para consultar su mapa.');
-  }
   function speakBoard() {
     if (!('speechSynthesis' in window)) {
       announce('Este dispositivo no tiene lectura en voz alta disponible.');
@@ -309,29 +244,6 @@ export default function App() {
     utterance.rate = 0.9;
     speechSynthesis.speak(utterance);
   }
-  useEffect(() => {
-    const submitted = submittedPlan.current;
-    if (
-      submitted &&
-      submitted.from === from &&
-      submitted.to === to &&
-      submitted.scenario === scenario
-    ) {
-      if (submitted.preference !== preference) {
-        const request = { from, to, preference, scenario };
-        submittedPlan.current = request;
-        setJourney(null);
-        void calculateJourney(request, true);
-      }
-      return;
-    }
-    ++planGeneration.current;
-    submittedPlan.current = null;
-    setPlan(null);
-    setPlanning(false);
-    setPlanError('');
-    setJourney(null);
-  }, [from, to, preference, scenario, calculateJourney]);
   const filteredStations = network.stations.filter(
     (s) =>
       (lineFilter === 'all' || s.lineIds.includes(lineFilter)) &&
@@ -339,77 +251,6 @@ export default function App() {
         normalize(stationQuery),
       ),
   );
-  const planner = (
-    <form className={`planner ${page === 'home' ? 'home-planner' : ''}`} onSubmit={searchJourney}>
-      <div className="planner-heading">
-        <span className="section-icon">
-          <Route size={19} />
-        </span>
-        <h2>¿A dónde vamos?</h2>
-        <button
-          type="button"
-          className="service-discovery-button"
-          onClick={() => {
-            setPage('stations');
-            setNetworkTab('routes');
-          }}
-        >
-          Rutas de autobús
-          <ArrowUpRight size={15} />
-        </button>
-      </div>
-      <div className="planner-fields">
-        <StationPicker value={from} onChange={setFrom} />
-        <button
-          type="button"
-          className="swap-button"
-          aria-label="Intercambiar origen y destino"
-          onClick={() => {
-            setFrom(to);
-            setTo(from);
-            setPlan(null);
-          }}
-        >
-          <ArrowDownUp size={17} />
-        </button>
-        <StationPicker value={to} onChange={setTo} destination />
-        <button type="submit" className="primary-button" disabled={planning}>
-          {planning ? 'Buscando…' : 'Encontrar mi ruta'}
-          <ArrowRight size={18} />
-        </button>
-      </div>
-      {page === 'plan' && (
-        <div className="preference-tabs" role="group" aria-label="Preferencia de trayecto">
-          {(
-            [
-              { id: 'fastest', icon: Clock3, label: 'Menos tiempo' },
-              { id: 'comfortable', icon: Users, label: 'Menos afluencia' },
-              { id: 'accessible', icon: Accessibility, label: 'Menos transbordos' },
-            ] as const
-          ).map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={preference === item.id}
-              className={preference === item.id ? 'active' : ''}
-              onClick={() => {
-                setPreference(item.id);
-              }}
-            >
-              <item.icon size={15} />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {planError && (
-        <p className="inline-error" role="alert">
-          {planError}
-        </p>
-      )}
-    </form>
-  );
-
   const forecastPanel = board && (
     <section className="panel forecast-panel">
       <div className="panel-heading">
@@ -557,49 +398,35 @@ export default function App() {
           </div>
         </header>
         <main id="main-content" tabIndex={-1}>
-          <div className="page-heading">
+          <div className={`page-heading ${page === 'home' || kiosk ? '' : 'compact-heading'}`}>
             <div>
-              <span className="eyebrow">
-                {kiosk
-                  ? 'INFORMACIÓN EN ESTA PARADA'
-                  : page === 'home'
-                    ? 'MENOS DUDAS. MÁS CIUDAD.'
-                    : page === 'plan'
-                      ? 'CADA TRAYECTO, UNA MEJOR DECISIÓN'
-                      : page === 'stations'
-                        ? networkTab === 'routes'
-                          ? 'LAS REDES DE NUEVO LEÓN'
-                          : 'CONOCE TU PRÓXIMA PARADA'
-                        : 'TUS CAMINOS DE TODOS LOS DÍAS'}
-              </span>
+              {(page === 'home' || kiosk) && (
+                <span className="eyebrow">
+                  {kiosk ? 'EN ESTA PARADA' : 'TU CIUDAD, A TU RITMO'}
+                </span>
+              )}
               <h1>
                 {kiosk
                   ? currentStation.name
                   : page === 'home'
                     ? 'Muévete con más calma.'
                     : page === 'plan'
-                      ? 'Encuentra tu mejor camino.'
+                      ? 'Planea tu viaje.'
                       : page === 'stations'
                         ? networkTab === 'routes'
-                          ? 'Más rutas, más posibilidades.'
-                          : 'Tu estación, más clara.'
-                        : 'Tu movilidad, a tu manera.'}
+                          ? 'Rutas y redes.'
+                          : 'Estaciones.'
+                        : 'Tus guardados.'}
               </h1>
-              <p>
-                {kiosk
-                  ? 'Próximas unidades y afluencia · Escenario de demostración'
-                  : page === 'home'
-                    ? 'Lo que necesitas saber, antes de salir.'
-                    : page === 'plan'
-                      ? 'Compara el tiempo y la afluencia. Tú decides cómo viajar.'
-                      : page === 'stations'
-                        ? networkTab === 'routes'
-                          ? 'Busca los servicios publicados y conoce su alcance.'
-                          : 'Explora la red de Metrorrey y anticipa tu viaje.'
-                        : 'Guarda tus trayectos y encuentra los canales oficiales de pago.'}
-              </p>
+              {(page === 'home' || kiosk) && (
+                <p>
+                  {kiosk
+                    ? 'Llegadas y afluencia simuladas.'
+                    : 'Lo que necesitas saber, antes de salir.'}
+                </p>
+              )}
             </div>
-            {!kiosk && (
+            {!kiosk && (page === 'home' || (page === 'stations' && networkTab === 'stations')) && (
               <button
                 className="location-button"
                 onClick={() => {
@@ -624,53 +451,34 @@ export default function App() {
               </button>
             )}
           </div>
-          <div className="demo-banner">
-            <span className="demo-label">
-              <span className="status-dot" />
-              DEMOSTRACIÓN
-            </span>
-            <p>Red de Metrorrey real. Operación simulada.</p>
-            <button
-              onClick={() => setModal('sources')}
-              aria-label="Conocer fuentes y límites de la demostración"
-            >
-              <Info size={16} />
-              <span>Cómo funciona</span>
-            </button>
-          </div>
+          {(page === 'home' || kiosk || page === 'stations') && (
+            <div className="demo-banner compact-demo">
+              <span className="demo-label">
+                <span className="status-dot" /> DEMOSTRACIÓN
+              </span>
+              <p>Operación simulada.</p>
+              <button
+                onClick={() => setModal('sources')}
+                aria-label="Conocer fuentes y límites de la demostración"
+              >
+                <Info size={16} />
+                <span>Ver fuentes</span>
+              </button>
+            </div>
+          )}
 
           {page === 'home' && !kiosk && (
-            <button className="mobile-plan-cta" onClick={() => setPage('plan')}>
+            <button className="mobile-plan-cta home-plan-cta" onClick={openMobilityPlanner}>
               <span className="soft-icon">
                 <Route size={22} />
               </span>
               <span>
                 <strong>¿A dónde vamos?</strong>
-                <small>Encuentra tu próxima conexión</small>
+                <small>Lugares, metro y autobús</small>
               </span>
               <ArrowRight size={20} />
             </button>
           )}
-          {page === 'plan' && !kiosk && (
-            <div className="planner-model-switch" role="group" aria-label="Modelo de planificación">
-              <button
-                aria-pressed={plannerModel === 'metro'}
-                onClick={() => setPlannerModel('metro')}
-              >
-                <TrainFront size={16} />
-                Metro
-              </button>
-              <button
-                aria-pressed={plannerModel === 'multimodal'}
-                onClick={() => setPlannerModel('multimodal')}
-              >
-                <Route size={16} />
-                Metro + autobús<small>Experimental</small>
-              </button>
-            </div>
-          )}
-          {(page === 'home' || (page === 'plan' && plannerModel === 'metro')) && !kiosk && planner}
-
           {page === 'home' && (
             <div className="dashboard-grid">
               <div className="dashboard-main">
@@ -745,7 +553,7 @@ export default function App() {
                     </p>
                     <button
                       className="text-button"
-                      onClick={() => (kiosk ? speakBoard() : setPage('plan'))}
+                      onClick={() => (kiosk ? speakBoard() : openMobilityPlanner())}
                     >
                       {kiosk ? 'Escuchar información' : 'Comparar mi trayecto'}
                       <ArrowRight size={17} />
@@ -835,129 +643,20 @@ export default function App() {
             </div>
           )}
 
-          {page === 'plan' && plannerModel === 'multimodal' && !kiosk && (
+          {page === 'plan' && !kiosk && (
             <Suspense
               fallback={
                 <p role="status" className="panel empty-small">
-                  Abriendo el modelo de movilidad…
+                  Abriendo el planificador…
                 </p>
               }
             >
-              <MobilityPlanner scenario={scenario} />
+              <MobilityPlanner
+                scenario={scenario}
+                initialTrip={initialMobilityTrip}
+                initialStationId={station}
+              />
             </Suspense>
-          )}
-
-          {page === 'plan' && plannerModel === 'metro' && (
-            <div className="plan-layout">
-              <section className="plan-results" aria-live="polite" aria-busy={planning}>
-                {planning && plan && (
-                  <p className="plan-updating" role="status">
-                    <Route size={16} aria-hidden="true" />
-                    Actualizando opciones según tu preferencia…
-                  </p>
-                )}
-                {planning && !plan && (
-                  <div className="panel empty-state">
-                    <Route size={32} />
-                    <h2>Encontrando conexiones…</h2>
-                  </div>
-                )}
-                {!planning && !plan && (
-                  <div className="panel empty-state">
-                    <span className="large-soft-icon">
-                      <Route size={36} />
-                    </span>
-                    <h2>Hay más de una forma de llegar.</h2>
-                    <p>
-                      Elige tu origen, destino y lo que más te importa.
-                      <br />
-                      Te mostramos conexiones de las líneas 1, 2 y 3.
-                    </p>
-                    <div className="empty-chips">
-                      <span>
-                        <Users size={15} />
-                        Afluencia estimada
-                      </span>
-                      <span>
-                        <Clock3 size={15} />
-                        Rango de tiempo
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {plan && (
-                  <>
-                    <div className="results-heading">
-                      <h2>{plan.journeys.length} opciones para tu camino</h2>
-                      <button className="text-button" onClick={saveJourney}>
-                        <Bookmark size={16} />
-                        Guardar trayecto
-                      </button>
-                    </div>
-                    <p className="subtle results-note">
-                      Tiempos y afluencia simulados. Incluyen márgenes de espera y caminata dentro
-                      de la red; no incluyen tu traslado hasta la estación. Abre una opción para ver
-                      su mapa y los pasos del recorrido.
-                    </p>
-                    {plan.journeys.map((item, i) => (
-                      <button
-                        key={item.id}
-                        className={`journey-card panel ${i === 0 ? 'recommended' : ''}`}
-                        onClick={() => {
-                          setMapStation(item.steps[0]?.fromId ?? from);
-                          setJourney(item);
-                        }}
-                      >
-                        {i === 0 && (
-                          <span className="recommendation">
-                            <Sparkles size={13} />
-                            Según tu preferencia
-                          </span>
-                        )}
-                        <div className="journey-top">
-                          <div>
-                            <h3>{item.title}</h3>
-                            <span>
-                              {item.transfers === 0
-                                ? 'Sin transbordos'
-                                : `${item.transfers} transbordo${item.transfers === 1 ? '' : 's'}`}
-                            </span>
-                          </div>
-                          <div className="journey-duration">
-                            <strong>{item.durationMinutes}</strong>
-                            <span>min aprox.</span>
-                          </div>
-                        </div>
-                        <div className="journey-lines">
-                          {item.steps.map((step, index) => (
-                            <span key={`${step.lineId}-${index}`}>
-                              <LineBadge id={step.lineId} />
-                              {index < item.steps.length - 1 && <ArrowRight size={15} />}
-                            </span>
-                          ))}
-                          <span className="journey-destination">
-                            {stationName(to)}
-                            <ChevronRight size={17} />
-                          </span>
-                        </div>
-                        <div className="journey-bottom">
-                          <Occupancy value={item.occupancy} />
-                          <span>
-                            <Clock3 size={14} />
-                            {item.etaRange[0]}–{item.etaRange[1]} min
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                    <p className="accessibility-note">
-                      <Accessibility size={16} />
-                      La accesibilidad de elevadores y unidades no está verificada. Confírmala con
-                      Metrorrey antes de viajar.
-                    </p>
-                  </>
-                )}
-              </section>
-            </div>
           )}
 
           {page === 'stations' && (
@@ -1019,9 +718,11 @@ export default function App() {
                   onPlanLine={(lineId) => {
                     const line = network.lines.find((item) => item.id === lineId);
                     if (!line) return;
-                    setFrom(line.stationIds[0]);
-                    setTo(line.stationIds[line.stationIds.length - 1]);
-                    setPlan(null);
+                    setInitialMobilityTrip({
+                      from: { id: line.stationIds[0] },
+                      to: { id: line.stationIds[line.stationIds.length - 1] },
+                      preference: 'fastest',
+                    });
                     setPage('plan');
                   }}
                 />
@@ -1171,154 +872,169 @@ export default function App() {
           )}
 
           {page === 'mobility' && (
-            <div className="mobility-grid">
-              <div>
-                <section className="panel saved-panel">
-                  <div className="panel-heading">
-                    <h2>Tus trayectos</h2>
-                    <Bookmark size={20} />
-                  </div>
-                  {!savedJourneys.length && (
-                    <div className="empty-small">
-                      <Route size={29} />
-                      <h3>El camino de siempre, a mano.</h3>
-                      <p>Planea un viaje y guárdalo para encontrarlo aquí.</p>
-                      <button className="primary-button" onClick={() => setPage('plan')}>
-                        Planear un viaje
-                        <ArrowRight size={16} />
-                      </button>
-                    </div>
-                  )}
-                  {savedJourneys.map((item, index) => (
-                    <div className="saved-journey" key={`${item.from}-${item.to}`}>
-                      <button
-                        onClick={() => {
-                          setFrom(item.from);
-                          setTo(item.to);
-                          setPage('plan');
-                          setPlan(null);
-                        }}
-                      >
-                        <span className="soft-icon">
-                          <Route size={20} />
-                        </span>
-                        <span>
-                          <strong>{stationName(item.from)}</strong>
-                          <small>
-                            <ArrowRight size={13} />
-                            {stationName(item.to)}
-                          </small>
-                        </span>
-                        <ChevronRight size={18} />
-                      </button>
-                      <button
-                        className="icon-button"
-                        aria-label={`Eliminar trayecto a ${stationName(item.to)}`}
-                        onClick={() => {
-                          const next = savedJourneys.filter((_, i) => i !== index);
-                          setSavedJourneys(next);
-                          writeStored('journeys', next);
-                          announce('Trayecto eliminado.');
-                        }}
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </section>
-                <section className="panel saved-panel">
-                  <div className="panel-heading">
-                    <h2>Estaciones guardadas</h2>
-                    <Heart size={20} />
-                  </div>
-                  {favorites.length ? (
-                    favorites.map((id) => (
-                      <div key={id} className="favorite-row">
-                        <button
-                          onClick={() => {
-                            setStation(id);
-                            setPage('stations');
-                            setNetworkTab('stations');
-                            setLineFilter('all');
-                            setStationQuery('');
-                          }}
-                        >
-                          <MapPin size={19} />
-                          {stationName(id)}
-                          <ChevronRight size={16} />
-                        </button>
-                        <button
-                          className="icon-button"
-                          aria-label={`Quitar ${stationName(id)} de guardadas`}
-                          onClick={() => toggleFavorite(id)}
-                        >
-                          <X size={16} />
-                        </button>
+            <>
+              <Suspense
+                fallback={
+                  <p role="status" className="empty-small">
+                    Abriendo guardados…
+                  </p>
+                }
+              >
+                <SavedMobilityTrips
+                  onStartPlanning={openMobilityPlanner}
+                  onPlan={(trip) => {
+                    setInitialMobilityTrip(trip);
+                    setPage('plan');
+                    window.scrollTo({ top: 0 });
+                  }}
+                />
+              </Suspense>
+              <details
+                className="saved-extras"
+                open={savedJourneys.length > 0 || favorites.length > 0}
+              >
+                <summary>Estaciones, Metro y pagos</summary>
+                <div className="mobility-grid">
+                  <div>
+                    <section className="panel saved-panel">
+                      <div className="panel-heading">
+                        <h2>Trayectos de Metro</h2>
+                        <Bookmark size={20} />
                       </div>
-                    ))
-                  ) : (
-                    <p className="empty-small">
-                      Toca el marcador de una estación para guardarla aquí.
-                    </p>
-                  )}
-                  <p className="local-storage-note">
-                    <ShieldCheck size={14} />
-                    Tus guardados se quedan en este dispositivo. Sin crear cuenta.
-                  </p>
-                </section>
-              </div>
-              <div>
-                <section className="payment-card">
-                  <span className="payment-icon">
-                    <Navigation size={24} />
-                  </span>
-                  <span className="eyebrow">CANALES OFICIALES</span>
-                  <h2>
-                    Tu pasaje.
-                    <br />
-                    Por el canal de siempre.
-                  </h2>
-                  <p>
-                    Consulta los medios de pago y recarga de Metrorrey. Para pagos digitales,
-                    utiliza Urbani.
-                  </p>
-                  <a
-                    className="light-button"
-                    href="https://www.urbani.com.mx/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Ir a Urbani
-                    <ExternalLink size={16} />
-                  </a>
-                  <a
-                    className="payment-secondary"
-                    href="https://www.metrorrey.mx/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Medios de pago de Metrorrey
-                    <ArrowUpRight size={14} />
-                  </a>
-                  <p className="payment-note">
-                    RegioMóvil no cobra, recarga saldo ni emite boletos válidos. No está afiliado a
-                    Metrorrey o Urbani.
-                  </p>
-                </section>
-                <section className="panel offline-card">
-                  <WifiOff size={25} />
-                  <h3>Tu red va contigo.</h3>
-                  <p>
-                    La red, tus guardados y la simulación funcionan sin conexión después de la
-                    primera visita o al instalar Android.
-                  </p>
-                  <button className="text-button" onClick={() => setModal('settings')}>
-                    Ajustar consumo de datos
-                    <ArrowRight size={15} />
-                  </button>
-                </section>
-              </div>
-            </div>
+                      {!savedJourneys.length && (
+                        <div className="empty-small">
+                          <Route size={29} />
+                          <h3>Tu viaje de siempre.</h3>
+                          <p>Guarda un viaje para tenerlo a mano.</p>
+                          <button className="primary-button" onClick={openMobilityPlanner}>
+                            Planear un viaje
+                            <ArrowRight size={16} />
+                          </button>
+                        </div>
+                      )}
+                      {savedJourneys.map((item, index) => (
+                        <div className="saved-journey" key={`${item.from}-${item.to}`}>
+                          <button
+                            onClick={() => {
+                              setInitialMobilityTrip({
+                                from: { id: item.from },
+                                to: { id: item.to },
+                                preference: 'fastest',
+                              });
+                              setPage('plan');
+                            }}
+                          >
+                            <span className="soft-icon">
+                              <Route size={20} />
+                            </span>
+                            <span>
+                              <strong>{stationName(item.from)}</strong>
+                              <small>
+                                <ArrowRight size={13} />
+                                {stationName(item.to)}
+                              </small>
+                            </span>
+                            <ChevronRight size={18} />
+                          </button>
+                          <button
+                            className="icon-button"
+                            aria-label={`Eliminar trayecto a ${stationName(item.to)}`}
+                            onClick={() => {
+                              const next = savedJourneys.filter((_, i) => i !== index);
+                              setSavedJourneys(next);
+                              writeStored('journeys', next);
+                              announce('Trayecto eliminado.');
+                            }}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </section>
+                    <section className="panel saved-panel">
+                      <div className="panel-heading">
+                        <h2>Estaciones guardadas</h2>
+                        <Heart size={20} />
+                      </div>
+                      {favorites.length ? (
+                        favorites.map((id) => (
+                          <div key={id} className="favorite-row">
+                            <button
+                              onClick={() => {
+                                setStation(id);
+                                setPage('stations');
+                                setNetworkTab('stations');
+                                setLineFilter('all');
+                                setStationQuery('');
+                              }}
+                            >
+                              <MapPin size={19} />
+                              {stationName(id)}
+                              <ChevronRight size={16} />
+                            </button>
+                            <button
+                              className="icon-button"
+                              aria-label={`Quitar ${stationName(id)} de guardadas`}
+                              onClick={() => toggleFavorite(id)}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="empty-small">
+                          Toca el marcador de una estación para guardarla aquí.
+                        </p>
+                      )}
+                      <p className="local-storage-note">
+                        <ShieldCheck size={14} />
+                        Solo en este dispositivo.
+                      </p>
+                    </section>
+                  </div>
+                  <div>
+                    <section className="payment-card">
+                      <span className="payment-icon">
+                        <Navigation size={24} />
+                      </span>
+                      <span className="eyebrow">CANALES OFICIALES</span>
+                      <h2>Pago y recargas</h2>
+                      <p>Consulta Metro o abre Urbani.</p>
+                      <a
+                        className="light-button"
+                        href="https://www.urbani.com.mx/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Ir a Urbani
+                        <ExternalLink size={16} />
+                      </a>
+                      <a
+                        className="payment-secondary"
+                        href="https://www.metrorrey.mx/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Medios de pago de Metrorrey
+                        <ArrowUpRight size={14} />
+                      </a>
+                      <p className="payment-note">RegioMóvil no procesa pagos.</p>
+                    </section>
+                    <section className="panel offline-card">
+                      <WifiOff size={25} />
+                      <h3>Tu red va contigo.</h3>
+                      <p>
+                        Abre tus mapas guardados sin internet. Las llegadas siguen siendo simuladas.
+                      </p>
+                      <button className="text-button" onClick={() => setModal('settings')}>
+                        Ajustar consumo de datos
+                        <ArrowRight size={15} />
+                      </button>
+                    </section>
+                  </div>
+                </div>
+              </details>
+            </>
           )}
 
           <footer className="page-footer">
@@ -1467,7 +1183,6 @@ export default function App() {
                   aria-pressed={scenario === id}
                   onClick={() => {
                     setScenario(id);
-                    setPlan(null);
                   }}
                 >
                   {id === 'rain' ? (
@@ -1605,68 +1320,6 @@ export default function App() {
           </p>
         </Dialog>
       )}
-      {journey && (
-        <Dialog title="Tu camino, paso a paso" onClose={() => setJourney(null)} wide>
-          <div className="journey-summary">
-            <span>
-              {stationName(from)}
-              <ArrowRight size={16} />
-              {stationName(to)}
-            </span>
-            <strong>
-              {journey.etaRange[0]}–{journey.etaRange[1]} <small>min estimados</small>
-            </strong>
-            <Occupancy value={journey.occupancy} />
-          </div>
-          <section className="journey-map" aria-label="Mapa del trayecto en Monterrey">
-            <h3>Tu recorrido por Monterrey</h3>
-            <NetworkMap
-              network={network}
-              selected={mapStation}
-              onSelect={setMapStation}
-              journey={journey}
-            />
-            <p>Mapa incluido en el dispositivo. Disponible sin internet.</p>
-          </section>
-          <ol className="journey-steps">
-            {journey.steps.map((step, i) => (
-              <li key={`${step.lineId}-${i}`}>
-                <span className="step-number">{i + 1}</span>
-                <div>
-                  <LineBadge id={step.lineId} />
-                  <h3>
-                    {stationName(step.from)} → {stationName(step.to)}
-                  </h3>
-                  {step.continuesOnTrain && (
-                    <p className="through-service">
-                      <Check size={14} />
-                      Continúa en el mismo tren; no necesitas bajar.
-                    </p>
-                  )}
-                  <p>
-                    {step.stationCount} tramos · {step.minutes} min simulados
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <p className="notice">
-            <Accessibility size={18} />
-            Los transbordos pueden implicar escaleras o recorridos a pie. No contamos con
-            información operativa de elevadores.
-          </p>
-          <button
-            className="primary-button full-width"
-            onClick={() => {
-              saveJourney();
-              setJourney(null);
-            }}
-          >
-            <Bookmark size={17} />
-            Guardar este trayecto
-          </button>
-        </Dialog>
-      )}
     </div>
   );
 }
@@ -1731,10 +1384,11 @@ function SourcesDialog({
           {transport === 'api' ? 'API del piloto' : 'En este dispositivo, sin servidor'}.
         </p>
         <p>
-          El planificador calcula conexiones de las líneas 1, 2 y 3 de Metrorrey. En Rutas y redes
-          puedes consultar los servicios y trazos de autobús documentados, con la fecha y fuente de
-          cada uno. Los autobuses sin paradas ordenadas y las líneas en construcción quedan fuera
-          del cálculo de viajes. No hay tráfico en vivo, tarifas integradas, pagos ni navegación
+          El planificador combina Metro, Transmetro, RegioRuta, Ecovía/GMG y rutas urbanas con
+          puntos y trazos documentados. En autobuses, el orden y los sentidos se infieren del mapa
+          y siguen sin validación operativa. En Rutas y redes puedes consultar la fecha y fuente de
+          cada servicio. Las líneas en construcción y los servicios sin geometría suficiente
+          quedan fuera del cálculo. No hay tráfico en vivo, tarifas integradas, pagos ni navegación
           peatonal.
         </p>
       </div>

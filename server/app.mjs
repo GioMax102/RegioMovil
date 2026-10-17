@@ -10,7 +10,7 @@ import { createPlaceSearch, PlaceSearchError } from './places.mjs';
 import { planMobility } from './mobility.mjs';
 
 const REPORT_CATEGORIES = ['crowding', 'climate', 'accessibility', 'condition'];
-export const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost', 'https://localhost', 'capacitor://localhost'];
+export const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost', 'https://localhost', 'capacitor://localhost'];
 const MIME = { '.txt': 'text/plain; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 const TEXT_EXTENSIONS = new Set(['.html','.js','.mjs','.css','.json','.svg','.webmanifest']);
 const gzipAsync = promisify(gzip);
@@ -132,7 +132,7 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
     catch { return false; }
     if (!realFile.startsWith(`${realRoot}${sep}`)) throw new HttpError(403, 'FORBIDDEN_PATH', 'No se puede abrir esa dirección.');
     if (!metadata.isFile()) return false;
-    const encoding = TEXT_EXTENSIONS.has(extension) && metadata.size >= 1024 && metadata.size <= 2 * 1024 * 1024 ? preferredEncoding(request.headers['accept-encoding']) : null;
+    const encoding = TEXT_EXTENSIONS.has(extension) && metadata.size >= 1024 && metadata.size <= 4 * 1024 * 1024 ? preferredEncoding(request.headers['accept-encoding']) : null;
     const encoded = encoding ? await compressedFile(realFile,metadata,encoding) : null;
     const content = request.method === 'HEAD' ? undefined : encoded || await readFile(realFile);
     response.writeHead(200, { 'Content-Type': MIME[extension], 'Content-Length': encoded?.length ?? metadata.size,
@@ -227,14 +227,14 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
       if (request.method === 'POST' && url.pathname === '/api/mobility/plan') {
         if (!mobilityNetwork) throw new HttpError(503, 'MOBILITY_UNAVAILABLE', 'La red experimental no está preparada. Puedes usar el planificador de Metro.');
         const body = await readJson(request, 'la consulta');
-        if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['from', 'to', 'preference', 'scenario', 'offline'].includes(key))) throw new HttpError(400, 'INVALID_MOBILITY_PLAN', 'Indica origen, destino y opciones válidas para el trayecto.');
+        if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['from', 'to', 'preference', 'scenario', 'offline', 'transport'].includes(key))) throw new HttpError(400, 'INVALID_MOBILITY_PLAN', 'Indica origen, destino y opciones válidas para el trayecto.');
         if (body.offline !== undefined && typeof body.offline !== 'boolean') throw new HttpError(400, 'INVALID_MOBILITY_PLAN', 'offline debe ser verdadero o falso.');
         for (const endpoint of [body.from, body.to]) {
-          if (!endpoint || typeof endpoint !== 'object' || Array.isArray(endpoint) || Object.keys(endpoint).some(key => !['id', 'kind', 'lat', 'lng', 'name', 'label'].includes(key))) throw new HttpError(400, 'INVALID_ENDPOINT', 'Elige una parada oficial o un lugar dentro de la zona metropolitana.');
+          if (!endpoint || typeof endpoint !== 'object' || Array.isArray(endpoint) || Object.keys(endpoint).some(key => !['id', 'kind', 'lat', 'lng', 'name', 'label', 'address'].includes(key))) throw new HttpError(400, 'INVALID_ENDPOINT', 'Elige una parada oficial o un lugar dentro de la zona metropolitana.');
           if (endpoint.id !== undefined && (typeof endpoint.id !== 'string' || endpoint.id.length > 160 || /[\u0000-\u001f\u007f]/.test(endpoint.id))) throw new HttpError(400, 'INVALID_ENDPOINT', 'El identificador de la parada no es válido.');
           if (endpoint.id !== undefined && (endpoint.lat !== undefined || endpoint.lng !== undefined)) throw new HttpError(400, 'INVALID_ENDPOINT', 'Elige una parada o unas coordenadas, sin combinar ambas.');
           if (endpoint.id === undefined && (!Number.isFinite(endpoint.lat) || !Number.isFinite(endpoint.lng))) throw new HttpError(400, 'INVALID_ENDPOINT', 'Las coordenadas deben ser números válidos.');
-          for (const field of ['name', 'label']) if (endpoint[field] !== undefined && (typeof endpoint[field] !== 'string' || endpoint[field].length > 500 || /[\u0000-\u001f\u007f]/.test(endpoint[field]))) throw new HttpError(400, 'INVALID_ENDPOINT', 'El nombre del lugar no es válido.');
+          for (const field of ['name', 'label', 'address']) if (endpoint[field] !== undefined && (typeof endpoint[field] !== 'string' || endpoint[field].length > 500 || /[\u0000-\u001f\u007f]/.test(endpoint[field]))) throw new HttpError(400, 'INVALID_ENDPOINT', 'El nombre del lugar no es válido.');
           if (endpoint.kind !== undefined && !['stop', 'place', 'location', 'coordinate'].includes(endpoint.kind)) throw new HttpError(400, 'INVALID_ENDPOINT', 'El tipo de origen o destino no es válido.');
         }
         try { return send(response, 200, planMobility(mobilityNetwork, { ...body, date: date.toISOString() })); }

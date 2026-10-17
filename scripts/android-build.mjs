@@ -8,19 +8,29 @@ import { loadEnv } from 'vite';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const env = { ...process.env };
+const supportedArgs = new Set(['--help', '--skip-web', '--offline', '--dev-local-api']);
+const unknownArgs = process.argv.slice(2).filter(argument => !supportedArgs.has(argument));
+const fail = message => { console.error(`\nAndroid: ${message}`); process.exit(1); };
+if (unknownArgs.length) fail(`Opciones desconocidas: ${unknownArgs.join(', ')}. Usa --help.`);
 const help = process.argv.includes('--help');
 if (help) {
-  console.log('node scripts/android-build.mjs [--skip-web] [--offline]\n\nCompila y sincroniza la web, genera un APK debug y lo copia a output/android.\nRequiere JDK 21, Android SDK 36 y Node 24+.\nVariables: JAVA_HOME, ANDROID_HOME, ANDROID_SDK_ROOT, GRADLE_USER_HOME, VITE_API_BASE_URL.');
+  console.log('node scripts/android-build.mjs [--skip-web] [--offline] [--dev-local-api]\n\nCompila y sincroniza la web, genera un APK debug y lo copia a output/android.\n--dev-local-api conecta el APK debug a http://localhost:4173; usa adb reverse tcp:4173 tcp:4173.\nRequiere JDK 21, Android SDK 36 y Node 24+.\nVariables: JAVA_HOME, ANDROID_HOME, ANDROID_SDK_ROOT, GRADLE_USER_HOME, VITE_API_BASE_URL.');
   process.exit(0);
 }
 
-const fail = message => { console.error(`\nAndroid: ${message}`); process.exit(1); };
-const api = env.VITE_API_BASE_URL ?? loadEnv('production', root, 'VITE_').VITE_API_BASE_URL;
+const devLocalApi = process.argv.includes('--dev-local-api');
+if (devLocalApi && process.argv.includes('--skip-web')) fail('--dev-local-api requiere reconstruir la web para fijar la API local. Quita --skip-web.');
+const configuredApi = env.VITE_API_BASE_URL ?? loadEnv('production', root, 'VITE_').VITE_API_BASE_URL;
+const localApi = 'http://localhost:4173';
+if (devLocalApi && configuredApi && configuredApi !== localApi) fail(`--dev-local-api sólo permite ${localApi}.`);
+const api = devLocalApi ? localApi : configuredApi;
+if (api) env.VITE_API_BASE_URL = api;
 if (api) {
   let url;
   try { url = new URL(api); } catch { fail('VITE_API_BASE_URL debe ser una URL HTTPS válida.'); }
-  if (url.protocol !== 'https:') fail('La aplicación Android requiere una API HTTPS; no se permite tráfico HTTP.');
+  if (url.protocol !== 'https:' && !(devLocalApi && api === localApi)) fail('La aplicación Android requiere una API HTTPS; HTTP sólo se permite con --dev-local-api y localhost.');
   if (url.username || url.password) fail('VITE_API_BASE_URL es pública; no debe contener credenciales.');
+  if (url.search || url.hash) fail('VITE_API_BASE_URL no debe incluir parámetros de búsqueda ni fragmentos.');
 }
 if (!env.JAVA_HOME) {
   const cache = path.join(homedir(), '.gradle', 'jdks');
@@ -103,3 +113,4 @@ writeFileSync(path.join(out, 'build-info.json'), JSON.stringify({
   webBundleSha256, webAssets,
 }, null, 2) + '\n');
 console.log(`\nAPK listo: ${output}\nSHA-256: ${sha256}`);
+if (devLocalApi) console.log('API de desarrollo: http://localhost:4173. Con el backend activo y el teléfono conectado, ejecuta ./regiomovil android-connect antes de Run en Android Studio.');

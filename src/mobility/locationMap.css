@@ -1,0 +1,159 @@
+.location-map {
+  min-width: 0;
+}
+.location-map-canvas {
+  position: relative;
+  height: 420px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #edf3ee;
+  border: 1px solid #d5e4df;
+  isolation: isolate;
+}
+.location-map-canvas > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.location-map-canvas > svg:active {
+  cursor: grabbing;
+}
+.location-map-canvas > svg:focus-visible {
+  outline: 3px solid #149b72;
+  outline-offset: -4px;
+}
+.location-map-canvas g[role='button'] {
+  cursor: pointer;
+  outline: none;
+}
+.location-map-canvas g[role='button']:focus-visible circle {
+  stroke: #124a39;
+  stroke-width: 4px;
+}
+.location-map-area {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 8px 10px;
+  border-radius: 20px;
+  background: #fffffff0;
+  color: #365f50;
+  font-size: 9px;
+  letter-spacing: 1px;
+  font-weight: 650;
+  pointer-events: none;
+}
+.location-map-controls {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  display: grid;
+  box-shadow: 0 3px 18px #294d3921;
+  border: 1px solid #d7e4dc;
+  border-radius: 14px;
+  overflow: hidden;
+  background: white;
+}
+.location-map-controls button {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  color: #1c7355;
+  background: white;
+  border: 0;
+  border-radius: 0;
+}
+.location-map-controls button + button {
+  border-top: 1px solid #e8efea;
+}
+.location-map-controls button:disabled {
+  opacity: 0.45;
+}
+.location-map-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  display: grid;
+  justify-items: center;
+  filter: drop-shadow(0 3px 4px #244a3a45);
+}
+.location-map-pin span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 50% 50% 50% 5px;
+  transform: rotate(-45deg);
+  background: #126c50;
+  color: white;
+  font-size: 0;
+}
+.location-map-pin span::after {
+  content: 'A';
+  transform: rotate(45deg);
+  font-size: 15px;
+  font-weight: 700;
+}
+.location-map-pin.to span {
+  background: #a76b20;
+}
+.location-map-pin.to span::after {
+  content: 'B';
+}
+.location-map-pin i {
+  width: 8px;
+  height: 4px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #214d3b55;
+}
+.location-map-credit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #fffffff0;
+  color: #345c4b;
+  font-size: 10px;
+  padding: 4px 8px;
+}
+.location-map-caption {
+  margin: 9px 4px 0;
+  color: #647b71;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.location-map-retry {
+  position: absolute;
+  bottom: 30px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: white;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  color: #466959;
+}
+@media (max-width: 760px) {
+  .location-map-canvas {
+    height: 325px;
+    border-radius: 16px;
+  }
+  .location-map-controls {
+    top: 12px;
+    right: 12px;
+  }
+  .location-map-area {
+    font-size: 8px;
+    max-width: calc(100% - 84px);
+    line-height: 1.4;
+  }
+}

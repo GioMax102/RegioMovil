@@ -108,3 +108,14 @@ test('places endpoint enforces explicit bounded query, no-store, quota and CORS 
   assert.equal(busy.headers.get('Retry-After'), '1');
   assert.equal(calls, 1);
 });
+
+test('transport filters keep arbitrary endpoint coordinates and addresses instead of replacing them with Metro stations', async t => {
+  const { request } = fixture(t);
+  const body = { ...validBody, offline: false, transport: 'metro', from: { kind: 'place', name: 'Un lugar', address: 'Una calle 555, Monterrey', lat: 25.6701, lng: -100.3201 } };
+  const response = await request('/api/mobility/plan', { method: 'POST', body });
+  assert.equal(response.status, 200);
+  assert.equal(response.body.from.kind, 'place');
+  assert.equal(response.body.from.lat, body.from.lat);
+  assert.ok(response.body.journeys.every(journey => journey.steps.every(step => step.mode !== 'bus')));
+  assert.equal((await request('/api/mobility/plan', { method: 'POST', body: { ...body, transport: 'invented' } })).body.error.code, 'INVALID_TRANSPORT');
+});

@@ -261,7 +261,10 @@ test('current production build precaches the base graph and stores deferred expe
   const stats = JSON.parse(await readFile(join(root,'dist/bundle-stats.json'),'utf8'));
   const initial = stats.files.filter(file => file.file.startsWith('assets/')).map(file => `/${file.file}`);
   for (const file of initial) assert.ok(harness.added.includes(file), `Production precache is missing ${file}`);
-  for (const file of files.filter(file => /\.(?:woff2|svg)$/.test(file))) assert.ok(initial.includes(`/assets/${file}`));
+  for (const file of files.filter(file => file.endsWith('.woff2'))) assert.ok(initial.includes(`/assets/${file}`));
+  for (const file of files.filter(file => /^monterrey-map-.*\.svg$/.test(file))) {
+    assert.ok((stats.deferredAssets || []).includes(`/assets/${file}`), 'The offline basemap is cached when its journey screen opens.');
+  }
   for (const path of stats.deferredAssets || []) {
     assert.ok(!harness.added.includes(path), `${path} must not increase the initial install.`);
     const opened = await harness.fetch(path);

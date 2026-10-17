@@ -9,11 +9,11 @@ const readJson = async (path) =>
 const catalog = await readJson('data/transit-catalog.json');
 
 test('published catalog includes both requested networks without administrative or fabricated routing entries', async () => {
-  assert.equal(catalog.routes.length, 207);
+  assert.ok(catalog.routes.length >= 214);
   assert.equal(new Set(catalog.routes.map((route) => route.id)).size, catalog.routes.length);
   assert.equal(catalog.networks.length, 6);
   assert.equal(catalog.routes.filter((route) => route.networkId === 'regioruta').length, 7);
-  assert.equal(catalog.routes.filter((route) => route.networkId === 'transmetro').length, 33);
+  assert.ok(catalog.routes.filter((route) => route.networkId === 'transmetro').length >= 40);
   assert.ok(
     !catalog.routes.some((route) => route.code === 'S/A' || route.id === 'ima-sin-asignar'),
   );
@@ -57,9 +57,9 @@ test('all service documents resolve public sources and retain per-route revision
   }
 });
 
-test('twelve on-demand route maps preserve published coordinates, separate segments and their exact revisions', async () => {
+test('on-demand route maps preserve published coordinates, separate segments and their exact revisions', async () => {
   const routes = catalog.routes.filter((route) => route.geometryPack);
-  assert.equal(routes.length, 12);
+  assert.ok(routes.length >= 51);
   let stops = 0;
   for (const route of routes) {
     const bytes = await readFile(
@@ -91,8 +91,44 @@ test('twelve on-demand route maps preserve published coordinates, separate segme
     }
     stops += pack.stops.length;
   }
-  assert.equal(stops, 1464);
+  assert.ok(stops >= 4436);
   const extension = await readJson('public/route-packs/regioruta-e.json');
   assert.equal(extension.segments.length, 2);
   assert.notDeepEqual(extension.segments[0].at(-1), extension.segments[1][0]);
+});
+
+test('Transmetro snapshots have official provenance, usable stop markers and no fabricated alimentadora stops', async () => {
+  const manifest = await readJson('data/metrorrey-map-sources.json');
+  assert.equal(manifest.officialPageUrl, 'https://www.metrorrey.mx/');
+  for (const item of manifest.routes) {
+    const route = catalog.routes.find(route => route.id === item.routeId);
+    if (item.excludedReason) {
+      assert.equal(item.routeId, 'transmetro-alimentadora-gomez-morin-san-agustin');
+      assert.ok(!route?.geometryPack, 'A path without published markers cannot invent boarding stops.');
+      continue;
+    }
+    assert.ok(route?.sourceIds.includes('metrorrey-transmetro-maps-20261016'));
+    const pack = await readJson(`public/route-packs/${route.geometryPack}.json`);
+    assert.match(pack.originalKmlSha256, /^[a-f0-9]{64}$/);
+    assert.equal(new URL(pack.sourceUrl).searchParams.get('mid'), item.mapId);
+    assert.equal(pack.officialPageUrl, manifest.officialPageUrl);
+    assert.ok(pack.stops.length >= 2);
+    assert.ok(pack.stops.every(stop => typeof stop.publishedName === 'string'));
+    assert.equal(route.statusAsOf, null, 'Consultation date does not certify an operational launch.');
+  }
+  const sanBernabe = await readJson('public/route-packs/transmetro-san-bernabe-julio-a-roca.json');
+  assert.ok(sanBernabe.stops.some(stop => /Estación San Bernabé/.test(stop.publishedName)));
+  const gmg = await readJson('public/route-packs/ecovia-garcia-monterrey-guadalupe.json');
+  assert.equal(gmg.segments.length, 2);
+});
+
+test('published Ruta 130 stops cover Río Missouri near Punto Valle without using proposed infrastructure', async () => {
+  for (const id of ['ima-130-remanente-alameda', 'ima-130-remanente-juarez']) {
+    const pack = await readJson(`public/route-packs/${id}.json`);
+    const stop = pack.stops.find(stop => /Gómez Morín/.test(stop.name) && /Río Missouri/.test(stop.name));
+    assert.ok(stop, `${id} must retain the original IMA street intersection.`);
+    assert.match(stop.publishedInfrastructureNote, /EXISTE PARABUS/);
+    const meters = Math.hypot((stop.lng + 100.3545702) * 100000, (stop.lat - 25.6590567) * 111000);
+    assert.ok(meters < 250, 'Published existing stop must actually be close to Punto Valle.');
+  }
 });

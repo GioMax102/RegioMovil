@@ -141,6 +141,32 @@ test('CORS rejects unknown origins before writing data', async t => {
   assert.equal(reports.reports.length, 0);
 });
 
+test('preview origins on port 4173 can load deferred CSS and API while other origins stay denied', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'regiomovil-preview-cors-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await mkdir(join(directory, 'assets'));
+  await writeFile(join(directory, 'assets/MobilityPlanner-Abc12345.css'), '.mobility-planner { display: grid; }');
+  const { request } = await fixture(t, { distPath: directory });
+  for (const origin of ['http://localhost:4173', 'http://127.0.0.1:4173']) {
+    const style = await request('/assets/MobilityPlanner-Abc12345.css', { headers: { Origin: origin } });
+    assert.equal(style.status, 200);
+    assert.equal(style.headers.get('Content-Type'), 'text/css; charset=utf-8');
+    assert.equal(style.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.match(await style.text(), /mobility-planner/);
+    const health = await request('/api/health', { headers: { Origin: origin } });
+    assert.equal(health.status, 200);
+    assert.equal(health.headers.get('Access-Control-Allow-Origin'), origin);
+    assert.equal((await health.json()).status, 'ok');
+  }
+  for (const origin of ['http://localhost:4174', 'http://127.0.0.1:4174', 'http://evil.example:4173']) {
+    for (const path of ['/assets/MobilityPlanner-Abc12345.css', '/api/health']) {
+      const denied = await request(path, { headers: { Origin: origin } });
+      assert.equal(denied.status, 403);
+      assert.equal(denied.headers.get('Access-Control-Allow-Origin'), null);
+    }
+  }
+});
+
 test('reports validate payload, resist SQL text, and persist through restart', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'regiomovil-test-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -282,4 +308,39 @@ test('static text compression negotiates gzip/Brotli, preserves HEAD and never c
   await writeFile(join(directory,'app.js'),changed);
   const refreshed = await raw('br');
   assert.equal(brotliDecompressSync(refreshed.body).toString(),changed,'A changed asset must not reuse its previous compressed response.');
+});
+
+test('a public mobility JSON larger than two MiB negotiates gzip and Brotli without caching API reports', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'regiomovil-large-network-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const original = JSON.stringify({ version: 1, reference: 'public-network-fixture'.repeat(102_000) });
+  assert.ok(Buffer.byteLength(original) > 2 * 1024 * 1024);
+  assert.ok(Buffer.byteLength(original) < 4 * 1024 * 1024);
+  await writeFile(join(directory, 'mobility-network.json'), original);
+  const { base, request } = await fixture(t, { distPath: directory });
+  const raw = encoding => new Promise((resolve, reject) => {
+    const target = new URL(base);
+    const req = httpRequest({ hostname: target.hostname, port: target.port, path: '/mobility-network.json', headers: { 'Accept-Encoding': encoding } }, response => {
+      const chunks = [];
+      response.on('data', chunk => chunks.push(chunk));
+      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, body: Buffer.concat(chunks) }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+  for (const [encoding, inflate] of [['gzip', gunzipSync], ['br', brotliDecompressSync]]) {
+    const response = await raw(encoding);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers['content-type'], 'application/json; charset=utf-8');
+    assert.equal(response.headers['content-encoding'], encoding);
+    assert.equal(response.headers['content-length'], String(response.body.length));
+    assert.equal(inflate(response.body).toString(), original);
+    assert.ok(response.body.length < Buffer.byteLength(original));
+    assert.equal(response.headers['cache-control'], 'public, max-age=3600');
+    assert.match(response.headers.vary, /Accept-Encoding/);
+  }
+  const reports = await request('/api/reports', { headers: { 'Accept-Encoding': 'br,gzip' } });
+  assert.equal(reports.status, 200);
+  assert.equal(reports.headers.get('Cache-Control'), 'no-store');
+  assert.equal(reports.headers.get('Content-Encoding'), null);
 });

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { performance } from 'node:perf_hooks';
 import { planMobility, resolveMobilityEndpoint, nearbyMobilityStops, sliceMobilityGeometry, distanceMeters } from '../server/mobility.mjs';
+import { findPlaceReferences } from '../server/place-references.mjs';
 
 const raw = await readFile(new URL('../data/mobility-network.json', import.meta.url), 'utf8');
 const network = JSON.parse(raw);
@@ -12,28 +13,31 @@ const query = (from, to, extra = {}) => planMobility(network, { from: { id: from
 
 test('movilidad conserva evidencia, excluye L4/L6 y notas exclusivamente propuestas', () => {
   assert.equal(network.routes.filter(route => route.mode === 'metro').length, 3);
-  assert.equal(network.routes.filter(route => route.mode === 'bus').length, 12);
-  assert.equal(network.stops.length, 1054);
+  assert.ok(network.routes.filter(route => route.mode === 'bus').length >= 12);
+  assert.ok(network.stops.length >= 1054);
   assert.equal(new Set(network.stops.map(stop => stop.id)).size, network.stops.length);
   assert.deepEqual(network.coverage.excludedRailRoutes.map(route => route.id), ['L4', 'L6']);
-  assert.ok(network.coverage.excludedRoutes.some(route => route.code === 'Ecovía'));
+  assert.ok(network.routes.some(route => route.code === 'Ecovía'));
+  assert.ok(network.routes.filter(route => route.networkId === 'transmetro').length >= 30);
   assert.ok(network.coverage.excludedStops.some(stop => stop.reason === 'proposed-only'));
   for (const stop of network.stops) {
-    assert.equal(stop.official, true);
+    assert.equal(typeof stop.official, 'boolean');
+    assert.ok(stop.sourceIds.length);
     const note = stop.publishedInfrastructureNote || '';
     assert.ok(!note.includes('PROPUESTA') || note.includes('EXISTE'));
     if (stop.mode === 'bus') assert.ok(stop.id.startsWith(`${stop.routeIds[0]}:`));
   }
   for (const route of network.routes.filter(route => route.mode === 'bus')) {
-    assert.equal(route.stopOrderVerified, false);
-    assert.equal(route.directionVerified, false);
+    assert.equal(typeof route.stopOrderVerified, 'boolean');
+    assert.equal(typeof route.directionVerified, 'boolean');
   }
 });
 
 test('Mederos a Universidad cruza autobús real publicado y Metro con geometría por tramo', () => {
   const result = query('regioruta-a:regioruta-a-a33', 'universidad');
-  assert.ok(result.journeys.length >= 1 && result.journeys.length <= 3);
-  const journey = result.journeys[0];
+  assert.ok(result.journeys.length >= 1 && result.journeys.length <= 8);
+  const journey = result.journeys.find(journey => journey.serviceIds.join('|') === 'regioruta-a|L2');
+  assert.ok(journey);
   assert.deepEqual(journey.steps.map(step => step.mode), ['bus', 'walk', 'metro']);
   assert.equal(journey.steps[0].lineId, 'regioruta-a');
   assert.equal(journey.steps.at(-1).lineId, 'L2');
@@ -46,7 +50,7 @@ test('Mederos a Universidad cruza autobús real publicado y Metro con geometría
   assert.ok(result.diagnostics.expansions <= 24000);
   assert.equal(result.mode, 'experimental');
   assert.equal(result.generatedAt, date);
-  assert.equal(query('regioruta-a:regioruta-a-a33', 'universidad').journeys[0].id, journey.id);
+  assert.ok(query('regioruta-a:regioruta-a-a33', 'universidad').journeys.some(repeated => repeated.id === journey.id));
 });
 
 test('reglas de offline y coordenadas rechazan GPS, lugares, cadenas numéricas y cobertura externa', () => {
@@ -61,7 +65,12 @@ test('reglas de offline y coordenadas rechazan GPS, lugares, cadenas numéricas 
   assert.throws(() => query('L4', 'universidad'), { code: 'UNKNOWN_STOP' });
   assert.throws(() => query('talleres', 'universidad', { preference: 'flying' }), { code: 'INVALID_PREFERENCE' });
   assert.throws(() => query('talleres', 'universidad', { scenario: 'tomorrow' }), { code: 'INVALID_SCENARIO' });
+  assert.throws(() => query('talleres', 'universidad', { transport: 'airplane' }), { code: 'INVALID_TRANSPORT' });
   assert.equal(resolveMobilityEndpoint(network, { id: 'padre-mier' }, { offline: true }).id, 'metro:padre-mier');
+  const place = { id: 'osm:682039730', kind: 'place', lat: 25.6590567, lng: -100.3545702, name: 'Punto Valle' };
+  assert.equal(resolveMobilityEndpoint(network, place).kind, 'place');
+  assert.equal(resolveMobilityEndpoint(network, place).lat, place.lat);
+  assert.throws(() => resolveMobilityEndpoint(network, place, { offline: true }), { code: 'OFFLINE_STOP_ONLY' });
 });
 
 test('ubicación real conecta solo a paradas cercanas; fuera del alcance no fabrica servicio', () => {
@@ -102,6 +111,172 @@ test('prioridad accesible penaliza cambios sin prometer accesibilidad verificada
   assert.equal(accessible.journeys[0].accessibility, 'unknown');
   assert.ok(fast.journeys.length >= 2);
   assert.ok(fast.journeys.every((journey, index) => index === 0 || journey.score >= fast.journeys[index - 1].score));
+});
+
+test('conserva alternativas distintas ordenadas por la prioridad sin completar opciones inexistentes', () => {
+  const stops = [
+    { id: 'a', lat: 25.67, lng: -100.32 },
+    { id: 'b', lat: 25.69, lng: -100.30 },
+  ].map(stop => ({ ...stop, name: stop.id, mode: 'bus', official: true, routeIds: ['direct', 'north', 'west'] }));
+  const route = (id, corner) => ({ id, mode: 'bus', name: id, segments: [{ id: `${id}:0`, stopIds: ['a', 'b'],
+    coordinates: [[-100.32, 25.67], corner, [-100.30, 25.69]], positions: [0, 2] }] });
+  const routes = [route('direct', [-100.31, 25.68]), route('north', [-100.32, 25.69]), route('west', [-100.335, 25.68])];
+  const data = { bounds: network.bounds, stops, routes };
+  const result = planMobility(data, { from: { id: 'a' }, to: { id: 'b' }, date, offline: true });
+  assert.equal(result.journeys.length, 3);
+  assert.equal(new Set(result.journeys.map(journey => journey.id)).size, 3);
+  assert.deepEqual(result.journeys.map(journey => journey.steps[0].lineId), ['direct', 'north', 'west']);
+  assert.ok(result.journeys.every((journey, index) => index === 0 || journey.score >= result.journeys[index - 1].score));
+  for (const journey of result.journeys) {
+    assert.deepEqual(journey.steps[0].geometry, routes.find(route => route.id === journey.steps[0].lineId).segments[0].coordinates);
+  }
+  assert.equal(planMobility({ ...data, routes: routes.slice(0, 1) }, { from: { id: 'a' }, to: { id: 'b' }, offline: true }).journeys.length, 1);
+});
+
+test('explora Metro, autobús y combinaciones con los mismos lugares de origen y destino', () => {
+  const data = fixture();
+  for (const id of ['c', 'd']) data.stops.find(stop => stop.id === id).routeIds.push('bus-link');
+  const coordinates = ['c', 'd'].map(id => {
+    const stop = data.stops.find(stop => stop.id === id);
+    return [stop.lng, stop.lat];
+  });
+  data.routes.push({ id: 'bus-link', mode: 'bus', name: 'Bus de conexión', segments: [{
+    id: 'bus-link:0', stopIds: ['c', 'd'], coordinates, positions: [0, 1],
+  }] });
+  const a = data.stops.find(stop => stop.id === 'a');
+  const d = data.stops.find(stop => stop.id === 'd');
+  const request = { from: { kind: 'place', name: 'Calle de salida', lat: a.lat - 0.0001, lng: a.lng },
+    to: { kind: 'place', name: 'Local de destino', lat: d.lat + 0.0001, lng: d.lng }, date };
+  const all = planMobility(data, request);
+  const compositions = all.journeys.map(journey => [...journey.modes].sort().join('+'));
+  assert.ok(compositions.includes('metro'));
+  assert.ok(compositions.includes('bus'));
+  assert.ok(compositions.includes('bus+metro'));
+  assert.equal(new Set(all.journeys.map(journey => journey.serviceIds.join('|'))).size, all.journeys.length);
+  const metro = planMobility(data, { ...request, transport: 'metro' });
+  assert.deepEqual(metro.from, all.from);
+  assert.deepEqual(metro.to, all.to);
+  assert.ok(metro.journeys.length);
+  assert.ok(metro.journeys.every(journey => journey.modes.length === 1 && journey.modes[0] === 'metro'));
+  assert.equal(all.coverage.exhaustive, false);
+  assert.equal(all.coverage.alternativesLimit, 8);
+});
+
+test('presenta hasta ocho servicios distintos en vez de limitarse a tres rutas casi iguales', () => {
+  const routeIds = Array.from({ length: 10 }, (_, index) => `bus-${index}`);
+  const stops = [{ id: 'a', lat: 25.67, lng: -100.32 }, { id: 'b', lat: 25.70, lng: -100.29 }]
+    .map(stop => ({ ...stop, name: stop.id, mode: 'bus', official: true, routeIds }));
+  const routes = routeIds.map((id, index) => ({ id, mode: 'bus', name: id, segments: [{
+    id: `${id}:0`, stopIds: ['a', 'b'], positions: [0, 2],
+    coordinates: [[-100.32, 25.67], [-100.32 - index * 0.001, 25.69], [-100.29, 25.70]],
+  }] }));
+  const result = planMobility({ bounds: network.bounds, stops, routes }, { from: { id: 'a' }, to: { id: 'b' }, offline: true });
+  assert.equal(result.journeys.length, 8);
+  assert.equal(new Set(result.journeys.map(journey => journey.serviceIds.join('|'))).size, 8);
+  assert.ok(result.diagnostics.expansions <= 24000);
+});
+
+test('buscar modos combinados no fabrica un paseo de ida y vuelta en autobús para cumplir el filtro', () => {
+  const stops = [
+    { id: 'a', lat: 25.67, lng: -100.32, routeIds: ['L1'] },
+    { id: 'b', lat: 25.67, lng: -100.31, routeIds: ['L1', 'spur'] },
+    { id: 'c', lat: 25.67, lng: -100.30, routeIds: ['L1'] },
+    { id: 'd', lat: 25.68, lng: -100.31, routeIds: ['spur'] },
+  ].map(stop => ({ ...stop, name: stop.id, official: true, mode: 'metro' }));
+  const route = (id, mode, ids) => ({ id, mode, name: id, segments: [{ id: `${id}:0`, stopIds: ids,
+    positions: ids.map((_, index) => index), coordinates: ids.map(id => {
+      const stop = stops.find(stop => stop.id === id); return [stop.lng, stop.lat];
+    }) }] });
+  const result = planMobility({ bounds: network.bounds, stops, routes: [route('L1', 'metro', ['a', 'b', 'c']), route('spur', 'bus', ['b', 'd'])] },
+    { from: { id: 'a' }, to: { id: 'c' }, offline: true });
+  assert.ok(result.journeys.length);
+  assert.ok(result.journeys.every(journey => !journey.modes.includes('bus')));
+});
+
+test('los sondeos de llegada no agregan autobuses de ida y vuelta después de alcanzar el destino', () => {
+  const pairs = [
+    ['ima-130-remanente-alameda:MTY-1979', 'regioruta-a:regioruta-a-a02'],
+    ['ima-214-directa-guadalupe-san-pedro-tapia:MTY-1928', 'transmetro-alameda-praderas:p66'],
+    ['transmetro-alameda-praderas:p133', 'metro:del-golfo'],
+  ];
+  for (const [from, to] of pairs) {
+    const result = query(from, to);
+    assert.ok(result.journeys.length);
+    for (const journey of result.journeys) {
+      const stopIds = journey.steps.flatMap((step, index) => step.stopIds.slice(index === 0 ? 0 : 1));
+      assert.equal(new Set(stopIds).size, stopIds.length, `Ciclo añadido en ${journey.serviceIds.join(' → ')}`);
+      assert.equal(stopIds.at(-1), resolveMobilityEndpoint(network, { id: to }).id);
+      assert.ok(journey.steps.filter(step => step.mode !== 'walk').every(step => step.fromId !== step.toId));
+    }
+  }
+});
+
+test('una caminata inicial no permite volver al origen en autobús para forzar una conexión mixta', () => {
+  const stops = [
+    { id: 'a', lat: 25.67, lng: -100.32, routeIds: ['L1'], mode: 'metro' },
+    { id: 'd', lat: 25.69, lng: -100.32, routeIds: ['L1'], mode: 'metro' },
+    { id: 'b', lat: 25.67015, lng: -100.32, routeIds: ['spur'], mode: 'bus' },
+    { id: 'a2', lat: 25.67, lng: -100.32, routeIds: ['spur'], mode: 'bus' },
+  ].map(stop => ({ ...stop, name: stop.id, official: true }));
+  const route = (id, mode, ids) => ({ id, mode, name: id, segments: [{ id: `${id}:0`, stopIds: ids,
+    positions: ids.map((_, index) => index), coordinates: ids.map(id => {
+      const stop = stops.find(stop => stop.id === id); return [stop.lng, stop.lat];
+    }) }] });
+  const result = planMobility({ bounds: network.bounds, stops, routes: [route('L1', 'metro', ['a', 'd']), route('spur', 'bus', ['b', 'a2'])] },
+    { from: { id: 'a' }, to: { id: 'd' }, offline: true });
+  assert.ok(result.journeys.length);
+  assert.ok(result.journeys.every(journey => !journey.modes.includes('bus')));
+});
+
+test('los nodos comunitarios documentados se aceptan online y no como extremos offline', () => {
+  const data = fixture();
+  data.stops.find(stop => stop.id === 'a').official = false;
+  assert.equal(resolveMobilityEndpoint(data, { id: 'a' }).id, 'a');
+  assert.throws(() => resolveMobilityEndpoint(data, { id: 'a' }, { offline: true }), { code: 'OFFLINE_STOP_ONLY' });
+  const result = planMobility(data, { from: { kind: 'place', name: 'Fuera de red', lat: 25.4, lng: -100.75 }, to: { id: 'd' } });
+  assert.deepEqual(result.journeys, []);
+  assert.equal(result.diagnostics.reason, 'NO_NEARBY_ORIGIN_STOPS');
+});
+
+test('San Bernabé a Punto Valle conecta Metro y autobús hasta una parada cercana al domicilio real', () => {
+  // OSM way 682039730 centroid; Río Missouri 555 is the official mall address.
+  // This is a place location, not a claimed pedestrian entrance.
+  const to = { kind: 'place', name: 'Punto Valle · Río Missouri 555', lat: 25.6590567, lng: -100.3545702 };
+  assert.ok(network.routes.some(route => route.id === 'ima-130-remanente-alameda'));
+  const nearby = nearbyMobilityStops(network, to);
+  assert.ok(nearby.some(candidate => candidate.stop.routeIds.includes('ima-130-remanente-alameda') && candidate.distanceMeters < 300));
+  const result = planMobility(network, { from: { id: 'san-bernabe' }, to, date });
+  assert.ok(result.journeys.length);
+  assert.ok(result.journeys.some(journey => journey.modes.includes('metro') && journey.modes.includes('bus')));
+  assert.equal(result.to.name, to.name);
+  assert.equal(result.to.lat, to.lat);
+  assert.equal(result.to.lng, to.lng);
+  assert.ok(result.journeys.every(journey => journey.walkingMeters <= 1200));
+  assert.ok(result.diagnostics.expansions <= 24000);
+  const metro = planMobility(network, { from: { id: 'san-bernabe' }, to, date, transport: 'metro' });
+  assert.deepEqual(metro.journeys, []);
+  assert.equal(metro.diagnostics.reason, 'NO_NEARBY_DESTINATION_STOPS');
+});
+
+test('Colonia Las Estaciones a Tec Campus Monterrey conecta Transmetro, Metro y buses sin cambiar los lugares', () => {
+  // OSM way665361279 and relation21104322 are published area centroids.
+  // Their source/official address and the reproduced geocoder mismatch are
+  // documented in docs/las-estaciones-tec.md. Neither point claims an entrance.
+  const from = findPlaceReferences('Colonia Las Estaciones')[0];
+  const to = findPlaceReferences('Tec de Monterrey')[0];
+  const result = planMobility(network, { from, to, date });
+  assert.ok(result.journeys.length >= 2);
+  assert.equal(result.from.lat, from.lat);
+  assert.equal(result.from.lng, from.lng);
+  assert.equal(result.to.lat, to.lat);
+  assert.equal(result.to.lng, to.lng);
+  assert.equal(result.to.name, 'Tec de Monterrey · Campus Monterrey');
+  assert.ok(result.journeys.some(journey => journey.serviceIds.includes('transmetro-san-bernabe-no-reeleccion') &&
+    journey.serviceIds.includes('L1') && journey.serviceIds.includes('transmetro-felix-u-gomez-la-estanzuela')));
+  assert.ok(result.journeys.some(journey => journey.serviceIds.includes('regioruta-g')));
+  assert.ok(result.journeys.every(journey => journey.walkingMeters <= 1200));
+  assert.equal(result.diagnostics.reason, null);
+  assert.ok(result.diagnostics.expansions <= 24000);
 });
 
 test('score conserva el objetivo de búsqueda sin duplicar transbordos ni sumar penalizaciones de alternativas', () => {
@@ -170,5 +345,6 @@ test('búsqueda limitada y benchmark determinista de consultas representativas',
   t.diagnostic(`9 consultas; mediana ${timings[4].toFixed(1)} ms; p95 ${p95.toFixed(1)} ms; JSON ${(Buffer.byteLength(raw) / 1024).toFixed(1)} KiB, gzip ${(gzipSync(raw).byteLength / 1024).toFixed(1)} KiB.`);
   // Generous CI ceiling catches unbounded/exponential regressions, not host noise.
   assert.ok(p95 < 1500, `Consulta fuera del presupuesto de prueba: ${p95.toFixed(1)} ms`);
-  assert.ok(gzipSync(raw).byteLength < 110 * 1024);
+  // Expanded official bus maps are downloaded on demand, outside initial precache.
+  assert.ok(gzipSync(raw).byteLength < 512 * 1024);
 });

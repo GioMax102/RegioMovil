@@ -1,4 +1,5 @@
-/** Explicit, bounded place lookup for the ZMM trip planner. No reverse geocoding. */
+/** Explicit, bounded place/address lookup for the ZMM trip planner. No reverse geocoding. */
+import { findPlaceReferences } from './place-references.mjs';
 export const ZMM_BOUNDS = [-100.9, 25.35, -99.8, 26.1];
 export const PLACE_ATTRIBUTION = Object.freeze({ text: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright', license: 'ODbL' });
 export const DEFAULT_PLACE_PROVIDER = 'https://nominatim.openstreetmap.org/search';
@@ -16,10 +17,10 @@ export const createPlaceSearchState = () => ({ cache: new Map(), lastStarted: -I
 const sharedState = createPlaceSearchState();
 
 function queryText(input) {
-  if (typeof input !== 'string') throw new PlaceSearchError(400, 'INVALID_PLACE_QUERY', 'Escribe el nombre de un lugar de 3 a 120 caracteres.');
+  if (typeof input !== 'string') throw new PlaceSearchError(400, 'INVALID_PLACE_QUERY', 'Escribe un lugar, calle o dirección de 3 a 120 caracteres.');
   const query = input.trim().normalize('NFC').replace(/ +/g, ' ');
-  if ([...query].length < 3 || [...query].length > 120 || /[\u0000-\u001f\u007f]/.test(query)) throw new PlaceSearchError(400, 'INVALID_PLACE_QUERY', 'Escribe el nombre de un lugar de 3 a 120 caracteres, sin controles.');
-  if (/[-+]?\d{1,3}\.\d+[,;\s]+[-+]?\d{1,3}\.\d+/.test(query) || /\S+@\S+/.test(query)) throw new PlaceSearchError(400, 'PRIVATE_PLACE_QUERY', 'Busca un lugar público por su nombre. La ubicación del dispositivo se procesa sin enviarla al buscador.');
+  if ([...query].length < 3 || [...query].length > 120 || /[\u0000-\u001f\u007f]/.test(query)) throw new PlaceSearchError(400, 'INVALID_PLACE_QUERY', 'Escribe un lugar, calle o dirección de 3 a 120 caracteres, sin controles.');
+  if (/[-+]?\d{1,3}\.\d+[,;\s]+[-+]?\d{1,3}\.\d+/.test(query) || /\S+@\S+/.test(query)) throw new PlaceSearchError(400, 'PRIVATE_PLACE_QUERY', 'Busca por nombre, calle o dirección. La ubicación del dispositivo se procesa sin enviarla al buscador.');
   return query;
 }
 
@@ -49,6 +50,18 @@ async function boundedJson(response) {
   catch { throw new PlaceSearchError(502, 'PLACES_INVALID_RESPONSE', 'El buscador no devolvió lugares válidos. Intenta de nuevo.'); }
 }
 
+function cleanText(value, limit = 180) {
+  return typeof value === 'string' && !/[\u0000-\u001f\u007f]/.test(value) ? value.trim().slice(0, limit) : '';
+}
+
+function fallbackQuery(query) {
+  // A settlement-type prefix is not part of a neighborhood's proper name.
+  // Keep house numbers, sectors and municipalities intact; the returned place
+  // still comes from the provider and must be selected explicitly by the user.
+  const name = query.replace(/^(?:colonia|col\.?|fraccionamiento|fracc\.?)\s+/iu, '').trim();
+  return /nuevo\s+le[oó]n/i.test(name) ? name : `${name}, Nuevo León, México`;
+}
+
 function placesFrom(payload) {
   if (!Array.isArray(payload)) throw new PlaceSearchError(502, 'PLACES_INVALID_RESPONSE', 'El buscador no devolvió una lista de lugares. Intenta de nuevo.');
   const places = [];
@@ -62,10 +75,21 @@ function placesFrom(payload) {
     const rawId = ['node', 'way', 'relation'].includes(row.osm_type) && /^\d{1,20}$/.test(String(row.osm_id)) ? `${row.osm_type[0]}${row.osm_id}` : /^\d{1,20}$/.test(String(row.place_id)) ? `p${row.place_id}` : null;
     if (!rawId || seen.has(rawId)) continue;
     const displayName = row.display_name.trim().slice(0, 500);
-    const name = (typeof row.name === 'string' && !/[\u0000-\u001f\u007f]/.test(row.name) ? row.name.trim() : '') || displayName.split(',')[0].trim();
+    const details = row.address && typeof row.address === 'object' ? row.address : {};
+    const street = cleanText(details.road || details.pedestrian || details.footway || details.residential);
+    const houseNumber = cleanText(details.house_number, 30);
+    const streetAddress = [street, houseNumber].filter(Boolean).join(' ');
+    const address = [...new Set([
+      streetAddress,
+      cleanText(details.neighbourhood || details.suburb || details.quarter),
+      cleanText(details.city || details.town || details.village || details.municipality || details.county),
+      cleanText(details.state),
+      cleanText(details.postcode, 20),
+    ].filter(Boolean))].join(', ') || displayName;
+    const name = cleanText(row.namedetails?.['name:es']) || cleanText(row.name) || streetAddress || displayName.split(',')[0].trim();
     if (!name) continue;
     seen.add(rawId);
-    places.push({ id: `osm:${rawId}`, name: name.slice(0, 180), displayName, lat, lng, kind: 'place' });
+    places.push({ id: `osm:${rawId}`, name: name.slice(0, 180), address, displayName, lat, lng, kind: 'place', resultType: houseNumber ? 'address' : street && ['highway', 'place'].includes(row.category) ? 'street' : 'place' });
     if (places.length === 6) break;
   }
   return places;
@@ -76,6 +100,10 @@ export function createPlaceSearch({ providerUrl = DEFAULT_PLACE_PROVIDER, userAg
   if (typeof transport !== 'function' || typeof userAgent !== 'string' || userAgent.length < 12 || userAgent.length > 300 || /[\r\n]/.test(userAgent)) throw new TypeError('A named provider transport and identifying User-Agent are required.');
   return async input => {
     const query = queryText(input);
+    const references = findPlaceReferences(query);
+    // Exact, sourced references remain available even while the external quota is busy.
+    // They do not turn arbitrary or partial text into a guessed destination.
+    if (references.length) return { places: references, provider: 'Referencias verificadas / OpenStreetMap', attribution: PLACE_ATTRIBUTION, cached: false };
     const time = now();
     const key = `${provider.href}|${query.toLocaleLowerCase('es-MX')}`;
     for (const [entry, cached] of state.cache) if (time - cached.createdAt >= CACHE_TTL) state.cache.delete(entry);
@@ -85,13 +113,15 @@ export function createPlaceSearch({ providerUrl = DEFAULT_PLACE_PROVIDER, userAg
     if (state.inFlight || time - state.lastStarted < 1000 || time < state.blockedUntil) throw new PlaceSearchError(429, 'PLACES_BUSY', 'El buscador está atendiendo otra consulta. Espera un momento y vuelve a buscar.', Math.max(1, Math.ceil((state.blockedUntil - time) / 1000)));
     state.inFlight = true;
     state.lastStarted = time;
-    const url = new URL(provider);
-    url.search = new URLSearchParams({ q: query, format: 'jsonv2', limit: '6', countrycodes: 'mx', viewbox: `${ZMM_BOUNDS[0]},${ZMM_BOUNDS[3]},${ZMM_BOUNDS[2]},${ZMM_BOUNDS[1]}`, bounded: '1', addressdetails: '1', 'accept-language': 'es' }).toString();
     const controller = new AbortController();
     let timeout;
     const deadline = new Promise((_, reject) => { timeout = setTimeout(() => { controller.abort(); reject(new PlaceSearchError(504, 'PLACES_TIMEOUT', 'El buscador tardó demasiado. Intenta de nuevo o elige una parada oficial.')); }, 6000); });
     try {
-      const work = (async () => {
+      const lookup = async text => {
+        if (controller.signal.aborted) throw new PlaceSearchError(504, 'PLACES_TIMEOUT', 'El buscador tardó demasiado. Intenta de nuevo o elige una parada oficial.');
+        const url = new URL(provider);
+        url.search = new URLSearchParams({ q: text, format: 'jsonv2', limit: '6', countrycodes: 'mx', viewbox: `${ZMM_BOUNDS[0]},${ZMM_BOUNDS[3]},${ZMM_BOUNDS[2]},${ZMM_BOUNDS[1]}`, bounded: '1', addressdetails: '1', namedetails: '1', dedupe: '1', 'accept-language': 'es' }).toString();
+        state.lastStarted = now();
         const response = await transport(url, { method: 'GET', headers: { Accept: 'application/json', 'User-Agent': userAgent }, signal: controller.signal, redirect: 'error' });
         if (!response.ok) {
           await response.body?.cancel().catch(() => {});
@@ -99,6 +129,21 @@ export function createPlaceSearch({ providerUrl = DEFAULT_PLACE_PROVIDER, userAg
           throw new PlaceSearchError(response.status === 429 ? 429 : 502, 'PLACES_UNAVAILABLE', 'El buscador no está disponible. Intenta después o elige una parada oficial.', response.status === 429 ? 60 : undefined);
         }
         return placesFrom(await boundedJson(response));
+      };
+      const work = (async () => {
+        let places = await lookup(query);
+        // Regional context can resolve otherwise ambiguous names and full addresses.
+        // At most one fallback, only after an empty response, under the SAME global
+        // request quota and six-second deadline. It is not an autocomplete service.
+        const fallback = fallbackQuery(query);
+        if (!places.length && fallback !== query) {
+          const remaining = Math.max(0, 1000 - (now() - state.lastStarted));
+          if (remaining) await new Promise(resolve => setTimeout(resolve, remaining));
+          if (controller.signal.aborted) return places;
+          state.lastStarted = now();
+          places = await lookup(fallback);
+        }
+        return places;
       })();
       const places = await Promise.race([work, deadline]);
       const result = { places, provider: 'Nominatim / OpenStreetMap', attribution: PLACE_ATTRIBUTION };

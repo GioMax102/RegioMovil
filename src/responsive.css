@@ -582,7 +582,7 @@
     gap: 9px;
   }
   .breadcrumb > span {
-    color: #617157;
+    color: var(--muted);
   }
   .topbar-actions {
     gap: 12px;
@@ -726,13 +726,13 @@
     position: absolute;
     right: 14px;
     top: 43px;
-    border: 1px solid #dce6d0;
+    border: 1px solid var(--line);
     background: #fff;
     z-index: 1;
     border-radius: 50%;
     height: 38px;
     width: 38px;
-    color: #617157;
+    color: var(--muted);
   }
   .planner-fields .primary-button {
     margin: 3px 0 0;
@@ -983,7 +983,7 @@
     inset: auto 0 0 0;
     background: #fffffff5;
     backdrop-filter: blur(12px);
-    border-top: 1px solid #e0e6d5;
+    border-top: 1px solid var(--line);
     padding: 6px calc(8px + var(--app-safe-right)) calc(7px + var(--app-safe-bottom))
       calc(8px + var(--app-safe-left));
     z-index: 25;
@@ -999,7 +999,7 @@
     flex: 1;
     min-width: 0;
     min-height: 52px;
-    color: #617157;
+    color: var(--muted);
     font-size: max(0.55rem, 12px);
     position: relative;
     padding: 4px;
@@ -1014,13 +1014,13 @@
     z-index: 1;
   }
   .mobile-nav button.active {
-    color: #426d3b;
+    color: var(--green);
     font-weight: 600;
   }
   .mobile-nav button.active:before {
     content: '';
     grid-area: 1 / 1;
-    background: #eef3e6;
+    background: var(--soft);
     width: 48px;
     height: 28px;
     border-radius: 20px;
@@ -1579,6 +1579,54 @@
 .mobile-plan-cta {
   display: none;
 }
+.home-plan-cta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  min-height: 112px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid #06734f;
+  border-radius: 16px;
+  background: var(--green);
+  color: white;
+  text-align: left;
+  box-shadow: 0 5px 14px #087f5b16;
+}
+.home-plan-cta:hover {
+  background: #066447;
+}
+.home-plan-cta > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.home-plan-cta .soft-icon {
+  width: 46px;
+  height: 46px;
+  color: white;
+  background: #ffffff20;
+  border-radius: 13px;
+}
+.home-plan-cta strong {
+  display: block;
+  font-family: 'Montserrat Variable', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 650;
+}
+.home-plan-cta small {
+  display: block;
+  color: #d5f8e9;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.home-plan-cta > svg {
+  color: white;
+}
+.high-contrast .home-plan-cta small {
+  color: #d5f8e9;
+}
 .map-controls button {
   width: 44px;
   height: 44px;
@@ -1635,35 +1683,16 @@
     display: none;
   }
   .mobile-plan-cta {
-    width: 100%;
-    display: flex;
-    align-items: center;
     gap: 13px;
-    padding: 16px;
-    background: white;
-    border: 1px solid var(--line);
-    border-radius: 11px;
+    padding: 18px;
     margin-bottom: 20px;
-    text-align: left;
     min-height: 86px;
   }
-  .mobile-plan-cta > span:nth-child(2) {
-    flex: 1;
-  }
   .mobile-plan-cta strong {
-    font-family: 'Montserrat Variable', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    display: block;
+    font-size: 16px;
   }
   .mobile-plan-cta small {
-    display: block;
     font-size: 12px;
-    color: #617157;
-    margin-top: 6px;
-  }
-  .mobile-plan-cta > svg {
-    color: #557b48;
   }
   .demo-banner {
     align-items: center;
@@ -1686,6 +1715,27 @@
   }
   .page-heading h1 {
     font-size: 1.6rem;
+  }
+  .page-heading.compact-heading h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+  .demo-banner.compact-demo {
+    padding-right: 40px;
+    gap: 7px;
+  }
+  .demo-banner.compact-demo p {
+    padding-right: 0;
+    font-size: 11px;
+  }
+  .demo-banner.compact-demo > button {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    min-height: 30px;
   }
   .page-heading .eyebrow {
     font-size: 11px;
@@ -1712,7 +1762,7 @@
 }
 .arrival-badges > small {
   font-size: 11px;
-  color: #6f785f;
+  color: var(--muted);
 }
 .forecast-foot {
   flex-wrap: wrap;
@@ -1725,10 +1775,10 @@
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  background: #edf4e5;
+  background: var(--soft);
   padding: 8px 10px;
   border-radius: 5px;
-  color: #3f683d !important;
+  color: var(--green) !important;
   line-height: 1.7;
 }
 .through-service svg {
@@ -1738,14 +1788,14 @@
 .payment-card > p,
 .payment-card .payment-note,
 .payment-card .eyebrow {
-  color: #cbdcc2;
+  color: #9edac6;
 }
 .payment-secondary {
   display: flex;
   align-items: center;
   gap: 7px;
   font-size: 12px;
-  color: #d5e0cb;
+  color: #d0f2e2;
   margin-top: 15px;
   min-height: 35px;
 }
@@ -1762,7 +1812,7 @@
 }
 .map-caption {
   font-size: 9px;
-  color: #4f6145;
+  color: var(--muted);
 }
 .map-key > span {
   font-size: 10px;
@@ -2008,5 +2058,27 @@
   }
   .large-text .map-location > div:nth-child(2) > span > span:last-child:not(.line-badge) {
     display: none;
+  }
+}
+@media (max-width: 360px) {
+  .topbar {
+    flex-wrap: nowrap;
+    gap: 7px;
+  }
+  .mobile-brand .brand {
+    font-size: 15px;
+    gap: 7px;
+  }
+  .mobile-brand .brand > svg {
+    width: 28px;
+    height: 28px;
+  }
+  .topbar-actions {
+    gap: 6px;
+  }
+  .connection-pill {
+    font-size: 10px;
+    padding: 5px 6px;
+    gap: 4px;
   }
 }

@@ -13,12 +13,12 @@
   gap: 8px;
   padding: 10px 16px;
   border-radius: 7px;
-  color: #617157;
+  color: var(--muted);
   font-size: 13px;
 }
 .network-section-tabs button[aria-selected='true'] {
-  background: #e8f0df;
-  color: #285435;
+  background: var(--soft);
+  color: var(--green);
   font-weight: 600;
 }
 .network-new-label {
@@ -26,14 +26,14 @@
   letter-spacing: 0.6px;
   padding: 3px 6px;
   border-radius: 4px;
-  background: #dce9cb;
-  color: #426333;
+  background: var(--soft);
+  color: var(--green);
 }
 .planner-heading .service-discovery-button {
   margin-left: auto;
   font-size: 12px;
   min-height: 32px;
-  color: #416f45;
+  color: var(--green);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -52,13 +52,13 @@
 }
 .service-catalog-heading p {
   font-size: 13px;
-  color: #617157;
+  color: var(--muted);
 }
 .service-catalog-symbol {
-  background: #e9f0df;
-  border: 1px solid #dbe7cf;
+  background: var(--soft);
+  border: 1px solid var(--line);
   border-radius: 15px;
-  color: #5b8050;
+  color: var(--green);
   width: 62px;
   height: 62px;
   display: grid;
@@ -69,9 +69,9 @@
   gap: 10px;
   padding: 14px 17px;
   border-radius: 8px;
-  background: #f0f2e8;
-  border: 1px solid #e2e8d6;
-  color: #617157;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
   margin: 0 0 20px;
   font-size: 12px;
 }
@@ -98,7 +98,7 @@
   align-items: center;
   gap: 4px;
   background: #fff;
-  border: 1px solid #e2e8d6;
+  border: 1px solid var(--line);
   padding: 10px 13px;
   border-radius: 7px;
   min-width: 0;
@@ -106,12 +106,12 @@
 .service-select > span {
   grid-column: 1/-1;
   font-size: 11px;
-  color: #617157;
+  color: var(--muted);
 }
 .service-select select {
   appearance: none;
   font-size: 13px;
-  color: #304d35;
+  color: var(--dark);
   background: none;
   border: 0;
   width: 100%;
@@ -124,7 +124,7 @@
   justify-content: space-between;
   gap: 12px;
   font-size: 12px;
-  color: #617157;
+  color: var(--muted);
   margin: 20px 2px 15px;
   flex-wrap: wrap;
 }
@@ -149,7 +149,7 @@
     transform 0.15s;
 }
 .service-card:hover {
-  border-color: #9eb58b;
+  border-color: #43b58f;
   transform: translateY(-2px);
 }
 .service-card-top {
@@ -170,8 +170,8 @@
 }
 .service-status {
   font-size: 10px;
-  color: #586a4d;
-  background: #edf2e6;
+  color: var(--muted);
+  background: var(--soft);
   border-radius: 4px;
   padding: 4px 7px;
   display: inline-flex;
@@ -181,11 +181,11 @@
 .service-status.construction,
 .service-status.announced {
   color: #805e2d;
-  background: #f3e9d2;
+  background: #fff0cd;
 }
 .service-network-name {
   font-size: 11px;
-  color: #617157;
+  color: var(--muted);
   margin-top: 14px;
 }
 .service-card h3 {
@@ -200,7 +200,7 @@
   align-items: flex-start;
   gap: 6px;
   font-size: 11px;
-  color: #617157;
+  color: var(--muted);
   line-height: 1.8;
   margin-bottom: 18px;
 }
@@ -213,11 +213,11 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  border-top: 1px solid #e9eee1;
+  border-top: 1px solid var(--line);
   padding-top: 12px;
   margin-top: auto;
   font-size: 12px;
-  color: #4d7141;
+  color: var(--green);
 }
 .service-load-more {
   display: flex;
@@ -226,10 +226,10 @@
   justify-content: center;
   min-height: 46px;
   padding: 12px 20px;
-  border: 1px solid #d7e3ca;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  color: #4b743d;
-  background: #f1f6e9;
+  color: var(--green);
+  background: var(--soft);
   font-size: 13px;
   margin: 23px auto;
 }
@@ -238,7 +238,7 @@
   gap: 8px;
   align-items: flex-start;
   font-size: 12px;
-  color: #617157;
+  color: var(--muted);
   line-height: 1.9;
   margin: 22px 3px;
 }
@@ -268,7 +268,7 @@
 }
 .service-detail-heading p {
   font-size: 12px;
-  color: #617157;
+  color: var(--muted);
   margin: 12px 0 18px;
 }
 .service-endpoints {
@@ -277,13 +277,13 @@
   gap: 13px;
   align-items: center;
   border-radius: 9px;
-  background: #f1f5ea;
+  background: var(--soft);
   padding: 16px;
   margin-bottom: 20px;
 }
 .service-endpoints small {
   font-size: 11px;
-  color: #617157;
+  color: var(--muted);
   display: block;
   margin-bottom: 6px;
 }
@@ -295,27 +295,27 @@
 .service-map-loading {
   font-size: 13px;
   padding: 26px;
-  background: #f2f5ed;
+  background: var(--surface);
   border-radius: 9px;
-  color: #617157;
+  color: var(--muted);
   text-align: center;
 }
 .service-map-context {
   font-size: 12px;
   line-height: 1.9;
-  color: #617157;
+  color: var(--muted);
   margin-top: 13px;
 }
 .service-planning-limit {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: #f6f1e5;
-  border: 1px solid #e7dec6;
+  background: #fff7e1;
+  border: 1px solid #f2e5bd;
   border-radius: 8px;
   padding: 17px;
   margin: 17px 0;
-  color: #806739;
+  color: #795f1c;
   font-size: 13px;
 }
 .service-planning-limit svg {
@@ -336,13 +336,13 @@
 }
 .service-via p {
   font-size: 13px;
-  color: #617157;
+  color: var(--muted);
 }
 .service-reference-stations ol {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-left: 1px solid #dce5d2;
+  border-left: 1px solid var(--line);
   margin-left: 11px;
 }
 .service-reference-stations li {
@@ -361,13 +361,13 @@
   display: grid;
   place-items: center;
   font-size: 11px;
-  background: #eaf1e0;
-  border: 1px solid #dce7cf;
+  background: var(--soft);
+  border: 1px solid var(--line);
   flex-shrink: 0;
 }
 .service-stop-list {
   margin: 22px 0;
-  border: 1px solid #e1e8d7;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0 15px;
 }
@@ -380,7 +380,7 @@
 }
 .service-stop-list p {
   font-size: 12px;
-  color: #617157;
+  color: var(--muted);
   margin-bottom: 13px;
 }
 .service-stop-list ul {
@@ -397,7 +397,7 @@
   font-size: 12px;
   line-height: 1.9;
   padding: 6px 0;
-  border-bottom: 1px solid #edf1e6;
+  border-bottom: 1px solid var(--line);
 }
 .service-stop-list li svg {
   flex-shrink: 0;
@@ -405,7 +405,7 @@
 }
 .service-data-notes {
   font-size: 12px;
-  color: #617157;
+  color: var(--muted);
   margin: 18px 0;
   line-height: 1.9;
 }
@@ -414,7 +414,7 @@
 }
 .service-detail-sources {
   margin-top: 25px;
-  border-top: 1px solid #e2e8d6;
+  border-top: 1px solid var(--line);
   padding-top: 20px;
 }
 .service-detail-sources a {
@@ -423,7 +423,7 @@
   justify-content: space-between;
   gap: 13px;
   font-size: 12px;
-  color: #507943;
+  color: var(--green);
   line-height: 1.8;
   min-height: 44px;
   padding: 9px 0;
@@ -439,7 +439,7 @@
   gap: 8px;
   align-items: flex-start;
   font-size: 12px;
-  color: #617157;
+  color: var(--muted);
   margin-top: 19px;
   line-height: 1.9;
 }

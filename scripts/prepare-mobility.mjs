@@ -17,6 +17,7 @@ for (const line of metro.lines) {
 }
 for (const stop of metro.stations.filter(stop => routeIds.has(stop.id))) {
   stops.push({ id: `metro:${stop.id}`, stationId: stop.id, name: stop.name, lat: stop.lat, lng: stop.lng,
+    ...(stop.aliases?.length ? { aliases: stop.aliases } : {}),
     municipality: stop.municipality, mode: 'metro', routeIds: routeIds.get(stop.id),
     sourceIds: [stop.sourceId], official: true, infrastructureStatus: 'unknown' });
 }
@@ -78,13 +79,13 @@ for (const route of catalog.routes.filter(route => route.mode === 'bus')) {
     continue;
   }
   routes.push({ id: route.id, code: route.code, name: route.name, mode: 'bus', networkId: route.networkId,
-    color: route.networkId === 'regioruta' ? '#46794d' : '#4975a4', sourceIds: route.sourceIds,
+    color: route.networkId === 'regioruta' ? '#46794d' : route.networkId === 'transmetro' ? '#008b72' : route.networkId === 'ecovia' ? '#a54545' : '#4975a4', sourceIds: route.sourceIds,
     stopOrderVerified: false, directionVerified: false, geometryKind: 'official-published',
     statusAsOf: route.statusAsOf, geometryPack: route.geometryPack, geometryRevision: route.geometryRevision,
     segments: usableSegments });
 }
 const data = {
-  version: 1, mode: 'experimental', verifiedAt: catalog.verifiedAt, bounds: [-100.8, 25.35, -99.8, 26.1],
+  version: 1, mode: 'experimental', verifiedAt: catalog.verifiedAt, bounds: [-100.9, 25.35, -99.8, 26.1],
   limits: { maxWalkingMeters: 1200, maxTransferWalkingMeters: 350, maxExpansions: 24000, maxTransfers: 4 },
   stops, routes,
   throughServices: (metro.throughServices || []).map(service => ({ ...service, stationId: `metro:${service.stationId}` })),

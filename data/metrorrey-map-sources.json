@@ -1,0 +1,168 @@
+{
+  "verifiedAt": "2026-10-16",
+  "officialPageUrl": "https://www.metrorrey.mx/",
+  "provenance": "My Maps incrustados en Rutas Transmetro, propietario público Metrorrey, consultados desde el sitio oficial.",
+  "routes": [
+    {
+      "routeId": "transmetro-cuauhtemoc-san-agustin-gomez-morin",
+      "name": "Cuauhtémoc – San Agustín – Gómez Morín",
+      "mapId": "1VS_KrIdfH7d3Dd95vsEz_drNYf_AIRE"
+    },
+    {
+      "routeId": "transmetro-san-bernabe-julio-a-roca",
+      "name": "San Bernabé – Julio A. Roca",
+      "mapId": "13TfLrdgRRJkbdiuQZrZHJ7J51iB7z4s"
+    },
+    {
+      "routeId": "transmetro-san-bernabe-no-reeleccion",
+      "name": "San Bernabé – No Reelección",
+      "mapId": "158b0mrgZ83t425h9sdO4BrngkGE2jWY"
+    },
+    {
+      "routeId": "transmetro-san-bernabe-no-reeleccion-marmol",
+      "name": "San Bernabé – No Reelección (Vía Mármol)",
+      "mapId": "1PMsEcdqKxf17KiDnaf4R2B7VDsHKjbQ"
+    },
+    {
+      "routeId": "transmetro-cuauhtemoc-centro-chipinque",
+      "name": "Cuauhtémoc – Centro – Chipinque",
+      "mapId": "1SiRAwsb7r_4J7o9KJrbjW5aLXpwoYRE"
+    },
+    {
+      "routeId": "transmetro-cuauhtemoc-centro-chipinque-directo",
+      "name": "Cuauhtémoc – Centro – Chipinque (Directo)",
+      "mapId": "1w3-G4XB-D-ubHukBaMhSHv3rbJ78u80"
+    },
+    {
+      "routeId": "transmetro-alimentadora-gomez-morin-san-agustin",
+      "name": "Alimentadora Gómez Morín – San Agustín",
+      "mapId": "19a0L_2utmHeK-9zgCi2gaWsmGbcO2sA",
+      "excludedReason": "missing-published-path-or-stops"
+    },
+    {
+      "routeId": "transmetro-talleres-cabezada-la-alianza",
+      "name": "Talleres – Cabezada – La Alianza",
+      "mapId": "1YiGZZU_EPm6vnzV27c5t-rFOpf_LgvE"
+    },
+    {
+      "routeId": "transmetro-alameda-praderas",
+      "name": "Alameda – Praderas",
+      "mapId": "1WfqI1ayUqs1Wl4NRb71gLUPeIYBKigE"
+    },
+    {
+      "routeId": "transmetro-felix-u-gomez-dos-rios",
+      "name": "Félix U. Gómez – Dos Ríos",
+      "mapId": "1zvQRiqtpQhktJpJXXIN1L-j6-D4zM4g"
+    },
+    {
+      "routeId": "transmetro-exposicion-pablo-livas",
+      "name": "Exposición – Pablo Livas",
+      "mapId": "1-AOrLDXxPoJwrhc-X8NGvaxouYe8eRc"
+    },
+    {
+      "routeId": "transmetro-exposicion-col-zaragoza-21-de-enero",
+      "name": "Exposición – Col. Zaragoza – 21 de Enero",
+      "mapId": "1JTgMhFAcMvoMod2SRvKAnWh-iQnP7RY"
+    },
+    {
+      "routeId": "transmetro-exposicion-san-cristobal",
+      "name": "Exposición – San Cristóbal",
+      "mapId": "1jQZbnYwahIOQSBb4FLsGUJHqRh-g41I"
+    },
+    {
+      "routeId": "transmetro-alimentadora-los-cristales-la-estanzuela",
+      "name": "Alimentadora Los Cristales – La Estanzuela",
+      "mapId": "1C3DKzjYUgt2IWGbt8V1zRymZQhh3Vb4"
+    },
+    {
+      "routeId": "transmetro-felix-u-gomez-la-estanzuela",
+      "name": "Félix U. Gómez – Carretera Nacional – La Estanzuela",
+      "mapId": "19agPE-_QOH380jlCWjrioqlnffCHmNc"
+    },
+    {
+      "routeId": "ecovia-garcia-monterrey-guadalupe",
+      "name": "García – Monterrey – Guadalupe",
+      "mapId": "1lKh6m1HsGuhjFalhIou2eHPmhWp_-aw"
+    },
+    {
+      "routeId": "transmetro-hospital-metropolitano-anillo-electrico-directo",
+      "name": "Hospital Metropolitano – Anillo Eléctrico (Directo)",
+      "mapId": "1-qdasexvl-Xp3d6l5L4YZS79kHcsrfA"
+    },
+    {
+      "routeId": "transmetro-hospital-metropolitano-anillo-electrico-u-laboral",
+      "name": "Hospital Metropolitano – Anillo Eléctrico (U. Laboral)",
+      "mapId": "1NoEk1lfGg5cbrcQ1MPw7ofuCeuaXDfU"
+    },
+    {
+      "routeId": "transmetro-hospital-metropolitano-casa-blanca",
+      "name": "Hospital Metropolitano – Casa Blanca",
+      "mapId": "1P1nUsBD-N1xRbIt2r1758KyVEiqNNxY"
+    },
+    {
+      "routeId": "transmetro-hospital-metropolitano-diego-diaz-de-berlanga",
+      "name": "Hospital Metropolitano – Diego Díaz de Berlanga",
+      "mapId": "1PcQc3zS8KRoVprlEVv6vIkhYJoNuEcs"
+    },
+    {
+      "routeId": "transmetro-hospital-metropolitano-romulo-garza",
+      "name": "Hospital Metropolitano – Rómulo Garza",
+      "mapId": "1HafEQ8lkxxdfwmlms8ipsyOaAaYAUgI"
+    },
+    {
+      "routeId": "transmetro-mitras-villas-de-san-francisco",
+      "name": "Mitras – Villas de San Francisco",
+      "mapId": "1bPhuGxL9wPGVy2ogTfYbVKKOQkvmQAo"
+    },
+    {
+      "routeId": "transmetro-sendero-casco-pedregal",
+      "name": "Sendero – Casco – Pedregal",
+      "mapId": "1Crezt6oW2plXA7pr_SBStbxOLW4Pk_k"
+    },
+    {
+      "routeId": "transmetro-sendero-fomerrey-9",
+      "name": "Sendero – Fomerrey 9",
+      "mapId": "16TaHWoT-tFlQ158bsHCaBtiBdCF8tYc"
+    },
+    {
+      "routeId": "transmetro-sendero-metroplex",
+      "name": "Sendero – Metroplex",
+      "mapId": "1AQHcEtIvN8D59ViI14gwXnpc3e2UVCM"
+    },
+    {
+      "routeId": "transmetro-sendero-miravista",
+      "name": "Sendero – Miravista",
+      "mapId": "1Nm-PFuuB0cTfEj5WEXRWhhc63aUvutI"
+    },
+    {
+      "routeId": "transmetro-sendero-monterreal",
+      "name": "Sendero – Monterreal",
+      "mapId": "1I8Eux8bKoijRn7iphuX25mI95k7W1gE"
+    },
+    {
+      "routeId": "transmetro-sendero-apodaca",
+      "name": "Sendero – San Nicolás – Apodaca",
+      "mapId": "1r8EoXv22nAO913eOWJI1pfTPOckM8M0"
+    },
+    {
+      "routeId": "transmetro-universidad-hospital-metropolitano",
+      "name": "Universidad – Arboledas San Jorge – Hospital Metropolitano",
+      "mapId": "15daNDj7MWmmRINrptcbvYwZ3w3VlGzY"
+    },
+    {
+      "routeId": "transmetro-universidad-las-puentes",
+      "name": "Universidad – Las Puentes",
+      "mapId": "1RSTDaNdd-mHq-rf2KFNeQ1oedvqVKQY"
+    },
+    {
+      "routeId": "transmetro-universidad-santo-domingo",
+      "name": "Universidad – Santo Domingo",
+      "mapId": "10NE6Cuzfg1vL3ZFDez4I-yyrLyj0NOw"
+    },
+    {
+      "routeId": "transmetro-universidad-e-zapata-cumbres",
+      "name": "Universidad – Emiliano Zapata – Cumbres",
+      "mapId": "1U7wqHEcBXBZwwzVEbIzwRPU8Oq8GesE"
+    }
+  ]
+}

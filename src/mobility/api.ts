@@ -89,7 +89,7 @@ export function createMobilityPlanner(network: MobilityNetwork) {
     };
     worker.onerror = () =>
       failWorker(
-        new Error('El cálculo se interrumpió. Cambia a Metro y vuelve a abrir Metro + autobús.'),
+        new Error('El cálculo se interrumpió. Vuelve a abrir Planear viaje e inténtalo de nuevo.'),
       );
   }
   return {
@@ -104,7 +104,7 @@ export function createMobilityPlanner(network: MobilityNetwork) {
         const timer = setTimeout(() => {
           failWorker(
             new Error(
-              'El cálculo tomó demasiado tiempo. Cambia a Metro y vuelve a abrir el modelo.',
+              'El cálculo tomó demasiado tiempo. Vuelve a abrir Planear viaje y prueba otra prioridad.',
             ),
           );
         }, 12000);

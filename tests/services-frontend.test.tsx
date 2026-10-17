@@ -99,7 +99,7 @@ after(async () => {
 
 async function mountCatalog() {
   render(<TransitCatalog onPlanLine={id => plannedLines.push(id)} />);
-  await screen.findByText('207 rutas · 6 redes');
+  await screen.findByText('214 rutas · 6 redes');
 }
 async function filterNetwork(id: string) {
   await user.selectOptions(screen.getByRole('combobox', { name: 'Filtrar rutas por red' }), id);
@@ -130,7 +130,7 @@ test('App exposes Rutas y redes, filters seven RegioRuta services and loads maps
   await user.click(navigation.getByRole('button', { name: 'Estaciones', exact: true }));
   screen.getByRole('tab', { name: 'Estaciones de Metro' }).focus();
   await user.keyboard('{ArrowRight}');
-  await screen.findByText('207 rutas · 6 redes');
+  await screen.findByText('214 rutas · 6 redes');
   assert.equal(document.querySelectorAll('.service-card').length, 24, 'The full catalog is paginated in the UI.');
   assert.equal(screen.getByRole('tab', { name: /Rutas y redes/ }).getAttribute('aria-selected'), 'true');
   assert.equal(document.activeElement, screen.getByRole('tab', { name: /Rutas y redes/ }));
@@ -152,7 +152,7 @@ test('route search combines route number and accent-free municipality and can re
   await search('223 juarez inexistente');
   assert.ok(screen.getByRole('heading', { name: 'No encontramos esa ruta.' }));
   await user.click(screen.getByRole('button', { name: /Mostrar todas las rutas/ }));
-  assert.ok(screen.getByText('207 rutas · 6 redes'));
+  assert.ok(screen.getByText('214 rutas · 6 redes'));
   assert.ok(!requests.some(path => path.startsWith('/route-packs/')));
 });
 
@@ -212,7 +212,7 @@ test('RegioRuta E draws its two published segments separately without a fabricat
   assertNoTravelAction(dialog);
 });
 
-test('route 223 Eloy Cavazos renders 203 published points and explains that transfers remain unverified', async () => {
+test('route 223 Eloy Cavazos renders 203 published points and explains experimental routing with inferred stop order', async () => {
   await mountCatalog();
   await search('223 Eloy Cavazos');
   assert.ok(screen.getByText('1 ruta · 6 redes'));
@@ -220,7 +220,8 @@ test('route 223 Eloy Cavazos renders 203 published points and explains that tran
   const map = await within(dialog).findByRole('img', { name: /Recorrido publicado.*203 puntos de referencia/ });
   assert.equal(map.querySelectorAll('circle[stroke="#256f4d"]').length, 203);
   assert.ok(within(dialog).getByText(/Trazo y 203 puntos publicados/));
-  assert.ok(within(dialog).getByText(/todavía no se usa para calcular transbordos/));
+  assert.ok(within(dialog).getByText(/El planificador experimental usa este recorrido con orden y sentidos inferidos del mapa/));
+  assert.ok(within(dialog).getByText(/El orden operativo de las paradas no está verificado/));
   assert.ok(within(dialog).getByText('Fecha del dato: 2025-09-30. Consulta la fuente para confirmar cambios.'));
   assert.ok(within(dialog).getByText(/Boletín de enero de 2026 confirma renovación/));
   assert.ok(within(dialog).getByRole('link', { name: /Renovación de ramales 223 Teófilo Salinas/ }));
