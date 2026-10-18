@@ -8,7 +8,7 @@ RegioMóvil reúne consulta de estaciones, comparación de trayectos, siguientes
 
 El repositorio incorpora interfaz React, paquete Android mediante Capacitor, API Node y persistencia de reportes. El catálogo usa fuentes públicas fechadas de Metrorrey: líneas 1, 2 y 3, con 38 ubicaciones únicas y correspondencias compartidas. La cifra institucional de 40 estaciones y el tratamiento de Zaragoza se explican en [Datos y fuentes](datos-y-fuentes.md).
 
-Existen selección de estación sin GPS, planificación entre estaciones, preferencias de tiempo/afluencia/transbordos, guardados locales, escenarios de demostración, lectura voluntaria del tablero y ajustes de texto, contraste y consumo. La voz depende de las capacidades del dispositivo. El mapa SVG evita descargar mosaicos; no ofrece navegación peatonal. Las fuentes tipográficas Inter y Montserrat se empaquetan localmente; son decisiones del diseño, no una identidad oficial del Gobierno estatal.
+Existen selección de estación sin GPS, planificación entre estaciones, preferencias de tiempo/afluencia/transbordos, guardados locales, escenarios de demostración, lectura voluntaria del tablero y ajustes de texto, contraste y consumo. La voz depende de las capacidades del dispositivo. El mapa con calles de Monterrey se empaqueta como SVG local y aparece únicamente en el detalle de un trayecto. Evita descargar mosaicos y no ofrece navegación peatonal. Los trayectos guardados se pueden volver a planear sin internet para abrir su mapa. Origen y destino permiten búsqueda por texto y una lista desplazable. Las fuentes tipográficas Inter y Montserrat se empaquetan localmente; son decisiones del diseño, no una identidad oficial del Gobierno estatal.
 
 **Llegadas, ocupación, estado del clima, condiciones y avisos operativos son simulados.** Los modelos se entrenan con muestras sintéticas y no acreditan precisión sobre unidades reales. La accesibilidad física de estaciones y vehículos permanece sin verificar. «Menos transbordos» no significa «ruta accesible».
 
@@ -16,7 +16,7 @@ El modo local calcula con el catálogo incluido cuando la interfaz está disponi
 
 ## Visión del entregable y trabajo pendiente
 
-La visión integra Metro, Transmetro, rutas urbanas, tráfico e información de unidades. Esta versión implementa el primer núcleo con Metro. No incluye catálogo de autobuses, GTFS operativo, GPS, tráfico en vivo, saldo, recargas ni boletos. Urbani y Metrorrey se consultan mediante enlaces externos; no existe una integración comercial o institucional.
+La visión integra Metro, Transmetro, rutas urbanas, tráfico e información de unidades. Esta versión planifica Metro y añade un catálogo de autobuses y ampliaciones con 207 fichas y doce recorridos publicados. Las líneas en construcción y los autobuses sin secuencia de paradas y transferencias verificada quedan fuera del cálculo de viajes. No incluye GTFS operativo, GPS, tráfico en vivo, saldo, recargas ni boletos. Urbani y Metrorrey se consultan mediante enlaces externos; no existe una integración comercial o institucional. Ver [alcance de las nuevas rutas](integracion-rutas.md).
 
 Para ofrecer información de servicio real hacen falta acuerdos de datos, telemetría con marcas de tiempo, medición de ocupación, validación de condiciones, estado de elevadores y protocolos de corrección. Hacen falta también mediciones de rendimiento en baja gama, pruebas de accesibilidad, instalación en dispositivos representativos y evaluación con personas. El modo parada es una presentación; el bloqueo del dispositivo y su administración corresponden a una configuración dedicada.
 
@@ -71,3 +71,7 @@ Realizar dos ciclos formativos con participantes de la ZMM que usen transporte p
 Usar tareas iguales: encontrar una estación conocida por su alias, interpretar una unidad simulada, comparar alternativas, corregir un destino y consultar una limitación de accesibilidad. Evaluar Android y parada por separado. Registrar éxito sin ayuda, tiempo, errores, comprensión y esfuerzo percibido; una encuesta aislada no demuestra utilidad.
 
 Meta formativa propuesta: al menos 80 % de tareas completadas sin intervención y ninguna confusión crítica entre simulación y operación real. Un estudio pequeño detecta problemas, no representa estadísticamente a toda la población. Corregir los hallazgos y repetir antes de declarar la aplicación accesible, intuitiva o apta para un despliegue público.
+
+## Viajes cotidianos y jerarquía visual
+
+Planear usa un único buscador de lugares, direcciones y paradas para ambos extremos. Los filtros Metro, Autobús y Metro + autobús actúan sobre los resultados sin cambiar esos extremos. El acceso de Inicio dirige al mismo planificador. Los paquetes de hasta ocho alternativas se guardan por acción explícita, con etiqueta y fecha, y se abren desde Guardados sin volver a buscar el destino. Los colores usan blanco limpio, menta y esmeralda; los tiempos, la prioridad seleccionada y la acción principal reciben el énfasis. Fuentes y supuestos permanecen disponibles en los detalles sin repetir textos largos en cada pantalla. Ver [evaluación de propuestas](iteracion-viajes-cotidianos.md).

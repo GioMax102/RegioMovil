@@ -2,20 +2,21 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 runtime_root="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies"
-if command -v node >/dev/null 2>&1; then
+if command -v node >/dev/null 2>&1 && [[ "$(node -p "Number(process.versions.node.split('.')[0]) >= 24" 2>/dev/null)" == "true" ]]; then
   app_node="$(command -v node)"
 elif [[ -x "$runtime_root/node/bin/node" ]]; then
   app_node="$runtime_root/node/bin/node"
 else
-  echo "Instala Node.js 24 o posterior para ejecutar RegioMóvil." >&2
+  echo "RegioMóvil requiere Node.js 24 o posterior. La versión del sistema no es compatible." >&2
   exit 1
 fi
 export PATH="$(dirname "$app_node"):$PATH"
 case "${1:-start}" in
   dev) exec "$app_node" scripts/dev.mjs ;;
   start) exec "$app_node" --env-file-if-exists=.env server/index.mjs ;;
-  build) "$app_node" node_modules/typescript/bin/tsc -b; "$app_node" node_modules/vite/bin/vite.js build; exec "$app_node" scripts/finalize-web.mjs ;;
+  build) "$app_node" node_modules/typescript/bin/tsc -b; "$app_node" scripts/prepare-catalog.mjs; "$app_node" scripts/prepare-mobility.mjs; "$app_node" node_modules/vite/bin/vite.js build; exec "$app_node" scripts/finalize-web.mjs ;;
   test) exec "$app_node" --import tsx --test tests/*.test.mjs tests/*.test.tsx ;;
-  android) exec "$app_node" scripts/android-build.mjs ;;
-  *) echo "Uso: ./regiomovil [dev|start|build|test|android]" >&2; exit 1 ;;
+  android) shift; exec "$app_node" scripts/android-build.mjs "$@" ;;
+  android-connect) shift; exec "$app_node" scripts/android-connect.mjs "$@" ;;
+  *) echo "Uso: ./regiomovil [dev|start|build|test|android|android-connect]" >&2; exit 1 ;;
 esac

@@ -1,6 +1,15 @@
 import rawNetwork from '../data/network.json';
 import { buildBoard, planJourney } from '../server/domain.mjs';
-import type { Board, Network, Plan, Preference, Scenario } from './types';
+import type {
+  Board,
+  Network,
+  Plan,
+  Preference,
+  Scenario,
+  TransitCatalogData,
+  TransitRoute,
+  RoutePack,
+} from './types';
 
 export const network = rawNetwork as unknown as Network;
 const apiBase = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -84,4 +93,93 @@ export function writeStored(key: string, value: unknown) {
   } catch {
     /* Browsing stays available in restricted storage. */
   }
+}
+
+// Only public route documents are stored here. Reports and API responses never enter this cache.
+const routeCache = 'regiomovil-public-routes-v1';
+export async function readPublicDocument<T>(
+  path: string,
+  immutable = false,
+): Promise<{ data: T; offline: boolean }> {
+  if (immutable && typeof caches !== 'undefined') {
+    try {
+      const cached = await (await caches.open(routeCache)).match(path, { ignoreVary: true });
+      if (cached) return { data: (await cached.json()) as T, offline: !navigator.onLine };
+    } catch {
+      /* A restricted cache falls through to the local bundle or network. */
+    }
+  }
+  try {
+    const response = await fetch(path, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error('PUBLIC_DOCUMENT_UNAVAILABLE');
+    const data = (await response.clone().json()) as T;
+    if (typeof caches !== 'undefined') {
+      try {
+        const cache = await caches.open(routeCache);
+        // Keep only the current revision of this public document.
+        const pathname = new URL(path, location.origin).pathname;
+        for (const key of await cache.keys()) {
+          if (
+            new URL(key.url).pathname === pathname &&
+            key.url !== new URL(path, location.origin).href
+          )
+            await cache.delete(key);
+        }
+        await cache.put(path, response);
+      } catch {
+        /* Restricted storage does not prevent consultation. */
+      }
+    }
+    return { data, offline: false };
+  } catch {
+    if (typeof caches !== 'undefined') {
+      try {
+        const cached = await (await caches.open(routeCache)).match(path, { ignoreVary: true });
+        if (cached) return { data: (await cached.json()) as T, offline: true };
+      } catch {
+        /* Surface the actionable message below. */
+      }
+    }
+    throw new Error(
+      'No pudimos abrir estos datos. Conéctate una vez para guardarlos en este dispositivo y vuelve a intentar.',
+    );
+  }
+}
+export async function loadTransitCatalog() {
+  const result = await readPublicDocument<TransitCatalogData>('/transit-catalog.json');
+  if (
+    result.data.version !== 1 ||
+    !Array.isArray(result.data.routes) ||
+    !Array.isArray(result.data.sources)
+  )
+    throw new Error('El catálogo no tiene un formato válido. Vuelve a descargarlo.');
+  return result;
+}
+export async function loadRoutePack(route: TransitRoute) {
+  if (!route.geometryPack || !/^[a-zA-Z0-9][a-zA-Z0-9-]{0,100}$/.test(route.geometryPack))
+    throw new Error('Esta ruta todavía no tiene un trazo publicado disponible.');
+  const result = await readPublicDocument<RoutePack>(
+    `/route-packs/${route.geometryPack}.json${route.geometryRevision ? `?v=${route.geometryRevision}` : ''}`,
+    !!route.geometryRevision,
+  );
+  const isCoordinate = (point: number[]) =>
+    point.length === 2 &&
+    point.every(Number.isFinite) &&
+    point[0] >= -102 &&
+    point[0] <= -99 &&
+    point[1] >= 24 &&
+    point[1] <= 28;
+  if (
+    result.data.id !== route.geometryPack ||
+    !Array.isArray(result.data.coordinates) ||
+    !result.data.coordinates.every(isCoordinate) ||
+    (result.data.segments &&
+      !result.data.segments.every(
+        (segment) => Array.isArray(segment) && segment.every(isCoordinate),
+      ))
+  )
+    throw new Error(
+      'El recorrido recibido no pasó la validación de coordenadas. Consulta la fuente oficial.',
+    );
+  return result;
 }

@@ -1,0 +1,1072 @@
+.mobility-planner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.mobility-intro {
+  margin: 0 0 12px;
+}
+.mobility-experiment {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  color: #826037;
+  font-weight: 650;
+}
+.mobility-experiment > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b68f4d;
+}
+.mobility-intro h2 {
+  font-size: 1.5rem;
+  margin: 9px 0 6px;
+  letter-spacing: -0.7px;
+}
+.mobility-intro > p {
+  font-size: 14px;
+  color: var(--muted);
+}
+.mobility-connection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  font-size: 12px;
+  margin: 0 3px 14px;
+  color: var(--green);
+}
+.mobility-connection > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mobility-connection small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.mobility-connection.offline {
+  color: #866334;
+}
+.mobility-form {
+  padding: 25px;
+  border-color: #b9dfd1;
+}
+.mobility-fields {
+  display: grid;
+  grid-template-columns: 1fr 44px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.mobility-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  min-height: 84px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  text-align: left;
+  min-width: 0;
+  background: var(--surface);
+}
+.mobility-endpoint:hover {
+  border-color: #3bae85;
+}
+.mobility-endpoint > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.mobility-endpoint small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.mobility-endpoint strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.mobility-point {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 650;
+}
+.mobility-point.origin {
+  color: var(--green);
+  background: var(--soft);
+}
+.mobility-point.destination {
+  color: #976411;
+  background: #fff0cd;
+}
+.mobility-swap {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--green);
+}
+.mobility-location-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 13px 2px 21px;
+}
+.mobility-location-row .text-button {
+  min-height: 44px;
+}
+.mobility-location-row small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.mobility-priorities {
+  border: 0;
+  padding: 0;
+  margin: 0 0 21px;
+}
+.mobility-priorities legend {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 11px;
+}
+.mobility-priorities > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.mobility-priorities button,
+.mobility-picker-kinds button,
+.mobility-stop-filters button {
+  min-height: 44px;
+  border-radius: 30px;
+  padding: 9px 15px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+.mobility-priorities button[aria-pressed='true'],
+.mobility-picker-kinds button[aria-pressed='true'],
+.mobility-stop-filters button[aria-pressed='true'] {
+  background: #c9f4e1;
+  border-color: #72cfaa;
+  color: var(--green);
+  font-weight: 600;
+}
+.mobility-honesty {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.85;
+  color: var(--muted);
+  margin: 16px 0 0;
+}
+.mobility-honesty svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.mobility-feedback,
+.mobility-error {
+  padding: 14px 17px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+  border-radius: 8px;
+  margin: 15px 0;
+}
+.mobility-error {
+  background: #fbefe8;
+  color: #885331;
+  border: 1px solid #ecd5c6;
+}
+.mobility-results {
+  margin-top: 28px;
+}
+.mobility-results-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 3px 16px;
+}
+.mobility-results-heading h3 {
+  font-size: 17px;
+}
+.mobility-results-heading > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.mobility-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 21px;
+  margin-bottom: 13px;
+}
+.mobility-result:first-of-type {
+  border-color: #43b58f;
+  box-shadow:
+    inset 4px 0 var(--green),
+    0 4px 12px #087f5b08;
+}
+.mobility-result:hover {
+  border-color: #46b78f;
+}
+.mobility-result-time {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+.mobility-result-time > span:first-child {
+  font-size: 27px;
+  font-weight: 700;
+  color: var(--green);
+}
+.mobility-result-time small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.mobility-result-time > span:last-child {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--green);
+  background: var(--soft);
+  border-radius: 20px;
+  padding: 5px 9px;
+}
+.mobility-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 17px 0 12px;
+}
+.mobility-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 15px;
+  color: var(--green);
+  background: var(--soft);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.mobility-mode.walk {
+  color: #8c5b13;
+  background: #fff3db;
+}
+.mobility-mode.metro {
+  color: #245c9a;
+  background: #e7f1ff;
+}
+.mobility-mode svg {
+  flex-shrink: 0;
+}
+.mobility-result > p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.mobility-result-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  margin-top: 17px;
+  padding-top: 13px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+}
+.mobility-method-note {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.85;
+  margin: 13px 0;
+}
+.mobility-method,
+.mobility-saved {
+  border-top: 1px solid var(--line);
+  margin: 24px 0;
+  padding-top: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.9;
+}
+.mobility-method summary,
+.mobility-saved summary {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 12px 0;
+}
+.mobility-saved summary > svg {
+  vertical-align: middle;
+  margin-right: 7px;
+}
+.mobility-method p {
+  margin-bottom: 12px;
+}
+.mobility-saved > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+}
+.mobility-saved > div > button:first-child {
+  flex: 1;
+  text-align: left;
+  padding: 12px 0;
+}
+.mobility-saved > div > button:last-child {
+  min-width: 44px;
+  min-height: 44px;
+}
+.mobility-picker-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 15px 0 20px;
+}
+.mobility-stop-filters {
+  display: flex;
+  gap: 7px;
+  margin: 12px 0;
+}
+.mobility-stop-filters button {
+  padding: 7px 13px;
+  min-height: 40px;
+  font-size: 11px;
+}
+.mobility-stop-list {
+  max-height: 45dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  margin: 13px -2px;
+}
+.mobility-stop-list > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 13px 9px;
+  min-height: 65px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green);
+}
+.mobility-stop-list > button:hover {
+  background: var(--soft);
+}
+.mobility-stop-list > button > span {
+  flex: 1;
+  min-width: 0;
+}
+.mobility-stop-list > button > svg {
+  flex-shrink: 0;
+}
+.mobility-stop-list strong {
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.7;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.mobility-stop-list small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.mobility-osm-link {
+  color: var(--green);
+  font-size: 11px;
+  text-decoration: underline;
+}
+.mobility-detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 20px;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 20px 0;
+  padding: 13px 15px;
+  border-radius: 10px;
+  background: var(--soft);
+}
+.mobility-detail-stats > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.mobility-map {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.mobility-map > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 670/410;
+  touch-action: none;
+  cursor: grab;
+}
+.mobility-map-tools {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: 0 2px 10px #16391e14;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.mobility-map-tools button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--green);
+  border-bottom: 1px solid var(--line);
+}
+.mobility-map-attribution {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  font-size: 9px;
+  color: var(--muted);
+  background: #fffffff0;
+  padding: 3px 7px;
+}
+.mobility-steps {
+  list-style: none;
+  margin: 20px 0 24px;
+  padding: 0;
+}
+.mobility-steps > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mobility-step-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--green);
+  background: var(--soft);
+}
+.mobility-step-icon.walk {
+  color: #8c5b13;
+  background: #fff3db;
+}
+.mobility-steps h3 {
+  font-size: 13px;
+  margin: 0 0 6px;
+  line-height: 1.6;
+}
+.mobility-steps p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--muted);
+}
+.mobility-steps p > svg {
+  vertical-align: middle;
+  margin: 0 3px;
+}
+.mobility-steps small {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.mobility-planner button:disabled,
+.mobility-picker-kinds button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.high-contrast .mobility-planner,
+.high-contrast .mobility-method-note {
+  color: #283a25;
+}
+.high-contrast .mobility-form,
+.high-contrast .mobility-result,
+.high-contrast .mobility-endpoint {
+  border-color: #4a633e;
+}
+.high-contrast .mobility-mode {
+  border: 1px solid currentColor;
+}
+@media (max-width: 760px) {
+  .mobility-intro h2 {
+    font-size: 1.45rem;
+  }
+  .mobility-intro > p {
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .mobility-form {
+    padding: 18px;
+  }
+  .mobility-fields {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    position: relative;
+  }
+  .mobility-endpoint {
+    padding: 13px;
+    min-height: 75px;
+    padding-right: 38px;
+  }
+  .mobility-endpoint strong {
+    font-size: 13px;
+  }
+  .mobility-swap {
+    position: absolute;
+    right: 11px;
+    top: 58px;
+    width: 35px;
+    height: 35px;
+    border: 3px solid white;
+    z-index: 1;
+  }
+  .mobility-connection {
+    font-size: 11px;
+    line-height: 1.8;
+  }
+  .mobility-location-row {
+    gap: 3px;
+    padding-bottom: 17px;
+  }
+  .mobility-location-row small {
+    line-height: 1.7;
+  }
+  .mobility-priorities button {
+    padding: 9px 11px;
+    font-size: 11px;
+  }
+  .mobility-result {
+    padding: 18px;
+  }
+  .mobility-results-heading h3 {
+    font-size: 15px;
+  }
+  .mobility-detail-stats {
+    font-size: 11px;
+  }
+  .mobility-map > svg {
+    min-height: 235px;
+  }
+  .mobility-map-tools {
+    right: 8px;
+    top: 8px;
+  }
+  .mobility-stop-list {
+    max-height: 42dvh;
+  }
+  .mobility-honesty {
+    font-size: 11px;
+  }
+}
+
+/* A single city search chooses endpoints; transport chips only filter its answer. */
+.mobility-search-prompt {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0 0 16px;
+  max-width: 60ch;
+}
+.endpoint-picker-intro {
+  color: var(--muted);
+  margin: 0 0 18px;
+  font-size: 1rem;
+}
+.endpoint-search-field {
+  min-height: 56px;
+}
+.endpoint-search-field input {
+  min-width: 0;
+  font-size: 1.05rem;
+}
+.endpoint-search-submit {
+  margin: 12px 0 8px;
+  min-height: 48px;
+}
+.endpoint-current-location {
+  margin: 10px 0;
+  min-height: 48px;
+}
+.endpoint-offline-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.93rem;
+  color: var(--muted);
+  margin: 12px 0;
+}
+.endpoint-suggestions {
+  margin-top: 24px;
+}
+.endpoint-suggestions h3 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+.endpoint-suggestions .mobility-place-list {
+  margin-top: 8px;
+}
+.endpoint-search-privacy {
+  margin-top: 22px;
+  font-size: 0.86rem;
+}
+.endpoint-search-privacy a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mobility-result-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.mobility-result-filters button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  min-height: 48px;
+  padding: 10px 14px;
+  background: #fff;
+  font-size: 0.93rem;
+}
+.mobility-result-filters button span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+.mobility-result-filters button[aria-pressed='true'] {
+  background: #e2f4e8;
+  border-color: #73a58b;
+  color: var(--green);
+  font-weight: 650;
+}
+.high-contrast .mobility-result-filters button {
+  border-color: currentColor;
+}
+@media (max-width: 760px) {
+  .mobility-swap {
+    width: 48px;
+    height: 48px;
+    right: 9px;
+    top: 52px;
+  }
+  .mobility-endpoint {
+    padding-right: 62px;
+  }
+  .mobility-priorities button {
+    min-height: 48px;
+    font-size: 0.93rem;
+  }
+  .mobility-endpoint strong {
+    font-size: 1rem;
+  }
+  .mobility-connection,
+  .mobility-method-note,
+  .mobility-detail-stats {
+    font-size: 0.93rem;
+  }
+  .mobility-stop-list small,
+  .mobility-place-list small {
+    font-size: 0.93rem;
+  }
+}
+.mobility-coverage-note {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+.mobility-step-network {
+  display: block;
+  color: var(--green);
+  font-size: 0.86rem;
+  font-weight: 650;
+  margin: 0 0 6px;
+}
+
+/* Ask for the endpoints first, then show the map in the same reading order. */
+.mobility-plan-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 26px;
+}
+.mobility-map-panel {
+  min-width: 0;
+  scroll-margin-top: 20px;
+}
+.mobility-map-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 1px 12px;
+}
+.mobility-map-heading > span {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: #255a45;
+}
+.mobility-map-heading > div {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 24px;
+  background: #e5efea;
+}
+.mobility-map-heading > div button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border-radius: 22px;
+  color: #526f61;
+  font-size: 0.8rem;
+}
+.mobility-map-heading > div button[aria-pressed='true'] {
+  background: white;
+  color: #0a7050;
+  box-shadow: 0 1px 5px #274e3915;
+  font-weight: 650;
+}
+.mobility-plan-workspace .mobility-form {
+  padding: 20px;
+  margin-top: 0;
+}
+.mobility-plan-workspace .mobility-fields {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  position: relative;
+}
+.mobility-endpoint-entry {
+  min-width: 0;
+  background: #f6faf8;
+  border: 1px solid #dae7df;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.mobility-plan-workspace .mobility-endpoint {
+  border: 0;
+  background: transparent;
+  width: 100%;
+  padding: 12px 14px 6px;
+  min-height: 65px;
+  padding-right: 45px;
+}
+.mobility-plan-workspace .mobility-endpoint strong {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.mobility-plan-workspace .mobility-endpoint small {
+  margin: 0 0 3px;
+  font-size: 0.72rem;
+}
+.mobility-point-map-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px 10px 53px;
+  min-height: 34px;
+  font-size: 0.76rem;
+  color: #47705d;
+  width: 100%;
+  text-align: left;
+}
+.mobility-point-map-action:hover {
+  color: #087c57;
+  text-decoration: underline;
+}
+.mobility-plan-workspace .mobility-swap {
+  position: absolute;
+  right: 13px;
+  top: 80px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border: 3px solid white;
+  box-shadow: 0 1px 5px #234f3510;
+}
+.mobility-plan-workspace .mobility-location-row {
+  margin: 10px 0 15px;
+  padding: 0;
+}
+.mobility-plan-workspace .mobility-location-row button {
+  min-height: 44px;
+  font-size: 0.83rem;
+}
+.mobility-plan-workspace .mobility-location-row > small {
+  display: none;
+}
+.mobility-plan-workspace .mobility-priorities {
+  margin-bottom: 18px;
+}
+.mobility-plan-workspace .mobility-priorities legend {
+  font-size: 0.78rem;
+  margin-bottom: 8px;
+}
+.mobility-plan-workspace .mobility-priorities > div {
+  gap: 5px;
+}
+.mobility-plan-workspace .mobility-priorities button {
+  padding: 8px 10px;
+  min-height: 40px;
+  font-size: 0.76rem;
+}
+.mobility-plan-workspace .mobility-honesty {
+  font-size: 0.7rem;
+  margin-bottom: 0;
+}
+.mobility-pin-confirm {
+  margin-top: 12px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #bfdfcf;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px #183f3010;
+}
+.mobility-pin-confirm strong {
+  font-size: 0.96rem;
+}
+.mobility-pin-confirm p {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #61776c;
+  margin: 5px 0 10px;
+}
+.mobility-pin-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.mobility-pin-actions .primary-button {
+  padding: 12px 17px;
+  font-size: 0.85rem;
+  min-height: 46px;
+}
+.mobility-nearby-stop {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-top: 1px solid #e5eee8;
+  padding: 11px 0;
+  text-align: left;
+  width: 100%;
+  font-size: 0.83rem;
+  color: #285d46;
+}
+.mobility-nearby-stop span {
+  flex: 1;
+}
+.mobility-nearby-stop small {
+  display: block;
+  font-size: 0.73rem;
+  color: #687f72;
+  margin-top: 3px;
+}
+.endpoint-map-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 15px;
+  min-height: 64px;
+  background: #edf7f1;
+  border: 1px solid #cfe5d7;
+  border-radius: 12px;
+  margin: 0 0 18px;
+  text-align: left;
+  color: #1b6a4b;
+}
+.endpoint-map-option > span {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.91rem;
+}
+.endpoint-map-option small {
+  display: block;
+  color: #60806d;
+  font-size: 0.75rem;
+  font-weight: 400;
+  margin-top: 4px;
+}
+.mobility-result-method {
+  margin-top: 16px;
+}
+@media (min-width: 1150px) {
+  .mobility-planner {
+    max-width: 1150px;
+  }
+}
+@media (max-width: 980px) and (min-width: 761px) {
+  .mobility-plan-workspace {
+    grid-template-columns: 1fr;
+  }
+  .mobility-plan-workspace .mobility-form {
+    margin-top: 0;
+  }
+  .mobility-plan-workspace .mobility-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .mobility-plan-workspace .mobility-swap {
+    top: 32px;
+    right: calc(50% - 22px);
+  }
+}
+@media (max-width: 760px) {
+  .mobility-plan-workspace {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .mobility-plan-workspace .mobility-form {
+    padding: 16px;
+    margin-top: 0;
+  }
+  .mobility-search-prompt {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .mobility-connection {
+    font-size: 0.78rem;
+    margin-bottom: 15px;
+  }
+  .mobility-map-heading > span {
+    font-size: 0.8rem;
+  }
+  .mobility-map-heading > div button {
+    padding: 6px 11px;
+    min-height: 38px;
+  }
+  .mobility-plan-workspace .mobility-priorities button {
+    font-size: 0.77rem;
+  }
+  .mobility-pin-actions .text-button {
+    padding: 8px 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .location-map * {
+    transition: none !important;
+  }
+}
+
+.mobility-map-heading > div button {
+  min-height: 44px;
+}
+.mobility-point-map-action {
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  .mobility-planner .mobility-intro {
+    display: none;
+  }
+  .mobility-planner > .mobility-connection {
+    display: none;
+  }
+  .mobility-plan-workspace .location-map-canvas {
+    height: 285px;
+  }
+}
+
+.mobility-plan-workspace .mobility-endpoint-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+  align-items: stretch;
+  min-height: 76px;
+}
+.mobility-plan-workspace .mobility-endpoint {
+  padding: 12px;
+  min-height: 76px;
+}
+.mobility-point-map-action {
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 54px;
+  padding: 7px 2px;
+  border-left: 1px solid #dae7df;
+  font-size: 0.7rem;
+}
+.mobility-plan-workspace .mobility-swap {
+  right: 60px;
+  top: 62px;
+}
+@media (max-width: 760px) {
+  .mobility-plan-workspace .location-map-canvas {
+    height: 260px;
+  }
+}
+@media (max-width: 980px) and (min-width: 761px) {
+  .mobility-plan-workspace .mobility-swap {
+    top: 18px;
+    right: calc(50% - 22px);
+  }
+}
+
+/* One direct sequence: endpoints, priorities, map and available connections. */
+.mobility-plan-workspace .mobility-swap {
+  top: 17px;
+  right: calc(50% - 22px);
+  background: var(--surface);
+  border-color: var(--surface);
+}
+.mobility-plan-workspace .mobility-priorities button {
+  min-height: 44px;
+}
+.mobility-plan-workspace .mobility-endpoint {
+  padding-right: 12px;
+}
+@media (max-width: 760px) {
+  .mobility-plan-workspace .mobility-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mobility-plan-workspace .mobility-swap {
+    right: 60px;
+    top: 62px;
+  }
+}

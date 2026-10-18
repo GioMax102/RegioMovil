@@ -11,7 +11,8 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SystemBars: {
-      insetsHandling: 'native',
+      // CSS variables also cover WebView versions whose env() insets are unreliable.
+      insetsHandling: 'css',
       initialViewportFitValueHint: 'cover',
       style: 'LIGHT',
     },

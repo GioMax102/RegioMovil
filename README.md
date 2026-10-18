@@ -4,12 +4,21 @@
 
 El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aquí en una experiencia verificable: red de transporte pública documentada, planeación sobre conexiones reales, escenarios de unidades, afluencia y condiciones, y fuentes visibles desde la interfaz.
 
+Esta rama, **`codex/movilidad-multimodal`**, ofrece un buscador único de lugares, calles, direcciones y paradas. Los mismos extremos se comparan entre Metro, autobús o sus combinaciones; los filtros se aplican a los resultados. La red documentada reúne **54 servicios y 3,417 puntos publicados**: tres líneas de Metro, treinta Transmetro, GMG, siete RegioRuta y trece recorridos IMA. Se calculan hasta ocho alternativas distintas por secuencia de servicios. [Cobertura y fuentes](docs/cobertura-autobuses-20261016.md), [método y benchmark](docs/modelo-movilidad.md).
+
+Las búsquedas nuevas sin internet se restringen a puntos oficiales. Puedes etiquetar un viaje como Casa, Trabajo o Escuela y guardar las alternativas con sus mapas; los lugares o coordenadas sólo se conservan tras confirmar ese guardado. El cálculo corre localmente en un worker; la red adicional se carga al abrir Planear.
+
+Planear con selección en mapa: [cambios y verificación del 17 de octubre](docs/mapa-y-planear-20261017.md).
+
+Verificación del buscador de lugares y conexiones: [resultado del 16 de octubre de 2026](docs/buscador-multimodal-20261016.md).
+
 ## Qué puedes usar
 
 - **Mi camino:** próximas unidades simuladas, intervalos de llegada, ocupación y aire acondicionado del escenario.
-- **Planear viaje:** origen y destino dentro de Metrorrey; compara menos tiempo, menos afluencia o menos transbordos. Explica la continuidad L2–L3 en Zaragoza.
+- **Planear viaje:** origen y destino por nombre, calle, dirección, parada o ubicación bajo petición. La misma búsqueda compara Metro, autobús y combinaciones; puedes filtrar los resultados y cambiar la prioridad sin volver a introducir los puntos.
 - **Estaciones:** búsqueda por nombre, alias y municipio, filtros de línea, pronóstico sintético y accesibilidad explícitamente sin verificar.
-- **Mi movilidad:** estaciones y trayectos guardados en el dispositivo, acceso al proveedor oficial Urbani y medios de pago de Metrorrey.
+- **Rutas y redes:** 214 fichas de servicios, variantes y ampliaciones; búsqueda por número o municipio, filtros de red y estado, 51 mapas de autobús y fuentes fechadas. Disponible en Estaciones → Rutas y redes.
+- **Guardados:** viajes con etiqueta y hasta ocho alternativas conservadas con su mapa, consulta sin internet y borrado individual o completo. Estaciones, trayectos anteriores y canales oficiales de pago quedan agrupados aparte.
 - **Modo parada:** `/?kiosk=1&locked=1&station=padre-mier` para un módulo dedicado, interfaz de consulta con lectura en voz alta cuando el dispositivo ofrece síntesis de voz. No muestra guardados personales ni permite reportar.
 - **Accesibilidad:** texto ampliado, contraste alto, controles con nombre, teclado, diálogos nativos y respeto de movimiento reducido.
 - **Sin conexión:** catálogo, planificador, modelo y guardados funcionan localmente. Android incorpora el bundle; la PWA precachea también JavaScript, CSS y fuentes al completar su instalación inicial.
@@ -19,7 +28,7 @@ El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aqu
 
 El catálogo usa **38 ubicaciones únicas** de estaciones de Metrorrey, coordenadas del portal de Datos Abiertos de Nuevo León y el mapa oficial de abril de 2026. Los conteos institucionales por línea pueden contar correspondencias más de una vez. El alias Parque Fundidora se conserva para Arena Monterrey.
 
-**Los arribos, el aforo, el clima de unidad, las incidencias y las duraciones son simulados.** No hay conexión contratada con GPS de concesionarios, sensores, tráfico de Waze o medios de pago. El alcance de rutas inicial son las líneas 1, 2 y 3 de Metrorrey; no se inventaron recorridos de autobús de la periferia. No hay saldos ficticios, cargos, NFC ni boletos válidos.
+**Los arribos, el aforo, el clima de unidad, las incidencias y las duraciones son simulados.** No hay conexión contratada con GPS de concesionarios, sensores, tráfico de Waze o medios de pago. El planificador original calcula las líneas 1, 2 y 3 de Metrorrey. El catálogo adicional reúne Muevo León / urbanas IMA, RegioRuta, Transmetro, Ecovía / GMG y troncales e integradas. El modelo experimental infiere el orden espacial de 51 trazos de autobús y sus enlaces a pie; no confirma sentidos, embarque o cruces seguros. Los servicios sin geometría y L4/L6 en construcción quedan fuera del cálculo. No hay saldos ficticios, cargos, NFC ni boletos válidos.
 
 Ver [procedencia y límites](docs/datos-y-fuentes.md), [alcance y heurísticas](docs/producto-y-accesibilidad.md) y [modelo/API](docs/api.md).
 
@@ -57,7 +66,7 @@ Requiere JDK 21 y Android SDK 36. Produce `output/android/regiomovil-debug.apk` 
 VITE_API_BASE_URL=https://tu-api.example pnpm android:build
 ```
 
-La URL se incorpora durante la compilación, debe usar HTTPS y no debe contener credenciales. El backend debe permitir el origen `https://localhost`. No se permite HTTP global ni se carga la aplicación desde un servidor remoto. [Compilación, kiosco y firma](docs/android.md).
+La URL se incorpora durante la compilación, debe usar HTTPS y no debe contener credenciales. El backend debe permitir el origen `https://localhost`. También es necesaria para buscar lugares desde el APK: sin API remota, las paradas y el modelo local siguen disponibles. La ubicación se obtiene una sola vez al pulsar su botón y requiere permiso del dispositivo. No se permite HTTP global ni se carga la aplicación desde un servidor remoto. [Compilación, kiosco y firma](docs/android.md).
 
 ## Pruebas y modelo
 
@@ -85,7 +94,7 @@ tests/        Pruebas de API, dominio y modo offline
 docs/         Producto, fuentes, API, Android y verificación
 ```
 
-Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. No hay analítica, mapas externos, rastreo de ubicación ni petición de cuenta.
+Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. La base geográfica de Monterrey usa un extracto de OpenStreetMap empaquetado localmente, con atribución ODbL; se muestra al abrir el detalle de un trayecto. [Procedencia y licencia del mapa](src/data/monterrey-map.md). El buscador sugiere lugares automáticamente con Photon al escribir al menos tres caracteres y hacer una pausa de 650 ms; el backend limita las consultas y mantiene una caché. Nominatim se conserva sólo para consultas explícitas de la API. No hay analítica, seguimiento continuo de ubicación ni cuenta obligatoria. Los guardados sólo conservan lugares o coordenadas cuando confirmas guardar un viaje; se pueden borrar desde Guardados. [Búsqueda y privacidad](docs/lugares-y-privacidad.md).
 
 ## Ejecutar en contenedor
 
@@ -95,3 +104,9 @@ docker run --rm -p 127.0.0.1:3001:3001 -v regiomovil-data:/data regiomovil
 ```
 
 Para un servicio público faltan el dominio HTTPS, respaldo del volumen, monitoreo y política de moderación de reportes. Para pasar de simulación a información operativa hacen falta acuerdos de datos, validación con sensores/GPS, medición de frescura y pruebas con pasajeros. El contrato propuesto para fuentes reales se documenta en la API.
+
+## Próximas iteraciones
+
+Metro, Transmetro, GMG, RegioRuta e IMA ya participan en el cálculo con los trazos disponibles. Consulta [cobertura actual, fuentes y límites](docs/cobertura-autobuses-20261016.md). La validación de sentidos, secuencias operativas, accesos peatonales y horarios continúa como [trabajo pendiente](docs/proximas-iteraciones.md).
+
+La [evaluación de esta iteración](docs/iteracion-viajes-cotidianos.md) explica qué se incluye, qué se descarta y los criterios para recomendar tramos a pie, bicicleta y monopatín en la siguiente etapa.

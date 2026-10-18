@@ -1,0 +1,541 @@
+.planner-heading .service-discovery-button {
+  margin-left: auto;
+  font-size: 12px;
+  min-height: 32px;
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.service-catalog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 5px 2px 20px;
+}
+.service-catalog-heading h2 {
+  font-size: 1.8rem;
+  margin: 9px 0;
+  letter-spacing: -0.6px;
+}
+.service-catalog-heading p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.service-catalog-symbol {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  color: var(--green);
+  width: 62px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+}
+.service-catalog-notice {
+  display: flex;
+  gap: 10px;
+  padding: 14px 17px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  margin: 0 0 20px;
+  font-size: 12px;
+}
+.service-catalog-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.service-toolbar {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.6fr) 1fr 1fr;
+  gap: 12px;
+}
+.service-toolbar .search-field {
+  margin: 0;
+  min-height: 58px;
+  background: #fff;
+}
+.service-toolbar .search-field input {
+  font-size: 13px;
+}
+.service-select {
+  display: grid;
+  grid-template-columns: 1fr 16px;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 10px 13px;
+  border-radius: 7px;
+  min-width: 0;
+}
+.service-select > span {
+  grid-column: 1/-1;
+  font-size: 11px;
+  color: var(--muted);
+}
+.service-select select {
+  appearance: none;
+  font-size: 13px;
+  color: var(--dark);
+  background: none;
+  border: 0;
+  width: 100%;
+  min-width: 0;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.service-results-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 20px 2px 15px;
+  flex-wrap: wrap;
+}
+.service-results-meta > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.service-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+}
+.service-card {
+  text-align: left;
+  padding: 18px 17px;
+  display: flex;
+  flex-direction: column;
+  min-height: 214px;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.service-card:hover {
+  border-color: #43b58f;
+  transform: translateY(-2px);
+}
+.service-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.service-route-code {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--service-color);
+  line-height: 1.6;
+}
+.service-status {
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--soft);
+  border-radius: 4px;
+  padding: 4px 7px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+}
+.service-status.construction,
+.service-status.announced {
+  color: #805e2d;
+  background: #fff0cd;
+}
+.service-network-name {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.service-card h3 {
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 6px 0 11px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.service-municipalities {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin-bottom: 18px;
+}
+.service-municipalities svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.service-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--green);
+}
+.service-load-more {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green);
+  background: var(--soft);
+  font-size: 13px;
+  margin: 23px auto;
+}
+.service-offline-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.9;
+  margin: 22px 3px;
+}
+.service-offline-note svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.service-load-error {
+  padding: 17px;
+  border: 1px solid #e8d6c4;
+  background: #fbf2e6;
+  border-radius: 8px;
+  margin: 15px 0;
+  color: #805b36;
+  font-size: 13px;
+}
+.service-load-error button {
+  margin-top: 12px;
+}
+.service-detail-heading {
+  margin-top: 13px;
+}
+.service-detail-heading h3 {
+  font-size: 1.4rem;
+  line-height: 1.6;
+  margin-top: 13px;
+}
+.service-detail-heading p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 12px 0 18px;
+}
+.service-endpoints {
+  display: grid;
+  grid-template-columns: 1fr 20px 1fr;
+  gap: 13px;
+  align-items: center;
+  border-radius: 9px;
+  background: var(--soft);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.service-endpoints small {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 6px;
+}
+.service-endpoints strong {
+  font-size: 13px;
+  line-height: 1.7;
+  display: block;
+}
+.service-map-loading {
+  font-size: 13px;
+  padding: 26px;
+  background: var(--surface);
+  border-radius: 9px;
+  color: var(--muted);
+  text-align: center;
+}
+.service-map-context {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--muted);
+  margin-top: 13px;
+}
+.service-planning-limit {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff7e1;
+  border: 1px solid #f2e5bd;
+  border-radius: 8px;
+  padding: 17px;
+  margin: 17px 0;
+  color: #795f1c;
+  font-size: 13px;
+}
+.service-planning-limit svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.service-via,
+.service-reference-stations {
+  margin: 23px 0;
+}
+.service-via h4,
+.service-reference-stations h4,
+.service-detail-sources h4 {
+  font-family: 'Montserrat Variable', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.service-via p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.service-reference-stations ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--line);
+  margin-left: 11px;
+}
+.service-reference-stations li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13px;
+  line-height: 1.8;
+  padding: 7px 0;
+  margin-left: -12px;
+}
+.service-reference-stations li > span {
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.service-stop-list {
+  margin: 22px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 15px;
+}
+.service-stop-list summary {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 13px 0;
+  font-size: 13px;
+  font-weight: 550;
+}
+.service-stop-list p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 13px;
+}
+.service-stop-list ul {
+  list-style: none;
+  margin: 0 0 13px;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+}
+.service-stop-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.9;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.service-stop-list li svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.service-data-notes {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 18px 0;
+  line-height: 1.9;
+}
+.service-data-notes p + p {
+  margin-top: 9px;
+}
+.service-detail-sources {
+  margin-top: 25px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+.service-detail-sources a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1.8;
+  min-height: 44px;
+  padding: 9px 0;
+}
+.service-detail-sources a:hover {
+  text-decoration: underline;
+}
+.service-detail-sources svg {
+  flex-shrink: 0;
+}
+.service-saved-confirmation {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 19px;
+  line-height: 1.9;
+}
+.service-saved-confirmation svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+@media (max-width: 1250px) {
+  .service-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .service-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .service-toolbar > .search-field {
+    grid-column: 1/-1;
+  }
+  .service-card {
+    min-height: 225px;
+  }
+}
+@media (max-width: 760px) {
+  .network-section-tabs {
+    gap: 5px;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+  .network-section-tabs button {
+    font-size: 12px;
+    padding: 9px 12px;
+  }
+  .network-new-label {
+    font-size: 9px;
+  }
+  .service-catalog-heading h2 {
+    font-size: 1.55rem;
+  }
+  .service-catalog-heading p {
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .service-catalog-symbol {
+    width: 47px;
+    height: 47px;
+    border-radius: 11px;
+    flex-shrink: 0;
+  }
+  .service-catalog-symbol svg {
+    width: 24px;
+  }
+  .service-catalog .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .service-catalog-notice {
+    padding: 13px 12px;
+    font-size: 12px;
+    gap: 8px;
+  }
+  .service-toolbar {
+    gap: 9px;
+  }
+  .service-select {
+    padding: 10px 11px;
+  }
+  .service-select select {
+    font-size: 12px;
+    min-height: 27px;
+  }
+  .service-select > span {
+    font-size: 10px;
+  }
+  .service-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .service-card {
+    min-height: 195px;
+    padding: 18px;
+  }
+  .service-card h3 {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .service-route-code {
+    font-size: 15px;
+  }
+  .service-status {
+    font-size: 11px;
+  }
+  .service-network-name,
+  .service-municipalities {
+    font-size: 12px;
+  }
+  .service-card-bottom {
+    font-size: 13px;
+  }
+  .service-results-meta {
+    font-size: 11px;
+    line-height: 1.8;
+    gap: 6px;
+  }
+  .service-detail-heading h3 {
+    font-size: 1.18rem;
+  }
+  .service-endpoints {
+    gap: 10px;
+    padding: 14px;
+  }
+  .service-endpoints strong {
+    font-size: 12px;
+  }
+  .service-map-context,
+  .service-offline-note {
+    font-size: 12px;
+  }
+  .planner-heading .service-discovery-button {
+    font-size: 11px;
+    gap: 4px;
+  }
+  .planner-heading .service-discovery-button svg {
+    width: 14px;
+  }
+  .service-reference-stations li {
+    font-size: 12px;
+  }
+  .service-detail-sources a {
+    font-size: 12px;
+  }
+}

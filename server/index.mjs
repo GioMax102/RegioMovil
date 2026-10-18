@@ -6,7 +6,21 @@ import { createApp, DEFAULT_ORIGINS } from './app.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const network = JSON.parse(await readFile(resolve(root, 'data/network.json'), 'utf8'));
-const application = createApp({ network,
+let catalog = null;
+try { catalog = JSON.parse(await readFile(resolve(root, 'data/transit-catalog.json'), 'utf8')); }
+catch (error) { if (error.code !== 'ENOENT') throw error; }
+let mobilityNetwork = null;
+try { mobilityNetwork = JSON.parse(await readFile(resolve(root, 'data/mobility-network.json'), 'utf8')); }
+catch (error) { if (error.code !== 'ENOENT') throw error; }
+const application = createApp({ network, catalog, mobilityNetwork,
+  placesOptions: {
+    ...(process.env.PLACES_PROVIDER_URL ? { providerUrl: process.env.PLACES_PROVIDER_URL } : {}),
+    ...(process.env.PLACES_USER_AGENT ? { userAgent: process.env.PLACES_USER_AGENT } : {}),
+  },
+  placeSuggestionsOptions: {
+    ...(process.env.PLACES_SUGGEST_PROVIDER_URL ? { providerUrl: process.env.PLACES_SUGGEST_PROVIDER_URL } : {}),
+    ...(process.env.PLACES_USER_AGENT ? { userAgent: process.env.PLACES_USER_AGENT } : {}),
+  },
   databasePath: process.env.DATABASE_PATH || resolve(root, '.data/regiomovil.sqlite'),
   allowedOrigins: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean) : DEFAULT_ORIGINS,
   distPath: resolve(root, 'dist'),

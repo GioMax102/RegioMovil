@@ -83,3 +83,41 @@ export interface Plan {
   mode: string;
   generatedAt: string;
 }
+
+export interface TransitRoute {
+  id: string;
+  code: string;
+  name: string;
+  networkId: string;
+  mode: 'metro' | 'bus';
+  status: 'published' | 'construction' | 'announced' | 'operational';
+  statusAsOf: string | null;
+  municipalities: string[];
+  from: string | null;
+  to: string | null;
+  via: string[];
+  sourceIds: string[];
+  officialUrl: string | null;
+  planningEligible: boolean;
+  geometryPack: string | null;
+  geometryRevision?: string;
+  stationNames?: string[];
+  notes: string[];
+}
+export interface TransitCatalogData {
+  version: number;
+  verifiedAt: string;
+  networks: { id: string; name: string; mode: string }[];
+  sources: Source[];
+  routes: TransitRoute[];
+}
+export interface RoutePack {
+  id: string;
+  sourceUrl: string;
+  verifiedAt: string;
+  coordinates: [number, number][];
+  segments?: [number, number][][];
+  stops: { id: string; name: string; lat: number; lng: number; infrastructureStatus?: string }[];
+  stopOrderVerified: boolean;
+  notes?: string | string[];
+}

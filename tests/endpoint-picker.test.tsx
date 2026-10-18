@@ -1,0 +1,253 @@
+import test, { after, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
+import React from 'react';
+import type { MobilityEndpoint, MobilityNetwork, SavedMobilityTrip } from '../src/mobility/types';
+const dom = new JSDOM('<!doctype html><html><body></body></html>', {
+  url: 'http://localhost/',
+  pretendToBeVisual: true,
+});
+const previous = new Map<string, PropertyDescriptor | undefined>();
+for (const name of [
+  'window',
+  'document',
+  'navigator',
+  'location',
+  'localStorage',
+  'HTMLElement',
+  'Element',
+  'Node',
+  'MutationObserver',
+  'Event',
+  'getComputedStyle',
+  'IS_REACT_ACT_ENVIRONMENT',
+]) {
+  previous.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
+  Object.defineProperty(globalThis, name, {
+    configurable: true,
+    writable: true,
+    value: name === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[name as keyof Window],
+  });
+}
+dom.window.scrollTo = () => {};
+dom.window.HTMLDialogElement.prototype.showModal = function () {
+  this.setAttribute('open', '');
+  // Native showModal runs its focus steps after React's initial autoFocus.
+  this.querySelector<HTMLButtonElement>('button[aria-label="Cerrar ventana"]')?.focus();
+};
+dom.window.HTMLDialogElement.prototype.close = function () {
+  this.removeAttribute('open');
+};
+const { render, screen, within, cleanup, act, fireEvent, waitFor } =
+  await import('@testing-library/react');
+const { default: userEvent } = await import('@testing-library/user-event');
+const { default: EndpointPicker } = await import('../src/mobility/EndpointPicker');
+const user = userEvent.setup({ document: dom.window.document });
+const originalFetch = globalThis.fetch;
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+  globalThis.fetch = originalFetch;
+});
+after(() => {
+  for (const [name, descriptor] of previous)
+    descriptor
+      ? Object.defineProperty(globalThis, name, descriptor)
+      : delete (globalThis as Record<string, unknown>)[name];
+  dom.window.close();
+});
+const network: MobilityNetwork = {
+  version: 1,
+  bounds: [-100.9, 25.35, -99.8, 26.1],
+  stops: [
+    {
+      id: 'metro:a',
+      name: 'Padre Mier',
+      lat: 25.67,
+      lng: -100.32,
+      mode: 'metro',
+      routeIds: ['L2'],
+      official: true,
+    },
+  ],
+  routes: [],
+  sources: [],
+} as MobilityNetwork;
+const place = (name: string) => ({
+  id: `osm:${name}`,
+  kind: 'place',
+  name,
+  displayName: `${name}, Monterrey, Nuevo León`,
+  lat: 25.67,
+  lng: -100.31,
+});
+const response = (name: string) => new Response(JSON.stringify({ places: [place(name)] }));
+function mount(online = true, extras = {}) {
+  render(
+    <EndpointPicker
+      field="to"
+      network={network}
+      online={online}
+      onSelect={() => {}}
+      onClose={() => {}}
+      {...extras}
+    />,
+  );
+  return screen.getByRole('searchbox', { name: 'Buscar destino' });
+}
+const pause = (ms: number) => act(() => new Promise((resolve) => setTimeout(resolve, ms)));
+
+test('opening a picker in StrictMode focuses its search field after the native modal opens', () => {
+  render(
+    <React.StrictMode>
+      <EndpointPicker
+        field="from"
+        network={network}
+        online={false}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />
+    </React.StrictMode>,
+  );
+  assert.equal(document.activeElement, screen.getByRole('searchbox', { name: 'Buscar origen' }));
+});
+
+test('typing searches automatically after a pause, ignores short text and supports clear and keyboard selection', async () => {
+  const queries: string[] = [],
+    selected: MobilityEndpoint[] = [];
+  globalThis.fetch = async (input) => {
+    queries.push(new URL(String(input), location.origin).searchParams.get('q')!);
+    return response('Parque Fundidora');
+  };
+  const input = mount(true, { onSelect: (point: MobilityEndpoint) => selected.push(point) });
+  await user.type(input, 'Pa');
+  await pause(700);
+  assert.equal(queries.length, 0);
+  await user.type(input, 'rque Fundidora');
+  assert.equal(queries.length, 0);
+  const result = await screen.findByRole('button', {
+    name: /Parque Fundidora Parque Fundidora, Monterrey/,
+  });
+  assert.deepEqual(queries, ['Parque Fundidora']);
+  assert.equal(screen.queryByRole('button', { name: 'Buscar lugares y direcciones' }), null);
+  await user.type(input, '{ArrowDown}');
+  assert.equal(document.activeElement, result);
+  await user.keyboard('{Enter}');
+  assert.equal(selected[0].name, 'Parque Fundidora');
+  await user.click(screen.getByRole('button', { name: 'Borrar búsqueda' }));
+  assert.equal((input as HTMLInputElement).value, '');
+  assert.equal(document.activeElement, input);
+});
+
+test('editing or closing aborts requests and delayed old results cannot replace the current query', async () => {
+  const pending: { query: string; signal: AbortSignal; resolve: (response: Response) => void }[] =
+    [];
+  globalThis.fetch = (input, init) =>
+    new Promise((resolve) =>
+      pending.push({
+        query: new URL(String(input), location.origin).searchParams.get('q')!,
+        signal: init?.signal as AbortSignal,
+        resolve,
+      }),
+    );
+  const input = mount();
+  await user.type(input, 'Fundidora');
+  await waitFor(() => assert.equal(pending.length, 1));
+  await user.clear(input);
+  await user.type(input, 'Macroplaza');
+  assert.equal(pending[0].signal.aborted, true);
+  await waitFor(() => assert.equal(pending.length, 2));
+  await act(async () => pending[1].resolve(response('Macroplaza')));
+  await screen.findByRole('button', { name: /Macroplaza Macroplaza, Monterrey/ });
+  await act(async () => pending[0].resolve(response('Fundidora')));
+  assert.equal(screen.queryByRole('button', { name: /Fundidora Fundidora, Monterrey/ }), null);
+  await user.clear(input);
+  await user.type(input, 'Otra calle');
+  await waitFor(() => assert.equal(pending.length, 3));
+  cleanup();
+  assert.equal(pending[2].signal.aborted, true);
+});
+
+test('IME composition is not sent until completed, and Escape closes the picker', async () => {
+  let calls = 0,
+    closed = false;
+  globalThis.fetch = async () => {
+    calls++;
+    return response('Calle Praga');
+  };
+  const input = mount(true, {
+    onClose: () => {
+      closed = true;
+    },
+  });
+  fireEvent.compositionStart(input);
+  fireEvent.change(input, { target: { value: 'Calle Praga' } });
+  await pause(700);
+  assert.equal(calls, 0);
+  fireEvent.compositionEnd(input);
+  await screen.findByRole('button', { name: /Calle Praga Calle Praga, Monterrey/ });
+  assert.equal(calls, 1);
+  await user.type(input, '{Escape}');
+  assert.equal(closed, true);
+});
+
+test('offline saved places open the existing trip and never become arbitrary endpoints for a new route', async () => {
+  const trip = {
+    version: 1,
+    id: 'saved-1',
+    label: 'Mi viaje al parque',
+    savedAt: '2026-10-17T12:00:00Z',
+    generatedAt: '2026-10-17T12:00:00Z',
+    from: { id: 'metro:a', name: 'Padre Mier' },
+    to: { kind: 'place', name: 'Parque Fundidora', lat: 25.67, lng: -100.31 },
+    preference: 'fastest',
+    journeys: [
+      {
+        id: 'j1',
+        durationMinutes: 10,
+        walkingMeters: 100,
+        walkingMinutes: 2,
+        transfers: 0,
+        occupancy: 50,
+        etaRange: [8, 12],
+        steps: [
+          {
+            mode: 'metro',
+            lineId: 'L2',
+            lineName: 'Línea 2',
+            from: 'Padre Mier',
+            to: 'General Zaragoza',
+            fromId: 'metro:a',
+            toId: 'metro:b',
+            minutes: 8,
+            stationCount: 1,
+            distanceMeters: 500,
+            geometry: [
+              [-100.32, 25.67],
+              [-100.31, 25.67],
+            ],
+          },
+        ],
+      },
+    ],
+    network,
+  } as SavedMobilityTrip;
+  localStorage.setItem('regiomovil:mobility-offline-trips', JSON.stringify([trip]));
+  let opened: SavedMobilityTrip | undefined,
+    selections = 0;
+  globalThis.fetch = async () => assert.fail('Offline picker must not search the Internet');
+  const input = mount(false, {
+    onOpenSavedTrip: (value: SavedMobilityTrip) => {
+      opened = value;
+    },
+    onSelect: () => {
+      selections++;
+    },
+  });
+  await user.type(input, 'Fundidora');
+  const saved = screen.getByRole('region', { name: 'Lugares guardados' });
+  await user.click(within(saved).getByRole('button', { name: /Parque Fundidora Ver trayecto/ }));
+  assert.equal(opened?.id, trip.id);
+  assert.equal(selections, 0);
+  await pause(700);
+});

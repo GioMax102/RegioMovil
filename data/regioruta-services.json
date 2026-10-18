@@ -1,0 +1,304 @@
+{
+  "sources": [
+    {
+      "id": "monterrey-regioruta",
+      "title": "Gobierno de Monterrey · Regio Ruta (rutas A–G)",
+      "url": "https://www.monterrey.gob.mx/regio-ruta/",
+      "verifiedAt": "2026-10-15",
+      "scope": "Siete corredores, horario general, gratuidad, registro y enlaces a mapas municipales. La página no indica fecha de actualización ni licencia abierta.",
+      "license": "not-specified",
+      "publishedAt": null
+    },
+    {
+      "id": "monterrey-regioruta-mapa",
+      "title": "Gobierno de Monterrey · Mapa público Regio Ruta A–G",
+      "url": "https://www.google.com/maps/d/viewer?mid=1e1JycXnZrFLm5OR0wkNmMxluVo4e_Cw",
+      "verifiedAt": "2026-10-15",
+      "scope": "Mapa enlazado desde las rutas F y G del portal municipal; contiene capas explícitas A–G, trazos y marcadores nombrados. No contiene horarios por parada ni orden validado para planificar viajes.",
+      "license": "not-specified",
+      "publishedAt": null
+    }
+  ],
+  "routes": [
+    {
+      "id": "regioruta-a",
+      "code": "A",
+      "name": "Macroplaza – Mederos – La Rioja",
+      "networkId": "regioruta",
+      "mode": "bus",
+      "status": "published",
+      "statusAsOf": null,
+      "municipalities": [
+        "Monterrey"
+      ],
+      "from": "Macroplaza",
+      "to": "La Rioja",
+      "via": [
+        "Mederos"
+      ],
+      "sourceIds": [
+        "monterrey-regioruta",
+        "monterrey-regioruta-mapa"
+      ],
+      "officialUrl": "https://www.monterrey.gob.mx/regio-ruta/",
+      "planningEligible": false,
+      "geometryPack": "regioruta-a",
+      "notes": [
+        "Servicio gratuito según el portal municipal; requiere registro.",
+        "Horario general publicado: lunes a sábado 05:00–23:00; domingos y festivos 07:00–23:00. No es horario de llegada a una parada.",
+        "Recorrido publicado disponible para consulta; sin itinerarios calculados ni llegadas en vivo."
+      ],
+      "serviceHours": {
+        "mondaySaturday": "05:00–23:00",
+        "sundayHolidays": "07:00–23:00",
+        "sourceId": "monterrey-regioruta"
+      },
+      "fareInfo": {
+        "amountMxn": 0,
+        "requiresRegistration": true,
+        "sourceId": "monterrey-regioruta"
+      },
+      "publishedStopCount": 93
+    },
+    {
+      "id": "regioruta-b",
+      "code": "B",
+      "name": "La Alianza – Talleres – Valle Verde",
+      "networkId": "regioruta",
+      "mode": "bus",
+      "status": "published",
+      "statusAsOf": null,
+      "municipalities": [
+        "Monterrey"
+      ],
+      "from": "La Alianza",
+      "to": "Valle Verde",
+      "via": [
+        "Talleres"
+      ],
+      "sourceIds": [
+        "monterrey-regioruta",
+        "monterrey-regioruta-mapa"
+      ],
+      "officialUrl": "https://www.monterrey.gob.mx/regio-ruta/",
+      "planningEligible": false,
+      "geometryPack": "regioruta-b",
+      "notes": [
+        "Servicio gratuito según el portal municipal; requiere registro.",
+        "Horario general publicado: lunes a sábado 05:00–23:00; domingos y festivos 07:00–23:00. No es horario de llegada a una parada.",
+        "Recorrido publicado disponible para consulta; sin itinerarios calculados ni llegadas en vivo."
+      ],
+      "serviceHours": {
+        "mondaySaturday": "05:00–23:00",
+        "sundayHolidays": "07:00–23:00",
+        "sourceId": "monterrey-regioruta"
+      },
+      "fareInfo": {
+        "amountMxn": 0,
+        "requiresRegistration": true,
+        "sourceId": "monterrey-regioruta"
+      },
+      "publishedStopCount": 113
+    },
+    {
+      "id": "regioruta-c",
+      "code": "C",
+      "name": "Fomerrey 35 – San Bernabé – Tierra y Libertad",
+      "networkId": "regioruta",
+      "mode": "bus",
+      "status": "published",
+      "statusAsOf": null,
+      "municipalities": [
+        "Monterrey"
+      ],
+      "from": "Fomerrey 35",
+      "to": "Tierra y Libertad",
+      "via": [
+        "San Bernabé"
+      ],
+      "sourceIds": [
+        "monterrey-regioruta",
+        "monterrey-regioruta-mapa"
+      ],
+      "officialUrl": "https://www.monterrey.gob.mx/regio-ruta/",
+      "planningEligible": false,
+      "geometryPack": "regioruta-c",
+      "notes": [
+        "Servicio gratuito según el portal municipal; requiere registro.",
+        "Horario general publicado: lunes a sábado 05:00–23:00; domingos y festivos 07:00–23:00. No es horario de llegada a una parada.",
+        "Recorrido publicado disponible para consulta; sin itinerarios calculados ni llegadas en vivo."
+      ],
+      "serviceHours": {
+        "mondaySaturday": "05:00–23:00",
+        "sundayHolidays": "07:00–23:00",
+        "sourceId": "monterrey-regioruta"
+      },
+      "fareInfo": {
+        "amountMxn": 0,
+        "requiresRegistration": true,
+        "sourceId": "monterrey-regioruta"
+      },
+      "publishedStopCount": 74
+    },
+    {
+      "id": "regioruta-d",
+      "code": "D",
+      "name": "Obispado – Macroplaza – Fundidora",
+      "networkId": "regioruta",
+      "mode": "bus",
+      "status": "published",
+      "statusAsOf": null,
+      "municipalities": [
+        "Monterrey"
+      ],
+      "from": "Obispado",
+      "to": "Fundidora",
+      "via": [
+        "Macroplaza"
+      ],
+      "sourceIds": [
+        "monterrey-regioruta",
+        "monterrey-regioruta-mapa"
+      ],
+      "officialUrl": "https://www.monterrey.gob.mx/regio-ruta/",
+      "planningEligible": false,
+      "geometryPack": "regioruta-d",
+      "notes": [
+        "Servicio gratuito según el portal municipal; requiere registro.",
+        "Horario general publicado: lunes a sábado 05:00–23:00; domingos y festivos 07:00–23:00. No es horario de llegada a una parada.",
+        "Recorrido publicado disponible para consulta; sin itinerarios calculados ni llegadas en vivo."
+      ],
+      "serviceHours": {
+        "mondaySaturday": "05:00–23:00",
+        "sundayHolidays": "07:00–23:00",
+        "sourceId": "monterrey-regioruta"
+      },
+      "fareInfo": {
+        "amountMxn": 0,
+        "requiresRegistration": true,
+        "sourceId": "monterrey-regioruta"
+      },
+      "publishedStopCount": 61
+    },
+    {
+      "id": "regioruta-e",
+      "code": "E",
+      "name": "Macroplaza – Félix U. Gómez – Moderna",
+      "networkId": "regioruta",
+      "mode": "bus",
+      "status": "published",
+      "statusAsOf": null,
+      "municipalities": [
+        "Monterrey"
+      ],
+      "from": "Macroplaza",
+      "to": "Moderna",
+      "via": [
+        "Félix U. Gómez"
+      ],
+      "sourceIds": [
+        "monterrey-regioruta",
+        "monterrey-regioruta-mapa"
+      ],
+      "officialUrl": "https://www.monterrey.gob.mx/regio-ruta/",
+      "planningEligible": false,
+      "geometryPack": "regioruta-e",
+      "notes": [
+        "Servicio gratuito según el portal municipal; requiere registro.",
+        "Horario general publicado: lunes a sábado 05:00–23:00; domingos y festivos 07:00–23:00. No es horario de llegada a una parada.",
+        "Recorrido publicado disponible para consulta; sin itinerarios calculados ni llegadas en vivo."
+      ],
+      "serviceHours": {
+        "mondaySaturday": "05:00–23:00",
+        "sundayHolidays": "07:00–23:00",
+        "sourceId": "monterrey-regioruta"
+      },
+      "fareInfo": {
+        "amountMxn": 0,
+        "requiresRegistration": true,
+        "sourceId": "monterrey-regioruta"
+      },
+      "publishedStopCount": 60
+    },
+    {
+      "id": "regioruta-f",
+      "code": "F",
+      "name": "Cedros – Hospital Universitario – Obispado",
+      "networkId": "regioruta",
+      "mode": "bus",
+      "status": "published",
+      "statusAsOf": null,
+      "municipalities": [
+        "Monterrey"
+      ],
+      "from": "Cedros",
+      "to": "Obispado",
+      "via": [
+        "Hospital Universitario"
+      ],
+      "sourceIds": [
+        "monterrey-regioruta",
+        "monterrey-regioruta-mapa"
+      ],
+      "officialUrl": "https://www.monterrey.gob.mx/regio-ruta/",
+      "planningEligible": false,
+      "geometryPack": "regioruta-f",
+      "notes": [
+        "Servicio gratuito según el portal municipal; requiere registro.",
+        "Horario general publicado: lunes a sábado 05:00–23:00; domingos y festivos 07:00–23:00. No es horario de llegada a una parada.",
+        "Recorrido publicado disponible para consulta; sin itinerarios calculados ni llegadas en vivo."
+      ],
+      "serviceHours": {
+        "mondaySaturday": "05:00–23:00",
+        "sundayHolidays": "07:00–23:00",
+        "sourceId": "monterrey-regioruta"
+      },
+      "fareInfo": {
+        "amountMxn": 0,
+        "requiresRegistration": true,
+        "sourceId": "monterrey-regioruta"
+      },
+      "publishedStopCount": 58
+    },
+    {
+      "id": "regioruta-g",
+      "code": "G",
+      "name": "Macroplaza – Sierra Ventana – San Ángel",
+      "networkId": "regioruta",
+      "mode": "bus",
+      "status": "published",
+      "statusAsOf": null,
+      "municipalities": [
+        "Monterrey"
+      ],
+      "from": "Macroplaza",
+      "to": "San Ángel",
+      "via": [
+        "Sierra Ventana"
+      ],
+      "sourceIds": [
+        "monterrey-regioruta",
+        "monterrey-regioruta-mapa"
+      ],
+      "officialUrl": "https://www.monterrey.gob.mx/regio-ruta/",
+      "planningEligible": false,
+      "geometryPack": "regioruta-g",
+      "notes": [
+        "Servicio gratuito según el portal municipal; requiere registro.",
+        "Horario general publicado: lunes a sábado 05:00–23:00; domingos y festivos 07:00–23:00. No es horario de llegada a una parada.",
+        "Recorrido publicado disponible para consulta; sin itinerarios calculados ni llegadas en vivo."
+      ],
+      "serviceHours": {
+        "mondaySaturday": "05:00–23:00",
+        "sundayHolidays": "07:00–23:00",
+        "sourceId": "monterrey-regioruta"
+      },
+      "fareInfo": {
+        "amountMxn": 0,
+        "requiresRegistration": true,
+        "sourceId": "monterrey-regioruta"
+      },
+      "publishedStopCount": 60
+    }
+  ]
+}

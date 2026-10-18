@@ -5,9 +5,13 @@ import { gzip, brotliCompress, constants as zlibConstants } from 'node:zlib';
 import { promisify } from 'node:util';
 import { buildBoard, getModelCard, planJourney, resolveStation, SCENARIOS, PREFERENCES } from './domain.mjs';
 import { createReportStore } from './storage.mjs';
+import { findServices, mergeCatalogs } from './catalog.mjs';
+import { createPlaceSearch, PlaceSearchError } from './places.mjs';
+import { createPlaceSuggestions } from './place-suggestions.mjs';
+import { planMobility } from './mobility.mjs';
 
 const REPORT_CATEGORIES = ['crowding', 'climate', 'accessibility', 'condition'];
-export const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost', 'https://localhost', 'capacitor://localhost'];
+export const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost', 'https://localhost', 'capacitor://localhost'];
 const MIME = { '.txt': 'text/plain; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 const TEXT_EXTENSIONS = new Set(['.html','.js','.mjs','.css','.json','.svg','.webmanifest']);
 const gzipAsync = promisify(gzip);
@@ -29,9 +33,9 @@ class HttpError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
 }
 
-async function readJson(request) {
-  if (request.headers['content-type']?.split(';')[0].trim() !== 'application/json') throw new HttpError(415, 'UNSUPPORTED_MEDIA_TYPE', 'Envía el reporte como application/json.');
-  if (Number(request.headers['content-length']) > 4096) throw new HttpError(413, 'BODY_TOO_LARGE', 'El reporte supera el tamaño permitido.');
+async function readJson(request, context = 'el reporte') {
+  if (request.headers['content-type']?.split(';')[0].trim() !== 'application/json') throw new HttpError(415, 'UNSUPPORTED_MEDIA_TYPE', `Envía ${context} como application/json.`);
+  if (Number(request.headers['content-length']) > 4096) throw new HttpError(413, 'BODY_TOO_LARGE', 'La solicitud supera el tamaño permitido.');
   let length = 0;
   const chunks = [];
   // Keep the response socket alive when rejecting a chunked body; drain its remainder.
@@ -39,17 +43,20 @@ async function readJson(request) {
     length += chunk.length;
     if (length > 4096) {
       request.resume();
-      throw new HttpError(413, 'BODY_TOO_LARGE', 'El reporte supera el tamaño permitido.');
+      throw new HttpError(413, 'BODY_TOO_LARGE', 'La solicitud supera el tamaño permitido.');
     }
     chunks.push(chunk);
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
-  catch { throw new HttpError(400, 'INVALID_JSON', 'El JSON del reporte no es válido.'); }
+  catch { throw new HttpError(400, 'INVALID_JSON', 'El JSON de la solicitud no es válido.'); }
 }
 
-export function createApp({ network, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12 } = {}) {
+export function createApp({ network, catalog = null, mobilityNetwork = null, placesOptions, placeSuggestionsOptions, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12 } = {}) {
   if (!network?.stations?.length || !network?.lines?.length) throw new Error('A nonempty transit network is required.');
   if (allowedOrigins.includes('*')) throw new Error('CORS wildcard is not supported. Configure explicit origins.');
+  const serviceCatalog = mergeCatalogs(catalog ? [catalog] : []);
+  const searchPlaces = createPlaceSearch(placesOptions);
+  const suggestPlaces = createPlaceSuggestions(placeSuggestionsOptions);
   const store = createReportStore(databasePath);
   const networkJson = JSON.stringify(network);
   const networkETag = `"${createHash('sha256').update(networkJson).digest('hex').slice(0, 20)}"`;
@@ -127,7 +134,7 @@ export function createApp({ network, databasePath = ':memory:', now = () => new 
     catch { return false; }
     if (!realFile.startsWith(`${realRoot}${sep}`)) throw new HttpError(403, 'FORBIDDEN_PATH', 'No se puede abrir esa dirección.');
     if (!metadata.isFile()) return false;
-    const encoding = TEXT_EXTENSIONS.has(extension) && metadata.size >= 1024 && metadata.size <= 2 * 1024 * 1024 ? preferredEncoding(request.headers['accept-encoding']) : null;
+    const encoding = TEXT_EXTENSIONS.has(extension) && metadata.size >= 1024 && metadata.size <= 4 * 1024 * 1024 ? preferredEncoding(request.headers['accept-encoding']) : null;
     const encoded = encoding ? await compressedFile(realFile,metadata,encoding) : null;
     const content = request.method === 'HEAD' ? undefined : encoded || await readFile(realFile);
     response.writeHead(200, { 'Content-Type': MIME[extension], 'Content-Length': encoded?.length ?? metadata.size,
@@ -166,7 +173,37 @@ export function createApp({ network, databasePath = ':memory:', now = () => new 
           if (request.headers['if-none-match'] === networkETag) { response.writeHead(304, { ETag: networkETag, 'Cache-Control': 'public, max-age=86400' }); response.end(); return; }
           return send(response, 200, network, { ETag: networkETag, 'Cache-Control': 'public, max-age=86400' });
         }
+        if (url.pathname === '/api/mobility/network') {
+          if (!mobilityNetwork) throw new HttpError(503, 'MOBILITY_UNAVAILABLE', 'La red experimental no está preparada. Puedes usar el planificador de Metro.');
+          return send(response, 200, mobilityNetwork, { 'Cache-Control': 'public, max-age=3600' });
+        }
+        if (url.pathname === '/api/places' || url.pathname === '/api/places/suggest') {
+          if ([...url.searchParams.keys()].some(key => key !== 'q') || url.searchParams.getAll('q').length !== 1) throw new HttpError(400, 'INVALID_PLACE_QUERY', 'Envía un solo nombre de lugar con el parámetro q.');
+          return send(response, 200, await (url.pathname === '/api/places/suggest' ? suggestPlaces : searchPlaces)(url.searchParams.get('q')));
+        }
         if (url.pathname === '/api/model') return send(response, 200, getModelCard(), { 'Cache-Control': 'public, max-age=3600' });
+        if (url.pathname === '/api/services') {
+          for (const key of url.searchParams.keys()) {
+            if (!['q', 'network', 'status'].includes(key) || url.searchParams.getAll(key).length !== 1) throw new HttpError(400, 'INVALID_SERVICE_FILTER', 'Usa una sola búsqueda, red o estado por consulta.');
+          }
+          let routes;
+          try { routes = findServices(serviceCatalog, Object.fromEntries(url.searchParams)); }
+          catch (error) {
+            if (error instanceof TypeError || error instanceof RangeError) throw new HttpError(400, 'INVALID_SERVICE_FILTER', error.message);
+            throw error;
+          }
+          return send(response, 200, { ...serviceCatalog, routes, total: routes.length }, { 'Cache-Control': 'public, max-age=3600' });
+        }
+        const serviceMatch = url.pathname.match(/^\/api\/services\/([^/]+)$/);
+        if (serviceMatch) {
+          let id;
+          try { id = decodeURIComponent(serviceMatch[1]); }
+          catch { throw new HttpError(400, 'INVALID_SERVICE_ID', 'El identificador del servicio no es válido.'); }
+          if (!id || id.length > 160 || /[\/\\\u0000-\u001f\u007f]/.test(id)) throw new HttpError(400, 'INVALID_SERVICE_ID', 'El identificador del servicio no es válido.');
+          const route = serviceCatalog.routes.find(route => route.id === id);
+          if (!route) throw new HttpError(404, 'SERVICE_NOT_FOUND', 'No encontramos ese servicio en el catálogo documentado.');
+          return send(response, 200, route, { 'Cache-Control': 'public, max-age=3600' });
+        }
         if (url.pathname === '/api/board') {
           const station = validStation(url.searchParams.get('station') || 'padre-mier');
           const scenario = url.searchParams.get('scenario') || 'normal';
@@ -189,6 +226,25 @@ export function createApp({ network, databasePath = ':memory:', now = () => new 
             source: 'community', verification: 'unverified', notice: 'Reportes de personas sin verificación. No son avisos oficiales ni alimentan el modelo.' });
         }
       }
+      if (request.method === 'POST' && url.pathname === '/api/mobility/plan') {
+        if (!mobilityNetwork) throw new HttpError(503, 'MOBILITY_UNAVAILABLE', 'La red experimental no está preparada. Puedes usar el planificador de Metro.');
+        const body = await readJson(request, 'la consulta');
+        if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['from', 'to', 'preference', 'scenario', 'offline', 'transport'].includes(key))) throw new HttpError(400, 'INVALID_MOBILITY_PLAN', 'Indica origen, destino y opciones válidas para el trayecto.');
+        if (body.offline !== undefined && typeof body.offline !== 'boolean') throw new HttpError(400, 'INVALID_MOBILITY_PLAN', 'offline debe ser verdadero o falso.');
+        for (const endpoint of [body.from, body.to]) {
+          if (!endpoint || typeof endpoint !== 'object' || Array.isArray(endpoint) || Object.keys(endpoint).some(key => !['id', 'kind', 'lat', 'lng', 'name', 'label', 'address'].includes(key))) throw new HttpError(400, 'INVALID_ENDPOINT', 'Elige una parada oficial o un lugar dentro de la zona metropolitana.');
+          if (endpoint.id !== undefined && (typeof endpoint.id !== 'string' || endpoint.id.length > 160 || /[\u0000-\u001f\u007f]/.test(endpoint.id))) throw new HttpError(400, 'INVALID_ENDPOINT', 'El identificador de la parada no es válido.');
+          if (endpoint.id !== undefined && (endpoint.lat !== undefined || endpoint.lng !== undefined)) throw new HttpError(400, 'INVALID_ENDPOINT', 'Elige una parada o unas coordenadas, sin combinar ambas.');
+          if (endpoint.id === undefined && (!Number.isFinite(endpoint.lat) || !Number.isFinite(endpoint.lng))) throw new HttpError(400, 'INVALID_ENDPOINT', 'Las coordenadas deben ser números válidos.');
+          for (const field of ['name', 'label', 'address']) if (endpoint[field] !== undefined && (typeof endpoint[field] !== 'string' || endpoint[field].length > 500 || /[\u0000-\u001f\u007f]/.test(endpoint[field]))) throw new HttpError(400, 'INVALID_ENDPOINT', 'El nombre del lugar no es válido.');
+          if (endpoint.kind !== undefined && !['stop', 'place', 'location', 'coordinate'].includes(endpoint.kind)) throw new HttpError(400, 'INVALID_ENDPOINT', 'El tipo de origen o destino no es válido.');
+        }
+        try { return send(response, 200, planMobility(mobilityNetwork, { ...body, date: date.toISOString() })); }
+        catch (error) {
+          if (error instanceof RangeError && /^[A-Z_]{3,40}$/.test(error.code || '')) throw new HttpError(400, error.code, error.message);
+          throw error;
+        }
+      }
       if (request.method === 'POST' && url.pathname === '/api/reports') {
         limit(request, 'report', reportLimit, date);
         const body = await readJson(request);
@@ -202,13 +258,14 @@ export function createApp({ network, databasePath = ':memory:', now = () => new 
         const report = store.add({ stationId: station.id, category: body.category, detail }, date);
         return send(response, 201, { report, notice: 'Reporte guardado sin verificación. No se envió a una autoridad ni a un servicio de emergencia.' }, { Location: `/api/reports?station=${encodeURIComponent(station.id)}` });
       }
-      if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports'].includes(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
+      if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports', '/api/services', '/api/places', '/api/places/suggest', '/api/mobility/network', '/api/mobility/plan'].includes(url.pathname) || /^\/api\/services\/[^/]+$/.test(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
       throw new HttpError(404, 'NOT_FOUND', 'No encontramos ese recurso.');
     } catch (error) {
       if (response.headersSent) { response.end(); return; }
-      if (!(error instanceof HttpError)) console.error('Request failed:', error.code || error.name);
-      if (error.status === 429) response.setHeader('Retry-After', '60');
-      send(response, error.status || 500, { error: { code: error.code && error instanceof HttpError ? error.code : 'INTERNAL_ERROR', message: error instanceof HttpError ? error.message : 'No pudimos completar la solicitud. Intenta de nuevo.' } });
+      const knownError = error instanceof HttpError || error instanceof PlaceSearchError;
+      if (!knownError) console.error('Request failed:', error.code || error.name);
+      if (error.status === 429) response.setHeader('Retry-After', String(error.retryAfter || 60));
+      send(response, knownError ? error.status : 500, { error: { code: knownError ? error.code : 'INTERNAL_ERROR', message: knownError ? error.message : 'No pudimos completar la solicitud. Intenta de nuevo.' } });
     }
   }
   return { handler, close: () => store.close(), store };

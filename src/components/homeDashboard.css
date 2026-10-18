@@ -1,0 +1,115 @@
+.home-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+.home-shortcuts {
+  grid-column: 1/-1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.home-shortcuts button {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 17px 20px;
+  min-height: 76px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  text-align: left;
+  color: var(--dark);
+}
+.home-shortcuts button > span {
+  flex: 1;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+.home-shortcuts small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.77rem;
+  font-weight: 400;
+}
+.home-shortcuts button > svg:first-child {
+  color: var(--green);
+}
+.home-departure,
+.home-outlook {
+  min-width: 0;
+  padding: 24px;
+}
+.home-dashboard h2 {
+  font-size: 1.12rem;
+}
+.home-station-name {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 15px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.home-station-name strong {
+  color: var(--dark);
+  margin-right: auto;
+}
+.home-advice {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+.home-advice h3 {
+  font-size: 0.96rem;
+  margin: 0 0 7px;
+}
+.home-advice p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0 0 13px;
+}
+.home-outlook > small {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.home-report {
+  grid-column: 1/-1;
+  justify-self: start;
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .home-dashboard {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .home-shortcuts {
+    gap: 9px;
+  }
+  .home-shortcuts button {
+    padding: 14px 12px;
+    gap: 9px;
+    align-items: flex-start;
+  }
+  .home-shortcuts button > span {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+  .home-shortcuts button > svg:last-child {
+    display: none;
+  }
+  .home-shortcuts small {
+    font-size: 0.7rem;
+  }
+  .home-departure,
+  .home-outlook {
+    padding: 20px;
+  }
+}

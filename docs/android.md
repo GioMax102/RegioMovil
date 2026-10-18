@@ -53,9 +53,9 @@ adb install -r output/android/regiomovil-debug.apk
 adb shell am start -n mx.regiomovil.app/.MainActivity
 ```
 
-En el emulador, `localhost` representa el propio Android. Para consultar el backend de una computadora se necesita un endpoint HTTPS alcanzable desde Android. El servidor web de desarrollo HTTP puede probarse en el navegador, pero el APK mantiene su política HTTPS. No cambiar globalmente `usesCleartextTraffic` ni añadir una URL de desarrollo permanente a Capacitor.
+En el emulador, `localhost` representa el propio Android. Una API publicada usa HTTPS; para probar el backend de esta computadora existe la modalidad debug por túnel ADB descrita al final. No cambiar globalmente `usesCleartextTraffic` ni añadir una URL de desarrollo permanente a Capacitor.
 
-La aplicación solicita únicamente `INTERNET`; seleccionar una estación no requiere ubicación, cuenta, cámara ni contactos. El modo avión permite comprobar la consulta y planificación locales. Los reportes requieren conexión a la API.
+En esta rama experimental el manifiesto incluye `INTERNET`, `ACCESS_COARSE_LOCATION` y `ACCESS_FINE_LOCATION`. Seleccionar una estación no solicita ubicación; el permiso aparece sólo al pulsar «Usar mi ubicación» en el modelo multimodal. Un plugin local usa LocationManager para obtener una sola posición en primer plano, con cancelación al salir y límite de veinte segundos. No requiere Google Play Services, servicio de fondo, cuenta, cámara ni contactos. La lectura aproximada también se admite si alcanza una precisión útil; de lo contrario se ofrece elegir una parada. El modo avión permite comprobar la planificación local entre puntos oficiales. Los reportes y la búsqueda de lugares desde Android requieren una API HTTPS configurada.
 
 Conviene compilar antes de arrancar el emulador cuando la computadora tiene poca memoria. El tamaño del APK y el arranque en emulador no demuestran autonomía, fluidez o consumo de memoria de un teléfono económico; esos criterios requieren medición sobre dispositivos físicos de destino.
 
@@ -83,7 +83,7 @@ El icono representa una montaña y un trayecto con dos paradas, en verde y lima.
 
 Verificado el **15 de octubre de 2026**, zona America/Monterrey, con JDK 21, SDK 36, Capacitor 8 y el wrapper Gradle del repositorio:
 
-- `node scripts/android-build.mjs --skip-web --offline`: correcto. El APK debug final ocupa 4,625,004 bytes (4.41 MiB). Su SHA-256 y fecha se guardan junto al archivo.
+- `node scripts/android-build.mjs --skip-web --offline`: correcto. El APK debug actualizado ocupa 4,401,698 bytes (4.20 MiB). Su SHA-256 y fecha se guardan junto al archivo.
 - `./gradlew :app:lintDebug :app:assembleRelease --no-daemon --max-workers=2 --offline`: correcto. Android Lint reporta **0 errores y 9 advertencias** sobre actualizaciones disponibles y recursos de la plantilla sin uso. El release con R8 y reducción de recursos compila; el APK unsigned resultante ocupa 1,042,292 bytes y requiere la firma de distribución.
 - `apksigner verify --verbose`: firma debug APK Signature Scheme v2 verificada.
 - Inspección del APK: el `index.html` empaquetado coincide con el bundle final, no incluye sourcemaps ni `server.url`, mantiene `allowMixedContent=false` y conserva sus fuentes e iconos locales. El manifiesto declara `INTERNET` y un permiso interno de firma de AndroidX, sin ubicación ni otros permisos personales.
@@ -96,3 +96,59 @@ Se comprobó instalación y arranque de una compilación intermedia en un emulad
 - [Capacitor: entorno Android](https://capacitorjs.com/docs/getting-started/environment-setup).
 - [Android: configurar dispositivos dedicados](https://developer.android.com/work/dpc/dedicated-devices).
 - [AndroidX: inicialización de SplashScreen](https://developer.android.com/reference/androidx/core/splashscreen/SplashScreen).
+
+## Correcciones visuales móviles del 15 de octubre de 2026
+
+Se configuró SystemBars con insets CSS de Capacitor y un fondo fijo para la barra de estado, también al desplazar contenido. La top nav reserva separación y controles de 44 px. La selección de la bottom nav comparte celda con su icono; «Mi movilidad» usa «Guardados» en móvil para mantener todas las etiquetas en una línea.
+
+La gráfica destaca el mínimo entre las horas visibles, incluidos empates. Origen y destino abren búsqueda por nombre, alias o municipio y una lista desplazable. El mapa real de Monterrey se empaqueta como SVG local con atribución OpenStreetMap/ODbL y aparece solo al abrir el detalle de un trayecto; los guardados se pueden volver a planear sin conexión.
+
+Verificación: TypeScript, build web, 42 pruebas automatizadas y compilación del APK debug correctos. Se comprobó el flujo en navegador móvil, el mapa sin conexión y anchos de 320, 360, 412, 768 y 1440 px sin desbordamiento horizontal. El APK conserva su firma debug v2 y sus assets coinciden con el bundle final. No había dispositivo ni emulador conectado; queda pendiente verificar visualmente los insets del sistema sobre el teléfono físico.
+
+También se verificó en navegador una recarga completa sin conexión antes de abrir el primer mapa. Se corrigió la recuperación de assets públicos precargados cuando las solicitudes CORS incluyen `Origin` y el servidor declara `Vary: Origin`; las respuestas de API continúan fuera de la caché.
+
+## Actualización del catálogo de ambas redes
+
+La compilación posterior a la integración de autobuses y ampliaciones de Metrorrey incluye 207 fichas y doce mapas de autobús. `node scripts/android-build.mjs --skip-web --offline` completó correctamente y generó un APK debug de **4,420,910 bytes**, con firma v2 válida. Se compararon los 27 archivos web dentro del ZIP con las huellas de `dist`: todos coinciden, incluidos catálogo y mapas. El SHA-256 final es `90613ad151a29cd502847c9059120e4d7696ee9baf19919dc5c20f38d7eb2aaf`.
+
+Las 59 pruebas automatizadas pasan. Se comprobó el catálogo y el detalle de mapa en navegador móvil y de escritorio; esta actualización no se ejecutó en Android físico ni en emulador. Los límites y los comandos comprobados están en [verificación](verificacion.md).
+
+## Compilación de la rama experimental multimodal
+
+La entrega posterior de `codex/movilidad-multimodal` incluye la red adicional, el worker, búsqueda de lugares mediante API HTTPS y lectura de ubicación bajo petición. APK debug: **4,672,310 bytes**, firma v2 válida y SHA-256 `7facf970a9650f4100ee7f5537ab619c946c9beeb53ea48413f3b0a3ddb15743`. Sus 34 archivos web coinciden con `dist`, sin recursos obsoletos. Compilación y Lint correctos (0 errores, 9 advertencias); 96 pruebas automatizadas aprobadas.
+
+El APK conserva el modo local sin API remota configurada; para buscar lugares reales se necesita `VITE_API_BASE_URL` durante el build. Las limitaciones de hardware pendiente y la evidencia web están en [verificación del experimento](experimento-multimodal-verificacion.md).
+
+### Probar desde Android Studio con el backend de esta computadora
+
+Conecta el teléfono por USB con la depuración USB activa. En una terminal deja el backend escuchando sólo en la computadora:
+
+```sh
+HOST=127.0.0.1 PORT=4173 ./regiomovil start
+```
+
+En otra terminal genera el APK debug con la API local y conecta el dispositivo:
+
+```sh
+./regiomovil android --dev-local-api
+./regiomovil android-connect
+```
+
+`android-connect` encuentra ADB desde el SDK o `PATH`, comprueba que el teléfono esté autorizado, valida la API y sus permisos CORS para `https://localhost`, crea el túnel y comprueba que ADB lo haya registrado. Si hay varios dispositivos, selecciona uno con `./regiomovil android-connect --serial SERIAL`; `adb devices` muestra sus identificadores. También admite `ANDROID_SERIAL`.
+
+Después pulsa **Run** en Android Studio o instala `output/android/regiomovil-debug.apk`. El teléfono verá el backend como `localhost:4173` por el túnel USB. El permiso HTTP queda limitado al hostname `localhost` y a la variante debug; la compilación normal sigue requiriendo HTTPS. Mantén el backend abierto y repite `./regiomovil android-connect` después de desconectar o reiniciar ADB. Para validar el flujo, abre **Planear**, busca cualquier lugar o dirección como origen y destino y pulsa **Buscar rutas**. Los filtros de transporte aparecen en los resultados.
+
+La API se fija al compilar la web: **Run** recompila el proyecto nativo, pero no ejecuta Vite. Repite `./regiomovil android --dev-local-api` después de cambiar la interfaz o su API. Esta opción reconstruye siempre el bundle y no admite `--skip-web`. Si tienes una API de producción en `.env`, usa la compilación normal o retira esa variable de tu configuración local antes de seleccionar esta modalidad. `--offline` sólo cambia la resolución de dependencias de Gradle: la app sigue pudiendo conectarse al backend.
+
+El túnel permite que la app acceda al backend, y el backend necesita internet para buscar lugares reales. No comparte automáticamente la conexión de datos del teléfono con esta computadora. Las rutas entre puntos oficiales siguen calculándose localmente.
+
+
+## Iteración de viajes cotidianos
+
+Se actualizó la interfaz y el planificador con búsqueda inicial de lugares, etiquetas y paquetes explícitos de hasta tres alternativas con mapa. Los guardados se consultan y eliminan sin internet; las búsquedas nuevas de lugares requieren la API. Pasaron 105 pruebas, compilación web, firma APK v2 y comprobación de assets. El APK de esta iteración conserva la API de desarrollo local `http://localhost:4173` y el flujo `android-connect` ya configurado; pesa 4,578,897 bytes. Detalles y límites: [evaluación y verificación](iteracion-viajes-cotidianos.md).
+
+## Buscador unificado de lugares y autobuses · 16 de octubre de 2026
+
+Planear acepta lugares, calles y direcciones en ambos extremos; los filtros de transporte se aplican después del cálculo. Red ampliada a 54 servicios y 3,417 puntos publicados, con hasta ocho alternativas distintas. El APK debug actualizado conserva la API local por USB. Consulta la [verificación y sus límites](buscador-multimodal-20261016.md).
+
+La iteración del 17 de octubre agrega selección por pin en mapa, exploración limitada a ZMM y detalle compacto. [Verificación, conexión al backend y límites](mapa-y-planear-20261017.md).

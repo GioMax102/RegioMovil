@@ -1,0 +1,375 @@
+/* Appearance is explicit: surfaces and type retain their own contrast in each theme. */
+:root {
+  --app-primary: #067850;
+  --app-warning-text: #805a22;
+  --app-warning-surface: #fff2d8;
+  --app-danger-text: #9a3e31;
+  --app-danger-surface: #fff1e9;
+}
+:root[data-theme='dark'] {
+  color: #e4f3ed;
+  background: #101d19;
+  --green: #78ddaf;
+  --dark: #e4f3ed;
+  --muted: #abc2b8;
+  --line: #3b5147;
+  --cream: #101d19;
+  --soft: #233e31;
+  --white: #192b23;
+  --surface: #1d3028;
+  --app-primary: #117653;
+  --app-warning-text: #f3cc8a;
+  --app-warning-surface: #3a3020;
+  --app-danger-text: #ffb8a7;
+  --app-danger-surface: #422c25;
+}
+:root[data-theme='dark'] body {
+  background: var(--cream);
+  color: var(--dark);
+}
+:root[data-theme='dark']
+  :is(
+    .sidebar,
+    .topbar,
+    .mobile-nav,
+    .app-shell::before,
+    .panel,
+    .planner,
+    .arrival-card,
+    .location-button,
+    .notification-button,
+    .dialog,
+    .saved-extras,
+    .mobility-form,
+    .mobility-result,
+    .service-toolbar .search-field,
+    .service-select,
+    .mobility-save-form input,
+    .mobility-result-filters button,
+    .mobility-endpoint-entry,
+    .mobility-pin-confirm
+  ) {
+  background: var(--white);
+  color: var(--dark);
+  border-color: var(--line);
+}
+:root[data-theme='dark'] :is(.arrival-card:hover, .service-card:hover, .source-list > a:hover) {
+  background: var(--surface);
+}
+:root[data-theme='dark']
+  :is(
+    .nav-item.active,
+    .preference-tabs button.active,
+    .mobility-priorities button[aria-pressed='true'],
+    .mobility-picker-kinds button[aria-pressed='true'],
+    .mobility-stop-filters button[aria-pressed='true'],
+    .mobility-result-filters button[aria-pressed='true'],
+    .scenario-grid button.selected,
+    .endpoint-map-option
+  ) {
+  background: var(--soft);
+  color: var(--green);
+  border-color: #609b7b;
+}
+:root[data-theme='dark'] :is(.primary-button, .home-plan-cta, .error-screen button) {
+  color: #fff;
+  background: var(--app-primary);
+}
+:root[data-theme='dark'] :is(.primary-button:hover, .home-plan-cta:hover) {
+  background: #16805c;
+}
+:root[data-theme='dark']
+  :is(
+    .demo-banner,
+    .connection-pill.offline,
+    .notice,
+    .alert-item,
+    .service-status.construction,
+    .service-status.announced,
+    .service-planning-limit,
+    .source-summary > span:last-child,
+    .mobility-mode.walk,
+    .mobility-step-icon.walk,
+    .mobility-point.destination
+  ) {
+  background: var(--app-warning-surface);
+  color: var(--app-warning-text);
+  border-color: #796640;
+}
+:root[data-theme='dark'] :is(.demo-banner > button, .journey-detail-caution, .occupancy.high) {
+  color: var(--app-warning-text);
+}
+:root[data-theme='dark'] :is(.mobility-error, .inline-error, .service-load-error) {
+  background: var(--app-danger-surface);
+  color: var(--app-danger-text);
+}
+:root[data-theme='dark'] :is(.mobility-experiment, .mobility-connection.offline) {
+  color: var(--app-warning-text);
+}
+:root[data-theme='dark']
+  :is(
+    .source-summary > span,
+    .arrival-dialog-hero,
+    .local-storage-note,
+    .mobility-map-heading > div
+  ) {
+  background: var(--surface);
+  color: var(--muted);
+}
+:root[data-theme='dark']
+  :is(
+    .facilities-panel p strong,
+    .empty-small h3,
+    .arrival-dialog-hero > strong,
+    .mobility-map-heading > span,
+    .mobility-nearby-stop,
+    .mobility-point-map-action
+  ) {
+  color: var(--green);
+}
+:root[data-theme='dark']
+  :is(
+    .mobility-pin-confirm p,
+    .mobility-nearby-stop small,
+    .endpoint-map-option small,
+    .mobility-map-heading > div button,
+    .report-form select,
+    .report-form textarea,
+    .location-map-caption
+  ) {
+  color: var(--muted);
+}
+:root[data-theme='dark'] .mobility-map-heading > div button[aria-pressed='true'] {
+  background: var(--white);
+  color: var(--green);
+}
+:root[data-theme='dark'] .mobility-mode.metro {
+  color: #b2d4ff;
+  background: #233b55;
+}
+:root[data-theme='dark'] .line-badge {
+  background: color-mix(in srgb, var(--line) 19%, var(--white));
+  color: var(--dark);
+  border-color: color-mix(in srgb, var(--line) 36%, var(--white));
+}
+:root[data-theme='dark'] .payment-card {
+  background: #173f30;
+  color: #fff;
+}
+:root[data-theme='dark'] .payment-card :is(h2, .eyebrow, p, .payment-note, .payment-secondary) {
+  color: #e2f5ec;
+}
+:root[data-theme='dark'] .payment-card .light-button {
+  background: #e4f3ed;
+  color: #103e36;
+}
+:root[data-theme='dark'] .skip-link {
+  background: #e4f3ed;
+  color: #103e36;
+}
+:root[data-theme='dark'] .switch {
+  background: #52675b;
+}
+:root[data-theme='dark'] .switch.on {
+  background: #238558;
+}
+:root[data-theme='dark'] .dialog::backdrop {
+  background: #020b08b3;
+}
+:root[data-theme='dark'] :is(.source-list, .source-list > a + a) {
+  border-color: var(--line);
+}
+:root[data-theme='dark']
+  :is(
+    .map-controls,
+    .map-key,
+    .map-caption,
+    .mobility-map-tools,
+    .mobility-map-attribution,
+    .location-map-controls,
+    .location-map-controls button,
+    .location-map-area,
+    .location-map-credit,
+    .location-map-retry
+  ) {
+  background: var(--white);
+  color: var(--dark);
+  border-color: var(--line);
+}
+:root[data-theme='dark'] :is(.network-map, .location-map-canvas) {
+  background: #24372f;
+  border-color: var(--line);
+}
+/* Only the geographic raster is dimmed; transit colors, markers and labels remain distinct. */
+:root[data-theme='dark'] :is(.network-map, .mobility-map, .location-map) image {
+  filter: brightness(0.66) saturate(0.72);
+}
+:root[data-theme='dark'] :is(.network-map, .mobility-map, .location-map) svg > rect {
+  fill: #24372f;
+}
+:root[data-theme='dark'] .map-stop .station-label {
+  fill: #e4f3ed;
+  stroke: #24372f;
+}
+:root[data-theme='dark'] :is(button, a, input, select, textarea):focus-visible {
+  outline-color: #81caff;
+}
+:root[data-theme='dark'].high-contrast {
+  --muted: #d9e9e0;
+  --line: #92b5a2;
+  --green: #b1f9d5;
+  --dark: #fff;
+}
+:root[data-theme='dark'].high-contrast
+  :is(
+    p,
+    small,
+    .subtle,
+    .eyebrow,
+    .bar-hour,
+    .text-button,
+    .occupancy,
+    .climate,
+    .nav-caption,
+    .mobility-planner,
+    .mobility-method-note
+  ) {
+  color: var(--dark);
+}
+:root[data-theme='dark'].high-contrast :is(.demo-banner p, .journey-detail-caution) {
+  color: #ffe0aa;
+}
+
+.appearance-settings {
+  padding: 0;
+  margin: 22px 0 0;
+  border: 0;
+  min-width: 0;
+}
+.appearance-settings legend {
+  font-family: 'Montserrat Variable', sans-serif;
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0 0 1px;
+}
+.appearance-settings .setting-row > label {
+  flex: 1;
+  min-width: 0;
+}
+.appearance-theme-select {
+  min-height: 48px;
+  max-width: 145px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--dark);
+  background: var(--surface);
+  font-size: 1rem;
+}
+.appearance-animation-switch {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 9px;
+}
+.appearance-switch-track {
+  display: block;
+  width: 46px;
+  height: 27px;
+  padding: 3px;
+  background: #8a9d92;
+  border-radius: 30px;
+}
+.appearance-switch-track > span {
+  display: block;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #122e2630;
+}
+.appearance-animation-switch[aria-checked='true'] .appearance-switch-track {
+  background: var(--app-primary);
+}
+.appearance-animation-switch[aria-checked='true'] .appearance-switch-track > span {
+  transform: translateX(19px);
+}
+
+.page-transition {
+  animation: regio-page-enter 160ms ease-out both;
+}
+.dialog[open] {
+  animation: regio-dialog-enter 150ms ease-out both;
+}
+.action-feedback {
+  animation: regio-feedback-enter 170ms ease-out both;
+}
+.action-feedback-icon {
+  display: grid;
+  place-items: center;
+  animation: regio-check-enter 180ms ease-out both;
+}
+.appearance-switch-track,
+.appearance-switch-track > span {
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+@keyframes regio-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes regio-dialog-enter {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes regio-feedback-enter {
+  from {
+    opacity: 0;
+    translate: 0 5px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes regio-check-enter {
+  from {
+    opacity: 0.5;
+    scale: 0.85;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

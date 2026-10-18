@@ -1,0 +1,193 @@
+.journey-detail {
+  min-width: 0;
+}
+.journey-detail .mobility-map > svg {
+  background: #edf3ee;
+}
+.journey-detail .journey-detail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 15px;
+  padding: 12px 0 5px;
+  color: var(--muted);
+  font-size: max(0.93em, 13px);
+  line-height: 1.5;
+}
+.journey-detail-summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.journey-detail-summary svg {
+  flex-shrink: 0;
+}
+.journey-detail-summary .journey-detail-duration {
+  color: var(--dark);
+  font-size: max(1.15em, 16px);
+}
+.journey-detail > .journey-detail-note {
+  margin: 0 0 13px;
+  color: var(--muted);
+  font-size: max(0.86em, 12px);
+  line-height: 1.5;
+}
+.journey-detail > .journey-detail-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.journey-detail-steps > li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9px;
+  padding: 10px 0 14px;
+}
+.journey-detail-steps > li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 35px;
+  bottom: -11px;
+  left: 14px;
+  border-left: 2px solid var(--line);
+}
+.journey-detail-steps .mobility-step-icon {
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+}
+.journey-detail-step-body {
+  min-width: 0;
+}
+.journey-detail-step-body > .journey-detail-network {
+  display: block;
+  color: var(--green);
+  font-size: max(0.86em, 12px);
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+.journey-detail-step-body > h3 {
+  margin: 0;
+  font-size: max(1em, 14px);
+  line-height: 1.45;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.journey-detail-step-body > .journey-detail-endpoints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 5px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: max(0.93em, 13px);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.journey-detail-endpoints > span {
+  min-width: 0;
+}
+.journey-detail-endpoints > svg {
+  flex-shrink: 0;
+}
+.journey-detail-step-body > .journey-detail-caution {
+  display: inline-block;
+  margin-top: 3px;
+  color: #7d501b;
+  font-size: max(0.86em, 12px);
+  line-height: 1.5;
+}
+.journey-detail-step-meta {
+  padding-top: 2px;
+  min-width: 45px;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--dark);
+  font-size: max(0.93em, 13px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+.journey-detail-step-meta > small {
+  display: block;
+  color: var(--muted);
+  font-size: max(0.86em, 12px);
+  font-weight: 400;
+}
+.journey-detail-steps > .journey-detail-transfer {
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  padding: 5px 0 10px;
+}
+.journey-detail-transfer .mobility-step-icon.transfer {
+  background: var(--pale, #eaf3ef);
+  color: var(--green);
+  width: 26px;
+  height: 26px;
+  margin-left: 2px;
+}
+.journey-detail-transfer-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1px 9px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: max(0.86em, 12px);
+  line-height: 1.45;
+}
+.journey-detail-transfer-body > strong {
+  color: var(--green);
+  font-size: inherit;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.journey-detail-transfer-body > span {
+  white-space: nowrap;
+}
+.journey-detail > .journey-detail-sources {
+  border-top: 1px solid var(--line);
+  margin: 3px 0 12px;
+  color: var(--muted);
+  font-size: max(0.93em, 13px);
+  line-height: 1.6;
+}
+.journey-detail-sources > summary {
+  min-height: 48px;
+  padding: 13px 0;
+  cursor: pointer;
+}
+.journey-detail-sources > p {
+  margin: 0 0 10px;
+  font-size: inherit;
+  line-height: inherit;
+}
+.journey-detail-sources .mobility-osm-link {
+  font-size: inherit;
+  overflow-wrap: anywhere;
+}
+.high-contrast .journey-detail-caution {
+  color: #603600;
+}
+@media (max-width: 430px) {
+  .journey-detail .journey-detail-summary {
+    gap: 4px 11px;
+  }
+  .journey-detail-summary .journey-detail-duration {
+    flex-basis: 100%;
+  }
+  .journey-detail-steps > li {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .journey-detail-steps .mobility-step-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .journey-detail-steps > li:not(:last-child)::before {
+    left: 13px;
+  }
+}

@@ -2,6 +2,8 @@
 
 El backend usa HTTP nativo y SQLite de Node.js 24, sin dependencias de servidor. El catálogo local contiene estaciones, líneas, correspondencias, lugares y fuentes oficiales fechadas. Las llegadas, ocupación, condiciones y duraciones son una **simulación**: no hay conexión con GPS ni con la operación de Metrorrey.
 
+En la rama experimental se añaden `GET /api/mobility/network`, `POST /api/mobility/plan` y `GET /api/places`. Sus contratos, límites, errores y privacidad están en [búsqueda de lugares](lugares-y-privacidad.md) y [modelo multimodal](modelo-movilidad.md). El cliente principal descarga sólo la red pública y calcula los trayectos en un worker local; las coordenadas GPS no se envían a esta API.
+
 ## Ejecutar
 
 ```bash
@@ -36,6 +38,18 @@ Devuelve `status`, `service`, `version`, `mode: "simulation"` y `generatedAt` IS
 ### `GET /api/network`
 
 Devuelve directamente `data/network.json`: `sources`, `lines`, `stations`, `places` y `throughServices`. Las referencias de línea contienen `stationIds` en orden. Las coordenadas de estaciones no representan accesos peatonales; los lugares con `coordinateRole: "station-anchor"` comparten el punto de su estación. La respuesta usa `ETag` y admite `If-None-Match` (`304`), con caché de un día.
+
+### `GET /api/services?q=apodaca&network=ima&status=published`
+
+Consulta el catálogo de servicios documentados, independiente del grafo de estaciones del Metro. Devuelve `{version: 1, verifiedAt, networks, sources, routes, total}` y, si existe, `geometryRevision` para seleccionar la revisión de los paquetes geográficos. `total` corresponde a los resultados filtrados; las redes y fuentes conservan su contexto completo. El servidor carga `data/transit-catalog.json` si existe; sin ese archivo devuelve un catálogo vacío y mantiene disponible la red base.
+
+Los filtros son opcionales. `q` busca sin distinguir mayúsculas ni acentos en código, nombre, extremos, municipios, vías, estaciones documentadas y notas; todas sus palabras deben coincidir. Admite hasta 160 caracteres, sin controles. `network` exige un ID presente en `networks`; `status` admite `published`, `construction`, `announced` u `operational`. Filtros desconocidos, repetidos o inválidos devuelven `400` con `INVALID_SERVICE_FILTER`.
+
+Cada ruta contiene `id`, `code`, `name`, `networkId`, `mode`, `status`, `statusAsOf`, `municipalities`, `from`, `to`, `via`, `sourceIds`, `officialUrl`, `planningEligible`, `geometryPack` y `notes`; puede incluir `stationNames`, `stationIds` ordenados y una `geometryRevision` por ruta para su paquete geográfico. `via`, `municipalities` y `notes` son listas de texto. Extremos, fecha de estado, URL y paquete geográfico pueden ser `null` si no hay información suficiente. `verifiedAt` identifica la consulta del catálogo; no sustituye una fecha de publicación desconocida. `published` indica que una autoridad publica el servicio, sin afirmar operación en este instante. La presencia de una geometría tampoco acredita una secuencia completa de paradas o predicciones reales.
+
+### `GET /api/services/:id`
+
+Devuelve directamente los metadatos canónicos de un servicio. Un ID desconocido devuelve `404` con `SERVICE_NOT_FOUND`; un ID codificado inválido devuelve `400` con `INVALID_SERVICE_ID`. Ambos endpoints son de lectura, usan caché pública de una hora y rechazan escrituras con `405`. No crean reportes, unidades, estaciones ni conexiones.
 
 ### `GET /api/board?station=padre-mier&scenario=normal`
 
@@ -105,6 +119,8 @@ Origen y destino son obligatorios y admiten ID, nombre o alias. `preference` pue
 
 El planificador busca hasta tres caminos simples conectados mediante aristas consecutivas del catálogo. Puede devolver menos alternativas si no hay más caminos documentados. No genera rutas de autobús ni de calles ausentes del catálogo. El mismo origen y destino devuelve una lista vacía y un mensaje; una red desconectada devuelve una lista vacía con explicación.
 
+Las líneas con `planningEligible: false`, `status: "construction"` o `status: "announced"`, o sin una secuencia de al menos dos `stationIds`, se excluyen del grafo y de las llegadas simuladas, también como continuaciones entre líneas. El catálogo de servicios no se incorpora automáticamente al grafo: las futuras L4 y L6 y los corredores informativos de autobús no producen viajes inventados.
+
 Los tiempos de recorrido usan distancia geográfica aproximada, velocidad supuesta de 32 km/h, estancia en estación y ajustes de escenario. Caminata y espera son supuestos explícitos de simulación, sin levantamiento de accesos ni horarios de salida. `comfortable` agrega una penalización por ocupación sintética. `accessible` penaliza cambios de tren para priorizar menos transbordos y devuelve un mensaje de accesibilidad sin verificar. **No garantiza una ruta accesible.**
 
 La continuidad documentada entre L2 y L3 en Zaragoza no suma transbordo; el nuevo paso lleva `continuesOnTrain: true`. La fuente se encuentra en `network.throughServices`. `stationCount` cuenta tramos entre estaciones, sin sumar otra vez la estación de inicio. `score` es el costo interno a minimizar según preferencia, no una calificación pública.
@@ -146,7 +162,7 @@ Estas métricas miden la recuperación de reglas sintéticas conocidas. **No dem
 
 `server/domain.mjs` no importa módulos de Node: exporta `buildBoard(network, stationId, scenario, date)` y `planJourney(network, from, to, preference, scenario, date)` para API y simulación local de Android/web. Importa el artefacto JSON con atributos de importación. Esto evita diferencias entre la vista sin conexión y la API.
 
-El servidor entrega `dist/` en producción, usa `nosniff` y CORS explícito, y no expone la base de datos en estáticos. El fallback SPA se aplica a navegación que acepta `text/html` y no tiene extensión; los assets inexistentes devuelven `404`, nunca HTML con MIME de JavaScript. `HEAD` devuelve tipo y longitud sin cuerpo. Se bloquean rutas ocultas, caracteres de control, separadores inversos, traversal codificado y symlinks que salgan del directorio real de `dist/`. Solo se sirven extensiones MIME permitidas; no se entregan source maps ni archivos arbitrarios. `sw.js` y HTML se revalidan con `no-cache`; los assets con hash admiten caché inmutable. Los endpoints actuales no realizan solicitudes salientes ni aceptan URLs remotas: no existe un proxy de recursos.
+El servidor entrega `dist/` en producción, usa `nosniff` y CORS explícito, y no expone la base de datos en estáticos. El fallback SPA se aplica a navegación que acepta `text/html` y no tiene extensión; los assets inexistentes devuelven `404`, nunca HTML con MIME de JavaScript. `HEAD` devuelve tipo y longitud sin cuerpo. Se bloquean rutas ocultas, caracteres de control, separadores inversos, traversal codificado y symlinks que salgan del directorio real de `dist/`. Solo se sirven extensiones MIME permitidas; no se entregan source maps ni archivos arbitrarios. `sw.js` y HTML se revalidan con `no-cache`; los assets con hash admiten caché inmutable. Los endpoints de lugares son los únicos que consultan un proveedor HTTPS configurado por el servidor; no aceptan URLs remotas enviadas por clientes.
 
 La interfaz web conserva su shell y assets públicos mediante service worker; `/api/` y los reportes no deben almacenarse en esa caché. Si falta API, la operación que se muestra proviene explícitamente del motor sintético local. Para una instalación pública se requiere HTTPS, volumen persistente para SQLite, dominio CORS explícito, monitoreo operativo y política de moderación. No se implementan pagos, saldo, boletos ni integración no autorizada con Urbani.
 
@@ -170,3 +186,12 @@ Propuesta de flujo: un recolector del servidor consulta solo destinos HTTPS conf
 Cada valor deberá llevar `source`, `observedAt`, `receivedAt` y estado `fresh|stale|unavailable`, sin reutilizar `generatedAt` como prueba de actualidad. Las [buenas prácticas de GTFS Realtime](https://gtfs.org/documentation/realtime/realtime-best-practices/) recomiendan actualizar el feed al menos cada 30 segundos y no superar 90 segundos de edad en posiciones/actualizaciones de viajes ni 10 minutos en alertas. El contrato con el operador fijará umbrales y cobertura reales.
 
 Si el feed falta, está vencido o carece de aforo, mostrar «Sin dato operativo» y la última observación con fecha. La simulación seguirá siendo una opción identificada aparte; nunca rellenará silenciosamente datos reales. Un contrato versionado deberá permitir `null` en ocupación/ETA desconocidas y distinguir horario programado, observación y predicción. Antes de activar la fuente, probar fixtures de cancelación, IDs desconocidos, datos parciales y vencidos; medir cobertura, latencia y error con observaciones reales y partición temporal. Ninguna métrica sintética del piloto autoriza el indicador «en vivo».
+
+
+## Buscador único y transporte (16 de octubre de 2026)
+
+`GET /api/places?q=...` acepta el nombre de un lugar, calle o dirección y devuelve `name`, `displayName`, `address` y coordenadas de referencia; no es un directorio completo ni garantiza el acceso peatonal. La interfaz combina estaciones/paradas locales con sugerencias automáticas de `/api/places/suggest?q=...` (Photon), tras 650 ms sin escribir y tres caracteres. El endpoint manual mantiene compatibilidad con Nominatim y no recibe autocompletado. [Proveedor, configuración y privacidad](lugares-y-privacidad.md).
+
+`POST /api/mobility/plan` acepta los mismos extremos para `transport: "all"` (predeterminado) y `transport: "metro"`. El filtro cambia los servicios utilizados, no sustituye lugares por estaciones. Las rutas devueltas incluyen `modes`, `serviceIds` y `coverage` (redes, límite de alternativas, `exhaustive: false`). Se devuelven hasta ocho combinaciones distintas por consulta, dentro de 24,000 expansiones. `diagnostics.reason` distingue falta de paradas cercanas, red desconectada y límite de cálculo. Sin conexión, los extremos deben ser puntos oficiales.
+
+La app filtra las alternativas ya calculadas con Todas, Metro, Autobús y Metro + autobús, sin volver a buscar los puntos. [Fuentes y cobertura actual](cobertura-autobuses-20261016.md).
