@@ -86,6 +86,14 @@ export default function MobilityMap({
     [paths, viewport],
   );
   const view = constrainMapView(rawView, projection, viewport);
+  const routeStops = useMemo(() => {
+    const ids = new Set(journey.stationIds ?? []);
+    return network.stops
+      .filter(
+        (stop) => ids.has(stop.id) && stop.official && isRegionalCoordinate([stop.lng, stop.lat]),
+      )
+      .slice(0, 240);
+  }, [journey, network]);
   const point = (coordinate: Coordinates) => projectMapCoordinate(coordinate, projection);
   const first = paths[0]?.geometry[0],
     last = paths.at(-1)?.geometry.at(-1);
@@ -228,15 +236,25 @@ export default function MobilityMap({
                   points={points}
                   fill="none"
                   stroke="#fff"
-                  strokeWidth={step.mode === 'walk' ? 5 : 7}
+                  strokeWidth={step.mode === 'walk' ? 5 : 10}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                 />
+                {step.mode !== 'walk' && (
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke="#40594c"
+                    strokeWidth="7.5"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                )}
                 <polyline
                   points={points}
                   fill="none"
                   stroke={color}
-                  strokeWidth={step.mode === 'walk' ? 2.5 : 4}
+                  strokeWidth={step.mode === 'walk' ? 2.5 : 6}
                   strokeDasharray={step.mode === 'walk' ? '5 5' : undefined}
                   strokeLinejoin="round"
                   strokeLinecap="round"
@@ -244,6 +262,25 @@ export default function MobilityMap({
               </g>
             );
           })}
+          <g aria-hidden="true">
+            {routeStops.map((stop) => {
+              const [x, y] = point([stop.lng, stop.lat]);
+              return (
+                <circle
+                  key={stop.id}
+                  data-journey-stop={stop.id}
+                  cx={x}
+                  cy={y}
+                  r={stop.routeIds.length > 1 ? 7 : 5}
+                  fill="#ffffff"
+                  stroke="#40594c"
+                  strokeWidth="2"
+                >
+                  <title>{stop.name}</title>
+                </circle>
+              );
+            })}
+          </g>
           {[first, last].map((coordinate, index) => {
             if (!coordinate) return null;
             const [x, y] = point(coordinate);

@@ -1,6 +1,7 @@
 /** Local interaction/geometry regressions; JSDOM never downloads map tiles. */
 import test, { after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
@@ -94,6 +95,9 @@ const network = {
   coverage: {},
   assumptions: [],
 } as MobilityNetwork;
+const publishedNetwork = JSON.parse(
+  readFileSync(new URL('../public/mobility-network.json', import.meta.url), 'utf8'),
+) as MobilityNetwork;
 let activeRoot: ReturnType<typeof createRoot> | null = null;
 let host: HTMLDivElement | null = null;
 afterEach(async () => {
@@ -407,4 +411,133 @@ test('network context draws only selected services and keeps exploration across 
     'Simplification uses only real vertices.',
   );
   assert.equal(dense.length, 1001, 'The source network geometry stays intact.');
+});
+
+test('el mapa general distingue las tres líneas del Metro y sus estaciones publicadas', async () => {
+  const metro = publishedNetwork.routes.filter((route) => route.mode === 'metro');
+  const { container, svg } = await mount({
+    network: publishedNetwork,
+    contextRoutes: metro,
+    online: true,
+    field: null,
+  });
+  assert.equal(
+    svg.querySelector('image[href^="https://tile.openstreetmap.org/"]'),
+    null,
+    'La red usa el fondo local discreto incluso con conexión.',
+  );
+  const traces = [...svg.querySelectorAll<SVGPolylineElement>('polyline[data-line]')];
+  assert.equal(traces.length, 3);
+  assert.equal(svg.querySelectorAll('.location-route-casing').length, 3);
+  for (const route of metro) {
+    const trace = traces.find((line) => line.dataset.line === route.id)!;
+    assert.ok(trace, `${route.name} debe tener un trazo visible.`);
+    assert.equal(trace.getAttribute('stroke')?.toLowerCase(), route.color.toLowerCase());
+    assert.equal(trace.getAttribute('opacity'), '1');
+    assert.ok(Number(trace.getAttribute('stroke-width')) >= 4.5);
+  }
+  const markers = [...svg.querySelectorAll<SVGCircleElement>('circle.location-transit-stop')];
+  assert.ok(
+    markers.length >= 25,
+    'Las estaciones son visibles sin entrar a elegir origen/destino.',
+  );
+  const metroStopIds = new Set(
+    publishedNetwork.stops.filter((stop) => stop.mode === 'metro').map((stop) => stop.id),
+  );
+  for (const marker of svg.querySelectorAll('[data-stop]')) {
+    assert.ok(
+      metroStopIds.has(marker.getAttribute('data-stop')!),
+      'Usa estaciones reales del Metro.',
+    );
+  }
+  assert.equal(svg.querySelectorAll('[data-stop][role="button"]').length, 0);
+  assert.equal(svg.querySelectorAll('[data-stop][tabindex="0"]').length, 0);
+  const legend = container.querySelector('[role="group"][aria-label="Leyenda del mapa"]');
+  assert.ok(legend);
+  for (const label of ['Línea 1', 'Línea 2', 'Línea 3', 'Estación o parada']) {
+    assert.ok(legend.textContent?.includes(label), `La leyenda explica ${label}.`);
+  }
+});
+
+test('el filtro de red muestra bolitas únicamente de paradas asociadas a las rutas seleccionadas', async () => {
+  const route = publishedNetwork.routes.find((candidate) => candidate.networkId === 'regioruta')!;
+  assert.ok(route);
+  const { svg } = await mount({
+    network: publishedNetwork,
+    contextRoutes: [route],
+    online: false,
+    field: null,
+  });
+  const stopsById = new Map(publishedNetwork.stops.map((stop) => [stop.id, stop]));
+  const markers = [...svg.querySelectorAll('[data-stop]')];
+  assert.ok(markers.length > 0);
+  assert.ok(markers.length <= 240);
+  for (const marker of markers) {
+    const stop = stopsById.get(marker.getAttribute('data-stop')!);
+    assert.ok(stop?.official);
+    assert.ok(stop.routeIds.includes(route.id));
+  }
+  assert.equal(svg.querySelector('[data-mode="metro"]'), null);
+  const trace = svg.querySelector('[data-line]')!;
+  assert.equal(trace.getAttribute('stroke')?.toLowerCase(), route.color.toLowerCase());
+  assert.equal(trace.getAttribute('opacity'), '1');
+  assert.ok(Number(trace.getAttribute('stroke-width')) >= 3.5);
+});
+
+test('todas las redes limitan la densidad de paradas y conservan estaciones de Metro', async () => {
+  const { svg } = await mount({
+    network: publishedNetwork,
+    contextRoutes: publishedNetwork.routes,
+    online: true,
+    field: null,
+  });
+  const markers = [...svg.querySelectorAll('[data-stop]')];
+  assert.ok(markers.length > 38);
+  assert.ok(markers.length <= 240, 'La red de 3417 paradas no genera miles de nodos SVG.');
+  assert.equal(
+    new Set(markers.map((marker) => marker.getAttribute('data-stop'))).size,
+    markers.length,
+    'Una misma parada no se repite para cada línea que la sirve.',
+  );
+  const metroIds = new Set(
+    publishedNetwork.stops.filter((stop) => stop.mode === 'metro').map((stop) => stop.id),
+  );
+  const metroMarkers = markers.filter((marker) => metroIds.has(marker.getAttribute('data-stop')!));
+  assert.ok(
+    metroMarkers.length >= 25,
+    'Las estaciones de Metro tienen prioridad sobre la densidad de autobuses.',
+  );
+  assert.equal(svg.querySelector('image[href^="https://tile.openstreetmap.org/"]'), null);
+});
+
+test('centrar la red restaura el encuadre de sus servicios después de explorar', async () => {
+  const routes = publishedNetwork.routes.filter((route) => route.mode === 'metro');
+  const { svg, container } = await mount({
+    network: publishedNetwork,
+    contextRoutes: routes,
+    field: null,
+  });
+  const trace = svg.querySelector('[data-line="L1"]')!;
+  const initial = trace.getAttribute('points');
+  await act(async () => key(svg, 'ArrowRight'));
+  assert.notEqual(trace.getAttribute('points'), initial);
+  const center = [...container.querySelectorAll('button')].find((button) =>
+    /^Centrar mapa/.test(button.getAttribute('aria-label') || ''),
+  );
+  assert.ok(center);
+  await act(async () =>
+    center.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })),
+  );
+  assert.equal(
+    trace.getAttribute('points'),
+    initial,
+    'No vuelve a un centro genérico ajeno a la red.',
+  );
+});
+
+test('Planear conserva las calles en línea con un fondo atenuado para distinguir sus recorridos', async () => {
+  const { svg } = await mount({ online: true, field: 'from' });
+  const tile = svg.querySelector('image[href^="https://tile.openstreetmap.org/"]');
+  assert.ok(tile);
+  assert.ok(tile.closest('.location-map-basemap'), 'Sólo el fondo recibe la atenuación visual.');
 });

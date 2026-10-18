@@ -21,6 +21,49 @@
 .location-map-canvas > svg:active {
   cursor: grabbing;
 }
+.location-map-basemap {
+  opacity: 0.6;
+  filter: grayscale(0.65);
+}
+.location-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 13px 3px 2px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--dark);
+}
+.location-map-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.location-map-legend i {
+  display: inline-block;
+  width: 16px;
+  height: 5px;
+  border-radius: 4px;
+  border: 1px solid #40594c;
+  flex-shrink: 0;
+}
+.location-map-legend i.location-map-legend-stop {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid #40594c;
+}
+:root[data-theme='dark'] .location-route-casing {
+  stroke: #152a21;
+}
+:root[data-theme='dark'] .location-route-outline {
+  stroke: #bfd2c7;
+}
+:root[data-theme='dark'] .location-transit-stop {
+  fill: #f4faf6;
+  stroke: #1c4c36;
+}
 .location-map-canvas > svg:focus-visible {
   outline: 3px solid #149b72;
   outline-offset: -4px;

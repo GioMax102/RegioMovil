@@ -59,3 +59,24 @@ La disponibilidad de trazos no confirma la operación actual ni el sentido o el 
 de paradas de un autobús. El servicio público de Photon es configurable y no ofrece
 un SLA para un despliegue de producción; los límites y alternativas están documentados
 en la política de búsqueda enlazada arriba.
+
+## Contraste y estaciones en los mapas
+
+La vista de Red utiliza el mismo fondo vectorial discreto de los detalles, incluso
+con conexión. Las rutas se dibujan opacas, con halo claro y contorno oscuro para
+conservar también el amarillo de Línea 1. Metro se dibuja encima de los autobuses.
+Una leyenda identifica líneas, sistemas y el símbolo de estación o parada.
+
+Los círculos proceden de las paradas publicadas de los servicios seleccionados;
+ningún vértice del trazo se convierte en una estación. Se prioriza Metro y se
+separan visualmente los puntos cercanos de autobús al acercar el mapa, con hasta
+240 marcadores por ventana. La vista de Metro muestra sus 38 estaciones, incluidas
+las compartidas. El detalle del trayecto muestra sus propias paradas. El botón de
+centrar recupera el encuadre de los recorridos seleccionados.
+
+Se verificaron los temas claro y oscuro a 390 × 844, las tres líneas Metro, las 54
+rutas juntas y la leyenda; en esa vista conjunta se dibujaron 122 círculos. La suite
+completa pasa sus 165 pruebas. Se recompiló y verificó el APK debug, se restauró el
+build web y se comprobó el servidor junto con el túnel USB de Android en el puerto
+4173. Las capturas están en `output/qa/metro-contraste-estaciones.jpg` y
+`output/qa/metro-contraste-oscuro.jpg`.

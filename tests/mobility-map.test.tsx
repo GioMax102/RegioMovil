@@ -61,6 +61,36 @@ const coordinates = (element: Element) =>
     .split(' ')
     .map((pair) => pair.split(',').map(Number));
 
+test('journey maps show only the published stations included in that trip, above contrasting route traces', () => {
+  const stop = {
+    id: 'metro:universidad',
+    name: 'Universidad',
+    lat: 25.74,
+    lng: -100.3,
+    official: true,
+    mode: 'metro',
+    routeIds: ['L2'],
+    sourceIds: [],
+  } as MobilityNetwork['stops'][number];
+  const snapshot = { ...network, stops: [stop, { ...stop, id: 'other', name: 'Otra estación' }] };
+  const trip = { ...journey(steps), stationIds: [stop.id] };
+  const dom = new JSDOM(renderToStaticMarkup(<MobilityMap network={snapshot} journey={trip} />));
+  try {
+    const marker = dom.window.document.querySelector('[data-journey-stop]')!;
+    assert.equal(marker.getAttribute('data-journey-stop'), 'metro:universidad');
+    assert.match(marker.textContent!, /Universidad/);
+    assert.equal(dom.window.document.querySelectorAll('[data-journey-stop]').length, 1);
+    const line = dom.window.document.querySelector('[data-line="L2"]')!;
+    assert.equal(
+      line.querySelectorAll('polyline').length,
+      3,
+      'A light halo and dark edge preserve the colored route against the base.',
+    );
+  } finally {
+    dom.window.close();
+  }
+});
+
 test('phone-shaped map viewports keep endpoints and the regional base in frame without letterboxing', async () => {
   const { fitMapProjection, projectMapCoordinate, constrainMapView, ZMM_BOUNDS } =
     await import('../src/mobility/mapGeography');
@@ -97,7 +127,7 @@ test('el mapa conserva geometrías y colores y encuadra el trayecto sobre el fon
       routes.map((route) => route.getAttribute('data-line')),
       ['bus-a', 'walk', 'L2'],
     );
-    const traces = routes.map((route) => route.querySelectorAll('polyline')[1]);
+    const traces = routes.map((route) => route.querySelector('polyline:last-of-type')!);
     assert.deepEqual(
       traces.map((trace) => coordinates(trace).length),
       [3, 2, 3],

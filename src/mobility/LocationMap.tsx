@@ -13,6 +13,7 @@ import {
   type RegionalView,
 } from './regionalViewport';
 import type { MobilityJourney, MobilityNetwork, MobilityRoute, MobilityStop } from './types';
+import { networkLabel } from './networks';
 import './locationMap.css';
 
 const localMapUrl = new URL('../assets/monterrey-map.svg', import.meta.url).href;
@@ -68,16 +69,27 @@ export default function LocationMap({
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
   const mapId = useId().replace(/:/g, '');
+  const displayedRoutes = useMemo(
+    () => contextRoutes ?? network.routes.filter((route) => route.mode === 'metro'),
+    [contextRoutes, network],
+  );
+  const routeById = useMemo(
+    () => new Map(network.routes.map((route) => [route.id, route])),
+    [network],
+  );
   const contextPaths = useMemo(
     () =>
-      (contextRoutes ?? network.routes.filter((route) => route.mode === 'metro')).flatMap((route) =>
-        route.segments.map((segment) => ({
-          geometry: simplifyOverviewGeometry(segment.coordinates),
-          lineId: route.id,
-          mode: route.mode,
-        })),
-      ),
-    [contextRoutes, network],
+      displayedRoutes
+        .slice()
+        .sort((a, b) => Number(a.mode === 'metro') - Number(b.mode === 'metro'))
+        .flatMap((route) =>
+          route.segments.map((segment) => ({
+            geometry: simplifyOverviewGeometry(segment.coordinates),
+            lineId: route.id,
+            mode: route.mode,
+          })),
+        ),
+    [displayedRoutes],
   );
   const contextSignature = contextRoutes
     ?.map((route) => route.id)
@@ -152,6 +164,76 @@ export default function LocationMap({
         .map((stop) => ({ stop, point: worldPoint(stop) })),
     [network],
   );
+  const transitStops = useMemo(() => {
+    const routeIds = new Set(
+      journey
+        ? journey.steps.filter((step) => step.mode !== 'walk').map((step) => step.lineId)
+        : displayedRoutes.map((route) => route.id),
+    );
+    const journeyStops = journey ? new Set(journey.stationIds ?? []) : null;
+    const terminals = new Set(
+      displayedRoutes.flatMap((route) =>
+        route.segments.flatMap((segment) => [segment.stopIds?.[0], segment.stopIds?.at(-1)]),
+      ),
+    );
+    return indexedStops
+      .filter(({ stop }) =>
+        journeyStops ? journeyStops.has(stop.id) : stop.routeIds.some((id) => routeIds.has(id)),
+      )
+      .map((item) => ({
+        ...item,
+        routes: item.stop.routeIds.filter((id) => routeIds.has(id)),
+        terminal: terminals.has(item.stop.id),
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.stop.mode === 'metro') - Number(a.stop.mode === 'metro') ||
+          Number(b.routes.length > 1) - Number(a.routes.length > 1) ||
+          Number(b.terminal) - Number(a.terminal),
+      );
+  }, [indexedStops, displayedRoutes, journey]);
+  const visibleTransitStops = useMemo(() => {
+    if (field) return [];
+    const center = worldPoint(view),
+      scale = 256 * 2 ** view.zoom;
+    const occupied = new Set<string>();
+    const cellSize = view.zoom >= 14 ? 12 : 20;
+    return transitStops
+      .filter(({ stop, point }) => {
+        const x = (point.x - center.x) * scale + size.width / 2;
+        const y = (point.y - center.y) * scale + size.height / 2;
+        if (x < 6 || x > size.width - 6 || y < 6 || y > size.height - 6) return false;
+        const cell = `${Math.round(x / cellSize)}:${Math.round(y / cellSize)}`;
+        // Keep Metro stations at city scale; gradually reveal nearby bus stops on zoom.
+        if (stop.mode !== 'metro' && occupied.has(cell)) return false;
+        occupied.add(cell);
+        return true;
+      })
+      .slice(0, 240);
+  }, [transitStops, view, size, field]);
+  const legend = useMemo(() => {
+    const routes = journey
+      ? network.routes.filter((route) => journey.steps.some((step) => step.lineId === route.id))
+      : displayedRoutes;
+    const seen = new Set<string>();
+    return routes.flatMap((route) => {
+      const key = route.mode === 'metro' || routes.length <= 6 ? route.id : route.networkId;
+      if (seen.has(key)) return [];
+      seen.add(key);
+      return [
+        {
+          id: key,
+          color: route.color,
+          label:
+            route.mode === 'metro'
+              ? route.name
+              : routes.length <= 6
+                ? `${networkLabel(route.networkId)} ${route.code}`
+                : networkLabel(route.networkId),
+        },
+      ];
+    });
+  }, [displayedRoutes, network, journey]);
   const nearbyStops = useMemo(() => {
     if (view.zoom < (online ? 15 : 13) || !field) return [];
     const center = worldPoint(view),
@@ -176,7 +258,8 @@ export default function LocationMap({
   const leftTile = Math.floor(camera.x * tileCount - size.width / tileSize / 2);
   const topTile = Math.floor(camera.y * tileCount - size.height / tileSize / 2);
   const tiles = [];
-  if (online && measured && !tileFailed) {
+  const onlineStreets = online && !contextRoutes;
+  if (onlineStreets && measured && !tileFailed) {
     for (let x = leftTile; x <= Math.floor(camera.x * tileCount + size.width / tileSize / 2); x++) {
       for (
         let y = topTile;
@@ -347,27 +430,28 @@ export default function LocationMap({
           </defs>
           <g clipPath={`url(#location-clip-${mapId})`}>
             <rect width={size.width} height={size.height} fill="#edf3ee" />
-            <image
-              href={localMapUrl}
-              x={baseNW.x}
-              y={baseNW.y}
-              width={baseSE.x - baseNW.x}
-              height={baseSE.y - baseNW.y}
-              preserveAspectRatio="none"
-              opacity="0.8"
-            />
-            {tiles.slice(0, 40).map((tile) => (
+            <g className="location-map-basemap" aria-hidden="true">
               <image
-                key={`${tileZoom}/${tile.x}/${tile.y}`}
-                href={`https://tile.openstreetmap.org/${tileZoom}/${tile.x}/${tile.y}.png`}
-                x={tile.left}
-                y={tile.top}
-                width={tileSize + 0.5}
-                height={tileSize + 0.5}
-                onError={() => setTileFailed(true)}
+                href={localMapUrl}
+                x={baseNW.x}
+                y={baseNW.y}
+                width={baseSE.x - baseNW.x}
+                height={baseSE.y - baseNW.y}
+                preserveAspectRatio="none"
               />
-            ))}
-            {(!online || tileFailed) && (
+              {tiles.slice(0, 40).map((tile) => (
+                <image
+                  key={`${tileZoom}/${tile.x}/${tile.y}`}
+                  href={`https://tile.openstreetmap.org/${tileZoom}/${tile.x}/${tile.y}.png`}
+                  x={tile.left}
+                  y={tile.top}
+                  width={tileSize + 0.5}
+                  height={tileSize + 0.5}
+                  onError={() => setTileFailed(true)}
+                />
+              ))}
+            </g>
+            {(!onlineStreets || tileFailed) && (
               <g aria-hidden="true" fill="#567063" fontSize="11" fontWeight="500">
                 {geography.labels.map((label) => {
                   const p = project(label);
@@ -389,31 +473,81 @@ export default function LocationMap({
                 })}
               </g>
             )}
-            {paths.map((step, index) => (
-              <polyline
-                key={`${step.lineId}-${index}`}
-                data-line={step.lineId}
-                data-mode={step.mode}
-                points={(Array.isArray(step.geometry) ? step.geometry : [])
-                  .filter(isRegionalCoordinate)
-                  .map(([lng, lat]) => {
-                    const p = project({ lng, lat });
-                    return `${p.x},${p.y}`;
-                  })
-                  .join(' ')}
-                fill="none"
-                stroke={
-                  step.mode === 'walk'
-                    ? '#9b6b2e'
-                    : network.routes.find((route) => route.id === step.lineId)?.color || '#128363'
-                }
-                strokeWidth={journey ? 4 : 2.5}
-                opacity={journey ? 0.9 : 0.4}
-                strokeDasharray={step.mode === 'walk' ? '5 5' : undefined}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
+            {paths.map((step, index) => {
+              const points = (Array.isArray(step.geometry) ? step.geometry : [])
+                .filter(isRegionalCoordinate)
+                .map(([lng, lat]) => {
+                  const p = project({ lng, lat });
+                  return `${p.x},${p.y}`;
+                })
+                .join(' ');
+              const width = step.mode === 'metro' ? 4.5 : step.mode === 'walk' ? 2.5 : 3.5;
+              return (
+                <g key={`${step.lineId}-${index}`}>
+                  <polyline
+                    className="location-route-casing"
+                    points={points}
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeWidth={width + 4}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {step.mode !== 'walk' && (
+                    <polyline
+                      className="location-route-outline"
+                      points={points}
+                      fill="none"
+                      stroke="#40594c"
+                      strokeWidth={width + 1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                  <polyline
+                    data-line={step.lineId}
+                    data-mode={step.mode}
+                    points={points}
+                    fill="none"
+                    stroke={
+                      step.mode === 'walk'
+                        ? '#9b6b2e'
+                        : routeById.get(step.lineId)?.color || '#128363'
+                    }
+                    strokeWidth={width}
+                    opacity="1"
+                    strokeDasharray={step.mode === 'walk' ? '5 5' : undefined}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </g>
+              );
+            })}
+            <g aria-hidden="true">
+              {visibleTransitStops.map(({ stop, routes }) => {
+                const p = project(stop);
+                const interchange = routes.length > 1;
+                return (
+                  <circle
+                    className="location-transit-stop"
+                    key={stop.id}
+                    data-stop={stop.id}
+                    data-transport={stop.mode}
+                    cx={p.x}
+                    cy={p.y}
+                    r={interchange ? 4.6 : stop.mode === 'metro' ? 3.2 : 2.6}
+                    fill="#ffffff"
+                    stroke="#40594c"
+                    strokeWidth={interchange ? 2 : 1.3}
+                  >
+                    <title>
+                      {stop.name}
+                      {interchange ? ' · Conexión entre líneas' : ''}
+                    </title>
+                  </circle>
+                );
+              })}
+            </g>
             {nearbyStops.map((stop) => {
               const p = project(stop);
               return (
@@ -468,7 +602,7 @@ export default function LocationMap({
             <i />
           </div>
         )}
-        <div className="location-map-area">ZONA METROPOLITANA DE MONTERREY</div>
+        <div className="location-map-area">MONTERREY · ZMM</div>
         <div className="location-map-controls">
           <button
             type="button"
@@ -490,9 +624,16 @@ export default function LocationMap({
             type="button"
             aria-label="Centrar mapa en el viaje"
             onClick={() => {
-              const positions = [origin, destination].filter(
-                (point): point is MapPosition => !!point,
-              );
+              const positions = journey
+                ? journey.steps
+                    .flatMap((step) => step.geometry)
+                    .filter(isRegionalCoordinate)
+                    .map(([lng, lat]) => ({ lng, lat }))
+                : contextRoutes
+                  ? contextPaths
+                      .flatMap((path) => path.geometry)
+                      .map(([lng, lat]) => ({ lng, lat }))
+                  : [origin, destination].filter((point): point is MapPosition => !!point);
               const next = move(fitRegionalPositions(positions, size));
               if (field) onPickRef.current?.(next);
             }}
@@ -500,7 +641,7 @@ export default function LocationMap({
             <LocateFixed size={19} />
           </button>
         </div>
-        {tileFailed && online && (
+        {tileFailed && onlineStreets && (
           <button type="button" className="location-map-retry" onClick={() => setTileFailed(false)}>
             <RotateCcw size={14} />
             Reintentar calles
@@ -515,13 +656,25 @@ export default function LocationMap({
           © OpenStreetMap · ODbL
         </a>
       </div>
+      <div className="location-map-legend" role="group" aria-label="Leyenda del mapa">
+        {legend.map((item) => (
+          <span key={item.id}>
+            <i style={{ backgroundColor: item.color }} />
+            {item.label}
+          </span>
+        ))}
+        <span>
+          <i className="location-map-legend-stop" />
+          Estación o parada
+        </span>
+      </div>
       <p className="location-map-caption">
         {field
           ? 'Mueve el mapa o toca un punto y confirma abajo.'
           : contextRoutes
             ? 'Explora los trazos publicados de los servicios seleccionados.'
             : 'Explora tu zona. Elige los puntos y compara cómo llegar.'}
-        {!online || tileFailed ? ' Mapa local simplificado con vialidades principales.' : ''}
+        {!onlineStreets || tileFailed ? ' Mapa local simplificado con vialidades principales.' : ''}
       </p>
     </div>
   );
