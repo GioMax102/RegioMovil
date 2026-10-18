@@ -160,7 +160,7 @@ export default function EndpointPicker({
           <Search size={20} />
           <input
             ref={input}
-            autoFocus
+            data-autofocus
             type="search"
             aria-label={field === 'from' ? 'Buscar origen' : 'Buscar destino'}
             placeholder="Lugar, dirección o parada"

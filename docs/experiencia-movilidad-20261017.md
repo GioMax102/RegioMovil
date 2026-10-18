@@ -80,3 +80,33 @@ completa pasa sus 165 pruebas. Se recompiló y verificó el APK debug, se restau
 build web y se comprobó el servidor junto con el túnel USB de Android en el puerto
 4173. Las capturas están en `output/qa/metro-contraste-estaciones.jpg` y
 `output/qa/metro-contraste-oscuro.jpg`.
+
+## Exploración de recorridos y consulta de estaciones
+
+Red permite aislar un recorrido documentado mediante «Recorrido en el mapa»;
+la selección sincroniza su sistema con el catálogo y se limpia al cambiar de red.
+«Ampliar mapa» abre la misma información en un diálogo con mayor superficie de
+exploración. Sólo se monta un mapa a la vez, y al cerrar se conserva el recorrido
+elegido. No cambia la cobertura ni incorpora servicios en construcción al cálculo.
+
+Tocar una bolita sin arrastrar abre una ficha breve con el nombre publicado y las
+líneas o recorridos de esa parada. La información de una estación compartida
+conserva sus otras conexiones aunque el mapa muestre sólo una línea. La ficha no
+cambia el origen o el destino. También puede consultarse con el selector nativo
+dentro de «Consultar una estación», sin depender de tocar un punto pequeño.
+Se descartan los gestos arrastrados o cancelados para evitar selecciones accidentales.
+Los nombres de terminales y conexiones aparecen progresivamente, con hasta cinco
+rótulos en una ventana móvil y nueve en una grande; las coordenadas no se desplazan.
+
+El buscador de origen o destino recibe el foco después de abrir el diálogo nativo,
+incluido React StrictMode. Esto permite empezar a escribir directamente y conserva
+el bloqueo de interacción y desplazamiento de la pantalla del fondo. El fondo del
+mapa también adopta el tema oscuro.
+
+La verificación incluye 170 pruebas, compilación Android y firma v2. En navegador
+de 390 × 844 se probó aislar Línea 1, ampliar, tocar Cuauhtémoc y comprobar sus
+conexiones con Líneas 1 y 2; también se comprobó el foco real del buscador. Las
+capturas están en `output/qa/mapa-ampliado-conexiones.jpg` y
+`output/qa/mapa-ampliado-oscuro.jpg`. No se detectó un dispositivo ADB al intentar
+activar el túnel de esta ejecución. El servidor queda activo en el puerto 4173;
+al conectar el teléfono se ejecuta `./regiomovil android-connect` antes de Run.

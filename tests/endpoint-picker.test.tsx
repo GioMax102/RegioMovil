@@ -32,6 +32,8 @@ for (const name of [
 dom.window.scrollTo = () => {};
 dom.window.HTMLDialogElement.prototype.showModal = function () {
   this.setAttribute('open', '');
+  // Native showModal runs its focus steps after React's initial autoFocus.
+  this.querySelector<HTMLButtonElement>('button[aria-label="Cerrar ventana"]')?.focus();
 };
 dom.window.HTMLDialogElement.prototype.close = function () {
   this.removeAttribute('open');
@@ -94,6 +96,21 @@ function mount(online = true, extras = {}) {
   return screen.getByRole('searchbox', { name: 'Buscar destino' });
 }
 const pause = (ms: number) => act(() => new Promise((resolve) => setTimeout(resolve, ms)));
+
+test('opening a picker in StrictMode focuses its search field after the native modal opens', () => {
+  render(
+    <React.StrictMode>
+      <EndpointPicker
+        field="from"
+        network={network}
+        online={false}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />
+    </React.StrictMode>,
+  );
+  assert.equal(document.activeElement, screen.getByRole('searchbox', { name: 'Buscar origen' }));
+});
 
 test('typing searches automatically after a pause, ignores short text and supports clear and keyboard selection', async () => {
   const queries: string[] = [],

@@ -166,6 +166,9 @@ export function Dialog({
     const unlockScroll = lockDialogScroll(dialog);
     try {
       dialog.showModal();
+      // React's mount-time focus can precede the native dialog focus steps.
+      // Apply the explicit search target after opening, without scrolling the page.
+      dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true });
     } catch (error) {
       unlockScroll();
       throw error;

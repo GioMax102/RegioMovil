@@ -541,3 +541,75 @@ test('Planear conserva las calles en línea con un fondo atenuado para distingui
   assert.ok(tile);
   assert.ok(tile.closest('.location-map-basemap'), 'Sólo el fondo recibe la atenuación visual.');
 });
+
+test('tocar una estación consulta sus conexiones sin cambiar origen ni destino', async () => {
+  const { svg, container, picks, stops } = await mount({
+    network: publishedNetwork,
+    contextRoutes: publishedNetwork.routes.filter((route) => route.mode === 'metro'),
+    field: null,
+  });
+  const marker = svg.querySelector<SVGCircleElement>('[data-stop="metro:cuauhtemoc"]')!;
+  assert.ok(marker);
+  const x = Number(marker.getAttribute('cx')),
+    y = Number(marker.getAttribute('cy'));
+  await act(async () => {
+    pointer(svg, 'pointerdown', x, y);
+    pointer(svg, 'pointerup', x, y);
+  });
+  const card = container.querySelector('[aria-label="Estación seleccionada"]')!;
+  assert.ok(card);
+  assert.match(card.textContent!, /Cuauhtémoc/);
+  assert.match(card.textContent!, /Línea 1.*Línea 2/);
+  assert.equal(picks.length, 0);
+  assert.equal(stops.length, 0);
+  assert.equal(marker.getAttribute('r'), '6');
+  const close = container.querySelector('[aria-label="Cerrar información de estación"]')!;
+  await act(async () => close.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })));
+  assert.equal(container.querySelector('[aria-label="Estación seleccionada"]'), null);
+});
+
+test('arrastrar o cancelar el mapa no abre fichas y la selección también funciona con controles nativos', async () => {
+  const { svg, container } = await mount({
+    network: publishedNetwork,
+    contextRoutes: publishedNetwork.routes.filter((route) => route.mode === 'metro'),
+    field: null,
+  });
+  const marker = svg.querySelector<SVGCircleElement>('[data-stop="metro:cuauhtemoc"]')!;
+  const x = Number(marker.getAttribute('cx')),
+    y = Number(marker.getAttribute('cy'));
+  await act(async () => {
+    pointer(svg, 'pointerdown', x, y);
+    pointer(svg, 'pointermove', x + 30, y + 30);
+    pointer(svg, 'pointerup', x + 30, y + 30);
+  });
+  assert.equal(container.querySelector('.location-station-card'), null);
+  await act(async () => {
+    pointer(svg, 'pointerdown', x, y);
+    pointer(svg, 'pointercancel', x, y);
+  });
+  assert.equal(container.querySelector('.location-station-card'), null);
+  const select = container.querySelector<HTMLSelectElement>('.location-stop-picker select')!;
+  assert.ok(select);
+  await act(async () => {
+    select.value = 'metro:cuauhtemoc';
+    select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  });
+  assert.match(container.querySelector('.location-station-card')!.textContent!, /Cuauhtémoc/);
+  assert.ok(svg.querySelectorAll('.location-station-labels text').length <= 9);
+});
+
+test('aislar una línea conserva la información real de conexiones de una estación compartida', async () => {
+  const { svg, container } = await mount({
+    network: publishedNetwork,
+    contextRoutes: publishedNetwork.routes.filter((route) => route.id === 'L1'),
+    field: null,
+  });
+  const select = container.querySelector<HTMLSelectElement>('.location-stop-picker select')!;
+  await act(async () => {
+    select.value = 'metro:cuauhtemoc';
+    select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  });
+  assert.match(container.querySelector('.location-station-card')!.textContent!, /Línea 1.*Línea 2/);
+  assert.ok(svg.querySelector('[data-line="L1"]'));
+  assert.equal(svg.querySelector('[data-line="L2"]'), null);
+});

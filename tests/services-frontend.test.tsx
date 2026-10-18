@@ -236,3 +236,27 @@ test('route 223 Eloy Cavazos renders 203 published points and explains experimen
   assert.ok(requests.some(path => /^\/route-packs\/ima-223-teofilo-eloy-cavazos\.json\?v=/.test(path)));
   assertNoTravelAction(dialog);
 });
+
+test('Red isolates a published route, expands one map and resets the selection when changing systems', async () => {
+  render(<App />);
+  await screen.findByText('API conectada');
+  await user.click(within(screen.getByRole('navigation', { name: 'Navegación principal' })).getByRole('button', { name: 'Red de transporte', exact: true }));
+  const route = await screen.findByRole('combobox', { name: 'Recorrido en el mapa' });
+  await user.selectOptions(route, 'L1');
+  await waitFor(() => assert.equal(document.querySelectorAll('polyline[data-line]').length, 1));
+  assert.ok(document.querySelector('polyline[data-line="L1"]'));
+  assert.equal((screen.getByRole('combobox', { name: 'Filtrar rutas por red' }) as HTMLSelectElement).value, 'metrorrey');
+  assert.ok(screen.getByText(/Mostrando 1 de 3 recorridos/));
+  await user.click(screen.getByRole('button', { name: 'Ampliar mapa', exact: true }));
+  const expanded = screen.getByRole('dialog', { name: 'L1 · Línea 1' });
+  assert.ok(within(expanded).getByRole('group', { name: /^Mapa interactivo/ }));
+  assert.equal(document.querySelectorAll('.location-map-canvas').length, 1, 'Expansion does not render a second expensive map behind the dialog.');
+  assert.equal(document.body.style.position, 'fixed');
+  await user.click(within(expanded).getByRole('button', { name: 'Cerrar ventana' }));
+  assert.equal(document.body.style.position, '');
+  assert.equal((screen.getByRole('combobox', { name: 'Recorrido en el mapa' }) as HTMLSelectElement).value, 'L1');
+  await user.click(within(screen.getByRole('group', { name: 'Sistema en el mapa y catálogo' })).getByRole('button', { name: 'RegioRuta', exact: true }));
+  assert.equal((screen.getByRole('combobox', { name: 'Recorrido en el mapa' }) as HTMLSelectElement).value, '');
+  assert.equal(document.querySelector('polyline[data-line="L1"]'), null);
+  assert.ok(screen.getByText('7 rutas · 6 redes'));
+});

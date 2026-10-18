@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { LocateFixed, Minus, Plus, RotateCcw } from 'lucide-react';
+import { LocateFixed, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import geography from '../data/monterrey-map.json';
 import { isRegionalCoordinate, simplifyOverviewGeometry } from './mapGeography';
 import {
@@ -56,6 +56,7 @@ export default function LocationMap({
   );
   const viewRef = useRef(view);
   const [tileFailed, setTileFailed] = useState(false);
+  const [inspectedId, setInspectedId] = useState('');
   const drag = useRef<{
     id: number;
     x: number;
@@ -95,6 +96,9 @@ export default function LocationMap({
     ?.map((route) => route.id)
     .sort()
     .join('|');
+  useEffect(() => {
+    setInspectedId('');
+  }, [contextSignature, journey?.id, field]);
   function move(next: RegionalView) {
     const safe = constrainRegionalView(next, sizeRef.current);
     viewRef.current = safe;
@@ -183,17 +187,17 @@ export default function LocationMap({
       .map((item) => ({
         ...item,
         routes: item.stop.routeIds.filter((id) => routeIds.has(id)),
+        connections: item.stop.routeIds.filter((id) => routeById.has(id)),
         terminal: terminals.has(item.stop.id),
       }))
       .sort(
         (a, b) =>
           Number(b.stop.mode === 'metro') - Number(a.stop.mode === 'metro') ||
-          Number(b.routes.length > 1) - Number(a.routes.length > 1) ||
+          Number(b.connections.length > 1) - Number(a.connections.length > 1) ||
           Number(b.terminal) - Number(a.terminal),
       );
-  }, [indexedStops, displayedRoutes, journey]);
+  }, [indexedStops, displayedRoutes, journey, routeById]);
   const visibleTransitStops = useMemo(() => {
-    if (field) return [];
     const center = worldPoint(view),
       scale = 256 * 2 ** view.zoom;
     const occupied = new Set<string>();
@@ -210,7 +214,62 @@ export default function LocationMap({
         return true;
       })
       .slice(0, 240);
-  }, [transitStops, view, size, field]);
+  }, [transitStops, view, size]);
+  const inspected = transitStops.find((item) => item.stop.id === inspectedId);
+  const stationLabels = useMemo(() => {
+    const occupied: { left: number; right: number; top: number; bottom: number }[] = [];
+    return visibleTransitStops
+      .slice()
+      .sort((a, b) => Number(b.stop.id === inspectedId) - Number(a.stop.id === inspectedId))
+      .filter(
+        (item) =>
+          item.terminal ||
+          item.connections.length > 1 ||
+          item.stop.id === inspectedId ||
+          view.zoom >= 14,
+      )
+      .flatMap((item) => {
+        const p = project(item.stop);
+        const label =
+          item.stop.name.length > 30 ? `${item.stop.name.slice(0, 29)}…` : item.stop.name;
+        const width = Math.min(size.width - 24, label.length * 5.4);
+        const x = Math.max(width / 2 + 8, Math.min(size.width - width / 2 - 8, p.x));
+        const y = p.y < 50 ? p.y + 19 : p.y - 11;
+        const box = {
+          left: x - width / 2 - 4,
+          right: x + width / 2 + 4,
+          top: y - 11,
+          bottom: y + 4,
+        };
+        if (
+          box.left < 6 ||
+          box.right > size.width - 6 ||
+          box.bottom > size.height - 22 ||
+          (box.right > size.width - 70 && box.top < 165) ||
+          (box.left < 145 && box.top < 42) ||
+          occupied.some(
+            (other) =>
+              box.left < other.right &&
+              box.right > other.left &&
+              box.top < other.bottom &&
+              box.bottom > other.top,
+          )
+        )
+          return [];
+        occupied.push(box);
+        return [{ ...item, label, x, y }];
+      })
+      .slice(0, size.width < 500 ? 5 : 9);
+  }, [visibleTransitStops, view, size, inspectedId]);
+  function inspectNearest(x: number, y: number) {
+    const nearest = visibleTransitStops
+      .map((item) => {
+        const p = project(item.stop);
+        return { id: item.stop.id, distance: Math.hypot(p.x - x, p.y - y) };
+      })
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (nearest && nearest.distance <= 24) setInspectedId(nearest.id);
+  }
   const legend = useMemo(() => {
     const routes = journey
       ? network.routes.filter((route) => journey.steps.some((step) => step.lineId === route.id))
@@ -315,6 +374,18 @@ export default function LocationMap({
           onPickRef.current?.(next);
         } else if (active.moved) onPickRef.current?.(viewRef.current);
       }
+    } else if (!multiTouch && active?.id === event.pointerId && !active.moved) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      if (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        Number.isFinite(event.clientX) &&
+        Number.isFinite(event.clientY)
+      )
+        inspectNearest(
+          ((event.clientX - rect.left) * size.width) / rect.width,
+          ((event.clientY - rect.top) * size.height) / rect.height,
+        );
     }
     try {
       if (event.currentTarget.hasPointerCapture?.(event.pointerId))
@@ -334,7 +405,7 @@ export default function LocationMap({
           role="group"
           aria-roledescription="mapa interactivo"
           tabIndex={0}
-          aria-label={`Mapa interactivo de la zona metropolitana de Monterrey${field ? ` para elegir ${field === 'from' ? 'el origen' : 'el destino'}` : ''}. Arrastra o usa las flechas para moverlo; más y menos para acercar.`}
+          aria-label={`Mapa interactivo de la zona metropolitana de Monterrey${field ? ` para elegir ${field === 'from' ? 'el origen' : 'el destino'}` : ''}. Arrastra o usa las flechas para moverlo; más y menos para acercar.${!field ? ' Toca una estación para consultar su nombre y conexiones.' : ''}`}
           onKeyDown={(event) => {
             const offsets: Record<string, [number, number]> = {
               ArrowLeft: [-70, 0],
@@ -429,7 +500,12 @@ export default function LocationMap({
             </clipPath>
           </defs>
           <g clipPath={`url(#location-clip-${mapId})`}>
-            <rect width={size.width} height={size.height} fill="#edf3ee" />
+            <rect
+              className="location-map-surface"
+              width={size.width}
+              height={size.height}
+              fill="#edf3ee"
+            />
             <g className="location-map-basemap" aria-hidden="true">
               <image
                 href={localMapUrl}
@@ -459,6 +535,7 @@ export default function LocationMap({
                     return null;
                   return (
                     <text
+                      className="location-place-label"
                       key={label.name}
                       x={p.x}
                       y={p.y}
@@ -524,9 +601,9 @@ export default function LocationMap({
               );
             })}
             <g aria-hidden="true">
-              {visibleTransitStops.map(({ stop, routes }) => {
+              {visibleTransitStops.map(({ stop, connections }) => {
                 const p = project(stop);
-                const interchange = routes.length > 1;
+                const interchange = connections.length > 1;
                 return (
                   <circle
                     className="location-transit-stop"
@@ -535,7 +612,15 @@ export default function LocationMap({
                     data-transport={stop.mode}
                     cx={p.x}
                     cy={p.y}
-                    r={interchange ? 4.6 : stop.mode === 'metro' ? 3.2 : 2.6}
+                    r={
+                      stop.id === inspectedId
+                        ? 6
+                        : interchange
+                          ? 4.6
+                          : stop.mode === 'metro'
+                            ? 3.2
+                            : 2.6
+                    }
                     fill="#ffffff"
                     stroke="#40594c"
                     strokeWidth={interchange ? 2 : 1.3}
@@ -547,6 +632,13 @@ export default function LocationMap({
                   </circle>
                 );
               })}
+            </g>
+            <g aria-hidden="true" className="location-station-labels">
+              {stationLabels.map((item) => (
+                <text key={item.stop.id} x={item.x} y={item.y} textAnchor="middle">
+                  {item.label}
+                </text>
+              ))}
             </g>
             {nearbyStops.map((stop) => {
               const p = project(stop);
@@ -622,7 +714,7 @@ export default function LocationMap({
           </button>
           <button
             type="button"
-            aria-label="Centrar mapa en el viaje"
+            aria-label={contextRoutes ? 'Centrar mapa en las rutas' : 'Centrar mapa en el viaje'}
             onClick={() => {
               const positions = journey
                 ? journey.steps
@@ -656,6 +748,49 @@ export default function LocationMap({
           © OpenStreetMap · ODbL
         </a>
       </div>
+      {inspected && (
+        <section
+          className="location-station-card"
+          aria-label="Estación seleccionada"
+          aria-live="polite"
+        >
+          <MapPin size={19} aria-hidden="true" />
+          <div>
+            <strong>{inspected.stop.name}</strong>
+            <p>
+              {inspected.connections
+                .map((id) => routeById.get(id))
+                .filter((route): route is MobilityRoute => !!route)
+                .map((route) =>
+                  route.mode === 'metro'
+                    ? route.name
+                    : `${networkLabel(route.networkId)} · ${route.name}`,
+                )
+                .slice(0, 3)
+                .join(' · ')}
+              {inspected.connections.length > 3
+                ? ` · +${inspected.connections.length - 3} recorridos`
+                : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={`Centrar estación ${inspected.stop.name}`}
+            onClick={() => move({ ...inspected.stop, zoom: Math.max(view.zoom, 14) })}
+          >
+            <LocateFixed size={18} />
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Cerrar información de estación"
+            onClick={() => setInspectedId('')}
+          >
+            <X size={18} />
+          </button>
+        </section>
+      )}
       <div className="location-map-legend" role="group" aria-label="Leyenda del mapa">
         {legend.map((item) => (
           <span key={item.id}>
@@ -668,6 +803,30 @@ export default function LocationMap({
           Estación o parada
         </span>
       </div>
+      {!field && !!visibleTransitStops.length && (
+        <details className="location-stop-picker">
+          <summary>
+            <MapPin size={14} />
+            Consultar una estación
+          </summary>
+          <label htmlFor={`map-stop-${mapId}`}>Estaciones y paradas visibles</label>
+          <select
+            id={`map-stop-${mapId}`}
+            value={inspectedId}
+            onChange={(event) => setInspectedId(event.target.value)}
+          >
+            <option value="">Elige una estación o tócala en el mapa</option>
+            {inspected && !visibleTransitStops.some((item) => item.stop.id === inspectedId) && (
+              <option value={inspectedId}>{inspected.stop.name}</option>
+            )}
+            {visibleTransitStops.map(({ stop }) => (
+              <option key={stop.id} value={stop.id}>
+                {stop.name}
+              </option>
+            ))}
+          </select>
+        </details>
+      )}
       <p className="location-map-caption">
         {field
           ? 'Mueve el mapa o toca un punto y confirma abajo.'
