@@ -31,7 +31,9 @@ export async function searchPlaces(query: string, signal: AbortSignal): Promise<
   const timer = setTimeout(() => {
     timedOut = true;
     request.abort();
-  }, 8500);
+  // Free hosting can take about a minute to wake. Keep this single request
+  // cancellable so changing the query never leaves old searches queued.
+  }, 75000);
   try {
     const response = await fetch(
       `${base}/api/places/suggest?q=${encodeURIComponent(query.trim())}`,

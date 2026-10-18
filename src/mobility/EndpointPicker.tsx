@@ -46,6 +46,7 @@ export default function EndpointPicker({
   const [places, setPlaces] = useState<Place[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [slowSearch, setSlowSearch] = useState(false);
   const [searched, setSearched] = useState('');
   const [composing, setComposing] = useState(false);
   const controller = useRef<AbortController | null>(null);
@@ -56,6 +57,12 @@ export default function EndpointPicker({
   const index = useMemo(() => indexMobilityStops(network), [network]);
   const matches = useMemo(() => searchMobilityStops(index, query, !online), [index, query, online]);
   const saved = useMemo(() => readSavedMobilityTrips(), []);
+  useEffect(() => {
+    setSlowSearch(false);
+    if (!busy) return;
+    const timer = setTimeout(() => setSlowSearch(true), 6000);
+    return () => clearTimeout(timer);
+  }, [busy, query]);
   const savedPlaces = useMemo(
     () =>
       saved
@@ -230,7 +237,9 @@ export default function EndpointPicker({
       )}
       <p role="status" aria-live="polite" className="mobility-feedback">
         {busy
-          ? 'Buscando calles, direcciones y comercios de la ZMM…'
+          ? slowSearch
+            ? 'La búsqueda está tardando. Si el servidor estaba en reposo, puede tomar cerca de un minuto. Puedes seguir eligiendo estaciones o un punto en el mapa.'
+            : 'Buscando calles, direcciones y comercios de la ZMM…'
           : searched
             ? places.length
               ? `${places.length} lugares encontrados.`
