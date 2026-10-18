@@ -151,11 +151,13 @@ export function Dialog({
   children,
   onClose,
   wide = false,
+  className = '',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -187,7 +189,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className={`dialog ${wide ? 'wide' : ''}`}
+      className={`dialog ${wide ? 'wide' : ''} ${className}`}
       aria-labelledby={titleId}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

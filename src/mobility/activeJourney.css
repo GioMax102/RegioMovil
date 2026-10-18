@@ -1,0 +1,134 @@
+.active-journey {
+  min-width: 0;
+  color: var(--dark);
+}
+.active-journey-top,
+.active-journey-state,
+.active-journey-options,
+.active-journey-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.active-journey-top {
+  justify-content: space-between;
+}
+.active-journey-state {
+  border-radius: 24px;
+  padding: 8px 11px;
+  background: var(--soft);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+.active-journey-state.running svg {
+  color: var(--green);
+}
+.active-journey-link {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-decoration: underline;
+  font-size: 0.76rem;
+}
+.active-journey-scope,
+.active-journey-footnote {
+  font-size: 0.73rem;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 12px 0 16px;
+}
+.active-journey-instruction {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+}
+.active-journey-instruction h3 {
+  font-size: 1.1rem;
+  margin: 8px 0;
+  line-height: 1.35;
+}
+.active-journey-instruction p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.active-journey-reference {
+  display: grid;
+  gap: 6px;
+  padding: 16px 2px 5px;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.active-journey-reference span,
+.active-journey-reference small {
+  color: var(--muted);
+}
+.active-journey-progress {
+  margin: 16px 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.active-journey-progress progress {
+  width: 100%;
+  height: 7px;
+  display: block;
+  margin-bottom: 7px;
+  accent-color: var(--green);
+}
+.active-journey-map .location-map-canvas {
+  height: clamp(250px, 40dvh, 390px);
+}
+.active-journey-options {
+  margin: 14px 0;
+  gap: 8px;
+}
+.active-journey-option,
+.active-journey-control,
+.active-journey-manual {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 11px 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--dark);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.active-journey-option[aria-pressed='true'] {
+  background: var(--soft);
+  border-color: var(--green);
+}
+.active-journey-option:disabled {
+  opacity: 0.55;
+}
+.active-journey-actions {
+  align-items: stretch;
+}
+.active-journey-actions > button {
+  flex: 1 1 160px;
+}
+.active-journey-manual {
+  font-weight: 650;
+}
+.active-journey-warning {
+  padding: 12px 14px;
+  background: var(--soft);
+  border-left: 3px solid var(--green);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.active-journey button:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
+.active-journey svg {
+  flex-shrink: 0;
+}

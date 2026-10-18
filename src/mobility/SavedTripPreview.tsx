@@ -34,7 +34,11 @@ export default function SavedTripPreview({
           ))}
         </div>
       )}
-      <MobilityJourneyDetail journey={trip.journeys[index]} network={trip.network} />
+      <MobilityJourneyDetail
+        key={trip.journeys[index].id}
+        journey={trip.journeys[index]}
+        network={trip.network}
+      />
       <p className="mobility-method-note">
         Consulta guardada; horarios y condiciones pueden cambiar.
       </p>

@@ -29,7 +29,9 @@ export function indexMobilityStops(network: MobilityNetwork) {
   const routes = new Map(network.routes.map((route) => [route.id, route]));
   return network.stops.map((stop) => {
     const services = stop.routeIds.map((id) => routes.get(id)).filter(Boolean);
-    const label = services.map((route) => route!.code).join(' · ');
+    const label = services
+      .map((route) => (stop.mode === 'bus' ? `${route!.code} · ${route!.name}` : route!.code))
+      .join(' · ');
     const text = normalizeSearch(
       [
         stop.name,

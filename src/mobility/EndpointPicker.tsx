@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
+  Bookmark,
   BusFront,
   ChevronDown,
   LocateFixed,
@@ -22,6 +23,21 @@ const searchable = (text: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase('es-MX');
 
+function suggestionLabel(place: Place) {
+  if (place.resultType === 'street') return 'Calle · elige el punto exacto en el mapa';
+  const label =
+    place.resultType === 'intersection'
+      ? 'Cruce de calles'
+      : place.resultType === 'address'
+        ? 'Dirección'
+        : 'Lugar';
+  return place.precision === 'approximate'
+    ? `${label} · ubicación aproximada`
+    : place.precision === 'street'
+      ? `${label} · referencia de calle`
+      : label;
+}
+
 export default function EndpointPicker({
   field,
   network,
@@ -31,6 +47,7 @@ export default function EndpointPicker({
   onUseLocation,
   onChooseMap,
   onOpenSavedTrip,
+  onRefinePlace,
 }: {
   field: 'from' | 'to';
   network: MobilityNetwork;
@@ -40,6 +57,7 @@ export default function EndpointPicker({
   onUseLocation?: () => void;
   onChooseMap?: () => void;
   onOpenSavedTrip?: (trip: SavedMobilityTrip) => void;
+  onRefinePlace?: (place: Place) => void;
 }) {
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(20);
@@ -52,11 +70,36 @@ export default function EndpointPicker({
   const controller = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const input = useRef<HTMLInputElement>(null);
+  const picker = useRef<HTMLDivElement>(null);
   const results = useRef<HTMLDivElement>(null);
   const id = useId();
   const index = useMemo(() => indexMobilityStops(network), [network]);
   const matches = useMemo(() => searchMobilityStops(index, query, !online), [index, query, online]);
   const saved = useMemo(() => readSavedMobilityTrips(), []);
+  useEffect(() => {
+    const dialog = picker.current?.closest<HTMLDialogElement>('dialog');
+    const viewport = dialog?.ownerDocument.defaultView?.visualViewport;
+    if (!dialog || !viewport) return;
+    // The keyboard can resize the visual viewport without resizing the layout
+    // viewport. Keep the search and the scrollable results inside the visible area.
+    const properties = ['--endpoint-viewport-height', '--endpoint-viewport-offset'];
+    const original = properties.map((name) => [name, dialog.style.getPropertyValue(name)]);
+    const update = () => {
+      dialog.style.setProperty(properties[0], `${viewport.height}px`);
+      dialog.style.setProperty(properties[1], `${viewport.offsetTop}px`);
+    };
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+      for (const [name, value] of original) {
+        if (value) dialog.style.setProperty(name, value);
+        else dialog.style.removeProperty(name);
+      }
+    };
+  }, []);
   useEffect(() => {
     setSlowSearch(false);
     if (!busy) return;
@@ -145,231 +188,256 @@ export default function EndpointPicker({
       ...(results.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []),
     ];
   }
+  function selectPlace(place: Place) {
+    if (onRefinePlace && (place.resultType === 'street' || place.precision === 'street')) {
+      onRefinePlace(place);
+      return;
+    }
+    onSelect({
+      kind: 'place',
+      name: place.name,
+      lat: place.lat,
+      lng: place.lng,
+      address: place.displayName,
+    });
+  }
   return (
-    <Dialog title={field === 'from' ? '¿Desde dónde sales?' : '¿A dónde vas?'} onClose={onClose}>
-      <p className="endpoint-picker-intro">Escribe un lugar, una dirección o una parada.</p>
-      {onChooseMap && (
-        <button type="button" className="endpoint-map-option" onClick={onChooseMap}>
-          <MapPin size={19} />
-          <span>
-            Elegir en el mapa<small>Mueve el pin hasta el punto que prefieras</small>
-          </span>
-          <ArrowRight size={17} />
-        </button>
-      )}
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!online && matches.length === 1) onSelect(stopEndpoint(matches[0].stop));
-        }}
-      >
-        <label className="search-field endpoint-search-field">
-          <Search size={20} />
-          <input
-            ref={input}
-            data-autofocus
-            type="search"
-            aria-label={field === 'from' ? 'Buscar origen' : 'Buscar destino'}
-            placeholder="Lugar, dirección o parada"
-            value={query}
-            maxLength={120}
-            autoComplete="off"
-            enterKeyHint="search"
-            aria-controls={`${id}-results`}
-            aria-describedby={`${id}-hint`}
-            onChange={(event) => changeQuery(event.target.value)}
-            onCompositionStart={() => {
-              controller.current?.abort();
-              setComposing(true);
+    <Dialog
+      title={field === 'from' ? '¿Desde dónde sales?' : '¿A dónde vas?'}
+      onClose={onClose}
+      className="endpoint-picker-dialog"
+    >
+      <div ref={picker} className="endpoint-picker">
+        <div className="endpoint-picker-search">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!online && matches.length === 1) onSelect(stopEndpoint(matches[0].stop));
             }}
-            onCompositionEnd={() => setComposing(false)}
+          >
+            <label className="search-field endpoint-search-field">
+              <Search size={20} />
+              <input
+                ref={input}
+                data-autofocus
+                type="search"
+                aria-label={field === 'from' ? 'Buscar origen' : 'Buscar destino'}
+                placeholder="Lugar, dirección o parada"
+                value={query}
+                maxLength={120}
+                autoComplete="off"
+                enterKeyHint="search"
+                aria-controls={`${id}-results`}
+                aria-describedby={`${id}-hint`}
+                onChange={(event) => changeQuery(event.target.value)}
+                onCompositionStart={() => {
+                  controller.current?.abort();
+                  setComposing(true);
+                }}
+                onCompositionEnd={() => setComposing(false)}
+                onKeyDown={(event) => {
+                  if (event.nativeEvent.isComposing) return;
+                  if (event.key === 'ArrowDown' && resultButtons().length) {
+                    event.preventDefault();
+                    resultButtons()[0]?.focus();
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    onClose();
+                  }
+                }}
+              />
+              {!!query && (
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="Borrar búsqueda"
+                  onClick={() => {
+                    changeQuery('');
+                    input.current?.focus();
+                  }}
+                >
+                  <X size={17} />
+                </button>
+              )}
+            </label>
+            <p
+              id={`${id}-hint`}
+              className={`endpoint-offline-note ${online && query.trim().length >= 3 ? 'endpoint-visually-hidden' : ''}`}
+            >
+              {online ? (
+                'Lugares, calles y paradas · sugerencias desde 3 letras'
+              ) : (
+                <>
+                  <WifiOff size={16} />
+                  Sin conexión: busca una estación o parada oficial.
+                </>
+              )}
+            </p>
+          </form>
+          {(onChooseMap || (field === 'from' && online && onUseLocation)) && (
+            <div className="endpoint-picker-actions" aria-label="Otras formas de elegir el punto">
+              {onChooseMap && (
+                <button type="button" className="endpoint-map-option" onClick={onChooseMap}>
+                  <MapPin size={18} />
+                  <span>Elegir en el mapa</span>
+                </button>
+              )}
+              {field === 'from' && online && onUseLocation && (
+                <button type="button" className="endpoint-current-location" onClick={onUseLocation}>
+                  <LocateFixed size={18} />
+                  <span>Usar mi ubicación</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="endpoint-picker-results" aria-label="Sugerencias de ubicación">
+          {error && (
+            <p className="mobility-error" role="alert">
+              {error} Puedes ajustar la búsqueda o elegir una parada de la lista.
+            </p>
+          )}
+          <p
+            role="status"
+            aria-live="polite"
+            className={`mobility-feedback endpoint-search-status ${!busy && places.length ? 'endpoint-visually-hidden' : ''}`}
+          >
+            {busy
+              ? slowSearch
+                ? 'La búsqueda está tardando. Si el servidor estaba en reposo, puede tomar cerca de un minuto. Puedes seguir eligiendo estaciones o un punto en el mapa.'
+                : 'Buscando calles, direcciones y comercios de la ZMM…'
+              : searched
+                ? places.length
+                  ? `${places.length} ${places.length === 1 ? 'lugar encontrado' : 'lugares encontrados'}.`
+                  : `No encontramos «${searched}». Prueba con la calle, el número y el municipio.`
+                : ''}
+          </p>
+          <div
+            ref={results}
+            id={`${id}-results`}
+            aria-busy={busy}
             onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing) return;
-              if (event.key === 'ArrowDown' && resultButtons().length) {
-                event.preventDefault();
-                resultButtons()[0]?.focus();
-              }
               if (event.key === 'Escape') {
                 event.preventDefault();
                 onClose();
               }
+              if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+              const buttons = resultButtons();
+              const current = buttons.indexOf(event.target as HTMLButtonElement);
+              if (current < 0) return;
+              event.preventDefault();
+              if (event.key === 'ArrowUp' && current === 0) input.current?.focus();
+              else
+                buttons[
+                  Math.min(buttons.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1))
+                ]?.focus();
             }}
-          />
-          {!!query && (
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Borrar búsqueda"
-              onClick={() => {
-                changeQuery('');
-                input.current?.focus();
-              }}
-            >
-              <X size={17} />
-            </button>
-          )}
-        </label>
-        <p id={`${id}-hint`} className="endpoint-offline-note">
-          {online ? (
-            'Las sugerencias aparecen al escribir al menos 3 letras.'
-          ) : (
-            <>
-              <WifiOff size={16} />
-              Sin conexión: busca una estación o parada oficial.
-            </>
-          )}
-        </p>
-      </form>
-      {field === 'from' && online && onUseLocation && (
-        <button
-          type="button"
-          className="text-button endpoint-current-location"
-          onClick={onUseLocation}
-        >
-          <LocateFixed size={18} />
-          Usar mi ubicación
-        </button>
-      )}
-      {error && (
-        <p className="mobility-error" role="alert">
-          {error} Puedes elegir una parada de la lista.
-        </p>
-      )}
-      <p role="status" aria-live="polite" className="mobility-feedback">
-        {busy
-          ? slowSearch
-            ? 'La búsqueda está tardando. Si el servidor estaba en reposo, puede tomar cerca de un minuto. Puedes seguir eligiendo estaciones o un punto en el mapa.'
-            : 'Buscando calles, direcciones y comercios de la ZMM…'
-          : searched
-            ? places.length
-              ? `${places.length} lugares encontrados.`
-              : `No encontramos «${searched}». Prueba con la calle, el número y el municipio.`
-            : ''}
-      </p>
-      <div
-        ref={results}
-        id={`${id}-results`}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault();
-            onClose();
-          }
-          if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
-          const buttons = resultButtons();
-          const current = buttons.indexOf(event.target as HTMLButtonElement);
-          if (current < 0) return;
-          event.preventDefault();
-          if (event.key === 'ArrowUp' && current === 0) input.current?.focus();
-          else
-            buttons[
-              Math.min(buttons.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1))
-            ]?.focus();
-        }}
-      >
-        {!!places.length && (
-          <section className="endpoint-suggestions" aria-label="Lugares y direcciones">
-            <h3>Lugares y direcciones</h3>
-            <div className="mobility-place-list">
-              {places.map((place) => (
-                <button
-                  key={place.id}
-                  type="button"
-                  onClick={() =>
-                    onSelect({
-                      kind: 'place',
-                      name: place.name,
-                      lat: place.lat,
-                      lng: place.lng,
-                      address: place.displayName,
-                    })
-                  }
-                >
-                  <MapPin size={20} />
-                  <span>
-                    <strong>{place.name}</strong>
-                    <small>{place.displayName}</small>
-                  </span>
-                  <ArrowRight size={17} />
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-        {!!savedPlaces.length && (
-          <section className="endpoint-suggestions" aria-label="Lugares guardados">
-            <h3>Lugares de tus trayectos guardados</h3>
-            {!online && (
-              <p className="mobility-feedback">
-                Abre el trayecto ya guardado para consultar este lugar sin conexión.
-              </p>
+          >
+            {!!places.length && (
+              <section className="endpoint-suggestions" aria-label="Lugares y direcciones">
+                <h3>
+                  Lugares y direcciones{' '}
+                  <span className="endpoint-results-count">{places.length}</span>
+                </h3>
+                <div className="mobility-place-list">
+                  {places.map((place) => (
+                    <button key={place.id} type="button" onClick={() => selectPlace(place)}>
+                      <MapPin size={20} />
+                      <span>
+                        <strong>{place.name}</strong>
+                        <small>{place.address || place.displayName}</small>
+                        <small className="endpoint-result-type">{suggestionLabel(place)}</small>
+                      </span>
+                      <ArrowRight size={17} />
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
-            <div className="mobility-place-list">
-              {savedPlaces.map(({ trip, point }) => (
-                <button
-                  key={`${point.lat},${point.lng}`}
-                  type="button"
-                  disabled={!online && !onOpenSavedTrip}
-                  onClick={() => (online ? onSelect(point) : onOpenSavedTrip?.(trip))}
-                >
-                  <WifiOff size={20} />
-                  <span>
-                    <strong>{point.name}</strong>
-                    <small>
-                      {online ? trip.label : `Ver trayecto · ${trip.label}`} ·{' '}
-                      {trip.from.name ?? 'Origen'} → {trip.to.name ?? 'Destino'}
-                    </small>
-                  </span>
-                  <ArrowRight size={17} />
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-        {!!matches.length && (
-          <section className="endpoint-suggestions" aria-label="Paradas y estaciones">
-            <h3>{query.trim() ? 'Paradas y estaciones que coinciden' : 'Paradas y estaciones'}</h3>
-            <p className="station-picker-count">{matches.length} coincidencias en la red</p>
-            <div className="mobility-stop-list">
-              {matches.slice(0, limit).map(({ stop, label }) => (
-                <button key={stop.id} type="button" onClick={() => onSelect(stopEndpoint(stop))}>
-                  {stop.mode === 'metro' ? <TrainFront size={20} /> : <BusFront size={20} />}
-                  <span>
-                    <strong>{stop.name}</strong>
-                    <small>
-                      {label}
-                      {!stop.official ? ' · referencia cartográfica' : ''}
-                    </small>
-                  </span>
-                  <ArrowRight size={17} />
-                </button>
-              ))}
-            </div>
-            {matches.length > limit && (
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => setLimit((value) => value + 30)}
-              >
-                Ver más paradas
-                <ChevronDown size={16} />
-              </button>
+            {!!savedPlaces.length && (
+              <section className="endpoint-suggestions" aria-label="Lugares guardados">
+                <h3>Lugares de tus trayectos guardados</h3>
+                {!online && (
+                  <p className="mobility-feedback">
+                    Abre el trayecto ya guardado para consultar este lugar sin conexión.
+                  </p>
+                )}
+                <div className="mobility-place-list">
+                  {savedPlaces.map(({ trip, point }) => (
+                    <button
+                      key={`${point.lat},${point.lng}`}
+                      type="button"
+                      disabled={!online && !onOpenSavedTrip}
+                      onClick={() => (online ? onSelect(point) : onOpenSavedTrip?.(trip))}
+                    >
+                      <Bookmark size={20} />
+                      <span>
+                        <strong>{point.name}</strong>
+                        <small>
+                          {online ? trip.label : `Ver trayecto · ${trip.label}`} ·{' '}
+                          {trip.from.name ?? 'Origen'} → {trip.to.name ?? 'Destino'}
+                        </small>
+                      </span>
+                      <ArrowRight size={17} />
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
-          </section>
-        )}
+            {!!matches.length && (
+              <section className="endpoint-suggestions" aria-label="Paradas y estaciones">
+                <h3>
+                  {query.trim() ? 'Paradas y estaciones que coinciden' : 'Paradas y estaciones'}
+                </h3>
+                <p className="station-picker-count">{matches.length} coincidencias en la red</p>
+                <div className="mobility-stop-list">
+                  {matches.slice(0, limit).map(({ stop, label }) => (
+                    <button
+                      key={stop.id}
+                      type="button"
+                      onClick={() => onSelect(stopEndpoint(stop))}
+                    >
+                      {stop.mode === 'metro' ? <TrainFront size={20} /> : <BusFront size={20} />}
+                      <span>
+                        <strong>{stop.name}</strong>
+                        <small>
+                          {label}
+                          {!stop.official ? ' · referencia cartográfica' : ''}
+                        </small>
+                      </span>
+                      <ArrowRight size={17} />
+                    </button>
+                  ))}
+                </div>
+                {matches.length > limit && (
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setLimit((value) => value + 30)}
+                  >
+                    Ver más paradas
+                    <ChevronDown size={16} />
+                  </button>
+                )}
+              </section>
+            )}
+          </div>
+          {!matches.length && !searched && !busy && !online && !savedPlaces.length && (
+            <p className="mobility-feedback">
+              No hay paradas oficiales ni lugares guardados que coincidan. Prueba otro nombre.
+            </p>
+          )}
+          {online && (
+            <p className="mobility-method-note endpoint-search-privacy">
+              Se consulta el texto que escribes para sugerir lugares. Tu GPS no se envía. ©{' '}
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+                OpenStreetMap · ODbL
+              </a>
+            </p>
+          )}
+        </div>
       </div>
-      {!matches.length && !searched && !busy && !online && !savedPlaces.length && (
-        <p className="mobility-feedback">
-          No hay paradas oficiales ni lugares guardados que coincidan. Prueba otro nombre.
-        </p>
-      )}
-      {online && (
-        <p className="mobility-method-note endpoint-search-privacy">
-          Se consulta el texto que escribes para sugerir lugares. Tu GPS no se envía. ©{' '}
-          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
-            OpenStreetMap · ODbL
-          </a>
-        </p>
-      )}
     </Dialog>
   );
 }

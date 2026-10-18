@@ -1,9 +1,29 @@
+import { normalizePlaceText, significantTokens, similarToken } from './place-query.mjs';
 /**
  * A small, sourced set of public destinations supplements provider coverage.
  * Coordinates are map references, never a verified entrance or boarding point.
  * This is not an exhaustive directory and arbitrary text still uses the provider.
  */
 export const PLACE_REFERENCES = Object.freeze([
+  Object.freeze({
+    id: 'reference:procuraduria-mujeres-nl',
+    name: 'Procuraduría de la Defensa de los Derechos de las Mujeres',
+    displayName: 'Procuraduría de la Defensa de los Derechos de las Mujeres, Washington 539 Ote., planta baja del Edificio Elizondo Garza, Centro, Monterrey, Nuevo León',
+    address: 'Washington 539 Ote., planta baja · Edificio Elizondo Garza, Centro, Monterrey',
+    lat: 25.67435574,
+    lng: -100.31020416,
+    kind: 'place',
+    resultType: 'place',
+    precision: 'approximate',
+    aliases: ['procuraduría de la defensa de los derechos de las mujeres', 'procuraduría de defensa de los derechos de las mujeres',
+      'procuraduría de la protección del derecho de la mujer', 'procuraduría de protección de los derechos de las mujeres',
+      'procuraduría de la mujer', 'procuraduría de las mujeres', 'defensa derechos mujer', 'protección derechos mujer',
+      'edificio elizondo garza', 'washington 539', 'washington 539 ote', 'washington 539 oriente', 'calle washington 539'],
+    regions: ['monterrey', 'centro', 'nuevo leon', 'mexico', 'nl', '64000'],
+    verifiedAt: '2026-10-18',
+    source: { title: 'Gobierno de Nuevo León · cambio de domicilio de la Procuraduría, 22 de enero de 2026', url: 'https://www.nl.gob.mx/es/boletines/anuncia-cambio-de-domicilio-de-la-procuraduria-de-la-defensa-de-los-derechos-de-las' },
+    coordinateSource: { title: 'OpenStreetMap · huella del edificio, referencia de mapa, no acceso verificado', url: 'https://www.openstreetmap.org/way/450490465', precision: 'published-centroid' },
+  }),
   Object.freeze({
     id: 'osm:w665361279',
     name: 'Las Estaciones',
@@ -51,7 +71,8 @@ export const PLACE_REFERENCES = Object.freeze([
   }),
 ]);
 
-const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-MX').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/ +/g, ' ');
+const normalize = normalizePlaceText;
+const publicPlace = ({ aliases: _aliases, regions: _regions, ...place }) => ({ precision: 'approximate', ...structuredClone(place) });
 
 export function findPlaceReferences(query) {
   const text = normalize(query);
@@ -63,5 +84,27 @@ export function findPlaceReferences(query) {
     const region = `(?:${place.regions.join('|')})`;
     const regionalSuffix = new RegExp(`^(?:en )?${region}(?: (?:en )?${region})*$`);
     return text === normalizedAlias || (text.startsWith(`${normalizedAlias} `) && regionalSuffix.test(text.slice(normalizedAlias.length + 1)));
-  })).map(({ aliases: _aliases, regions: _regions, ...place }) => structuredClone(place));
+  })).map(publicPlace);
+}
+
+/** Partial and modest typo matching only offers choices; it never picks a destination. */
+export function suggestPlaceReferences(query) {
+  const exact = findPlaceReferences(query);
+  if (exact.length) return exact;
+  const [name, ...regionParts] = query.split(',');
+  const tokens = significantTokens(name);
+  if (!tokens.length || tokens.some(token => token.length < 2)) return [];
+  return PLACE_REFERENCES.filter(place => {
+    if (regionParts.length) {
+      const regionalQuery = normalize(regionParts.join(' '));
+      const region = `(?:${place.regions.join('|')})`;
+      if (!new RegExp(`^(?:${region})(?: ${region})*$`).test(regionalQuery)) return false;
+    }
+    return place.aliases.some(alias => {
+      const aliases = significantTokens(alias);
+      // Every typed word must belong to this name. Extra branches, businesses,
+      // different municipalities and numbers cannot be silently discarded.
+      return tokens.every(token => aliases.some(candidate => similarToken(token, candidate)));
+    });
+  }).map(publicPlace).slice(0, 4);
 }

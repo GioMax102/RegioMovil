@@ -1,9 +1,20 @@
-import { ArrowRight, BusFront, Clock3, Footprints, Repeat2, TrainFront } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
+import {
+  ArrowRight,
+  BusFront,
+  Clock3,
+  Footprints,
+  Navigation,
+  Repeat2,
+  TrainFront,
+} from 'lucide-react';
 import MobilityMap from './MobilityMap';
 import { networkLabel } from './networks';
 import { presentJourneySteps } from './journeyPresentation';
 import type { MobilityJourney, MobilityNetwork } from './types';
 import './journeyDetail.css';
+
+const ActiveJourney = lazy(() => import('./ActiveJourney'));
 
 export default function MobilityJourneyDetail({
   journey,
@@ -12,6 +23,7 @@ export default function MobilityJourneyDetail({
   journey: MobilityJourney;
   network: MobilityNetwork;
 }) {
+  const [guiding, setGuiding] = useState(false);
   const routeIds = new Set(journey.steps.map((step) => step.lineId));
   const sourceIds = new Set(
     network.routes.filter((route) => routeIds.has(route.id)).flatMap((route) => route.sourceIds),
@@ -19,8 +31,31 @@ export default function MobilityJourneyDetail({
   const unverifiedBus = journey.steps.some(
     (step) => step.mode === 'bus' && (!step.stopOrderVerified || step.directionVerified !== true),
   );
+  if (guiding)
+    return (
+      <Suspense fallback={<p role="status">Abriendo tu guía de viaje…</p>}>
+        <ActiveJourney
+          key={journey.id}
+          journey={journey}
+          network={network}
+          autoStart
+          onFinish={() => setGuiding(false)}
+        />
+      </Suspense>
+    );
   return (
     <div className="journey-detail">
+      <button
+        type="button"
+        className="primary-button full-width journey-start"
+        onClick={() => setGuiding(true)}
+      >
+        <Navigation size={18} aria-hidden="true" /> Iniciar trayecto
+      </button>
+      <p className="journey-detail-note">
+        Sigue tu ubicación y recibe indicaciones con la app abierta. El GPS se usa sólo en tu
+        dispositivo.
+      </p>
       <MobilityMap key={journey.id} journey={journey} network={network} />
       <div className="journey-detail-summary" aria-label="Resumen del trayecto">
         <span className="journey-detail-duration">

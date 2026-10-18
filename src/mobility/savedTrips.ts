@@ -57,6 +57,8 @@ function validJourney(value: unknown): value is MobilityJourney {
         typeof step.toId === 'string' &&
         finite(step.minutes) &&
         finite(step.stationCount) &&
+        (step.stopIds === undefined ||
+          (Array.isArray(step.stopIds) && step.stopIds.every((id) => typeof id === 'string'))) &&
         finite(step.distanceMeters) &&
         Array.isArray(step.geometry) &&
         step.geometry.every(
@@ -171,7 +173,10 @@ export function snapshotMobilityPlan(
   if (!journeys.length) throw new Error('Calcula una ruta antes de guardarla.');
   const routeIds = new Set(journeys.flatMap((journey) => journey.steps.map((step) => step.lineId)));
   const stopIds = new Set(
-    journeys.flatMap((journey) => journey.steps.flatMap((step) => [step.fromId, step.toId])),
+    journeys.flatMap((journey) => [
+      ...(journey.stationIds ?? []),
+      ...journey.steps.flatMap((step) => step.stopIds ?? [step.fromId, step.toId]),
+    ]),
   );
   const namedEndpoint = (point: MobilityEndpoint): MobilityEndpoint => {
     // The engine resolves official IDs into full stop records at runtime.

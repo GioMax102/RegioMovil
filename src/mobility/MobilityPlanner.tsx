@@ -763,6 +763,16 @@ export default function MobilityPlanner({
           online={online}
           onClose={() => setPicker(null)}
           onChooseMap={() => chooseOnMap(picker)}
+          onRefinePlace={(place) => {
+            setPicker(null);
+            setMapField(picker);
+            const point = { lat: place.lat, lng: place.lng };
+            setMapFocus(point);
+            setMapDraft(point);
+            setNotice(
+              `Encontramos ${place.name}. Ajusta el punto en el mapa y confirma dónde quieres ${picker === 'from' ? 'salir' : 'llegar'}.`,
+            );
+          }}
           onOpenSavedTrip={(trip) => {
             setPicker(null);
             setPreviewSaved(trip);
@@ -787,7 +797,7 @@ export default function MobilityPlanner({
       <ActionFeedback key={savedFeedback} message={savedFeedback} />
       {detail && network && (
         <Dialog title="Tu conexión, paso a paso" onClose={() => setDetail(null)} wide>
-          <MobilityJourneyDetail journey={detail} network={network} />
+          <MobilityJourneyDetail key={detail.id} journey={detail} network={network} />
           <div className="mobility-save-action">
             <button className="primary-button full-width" disabled={busy} onClick={startSaving}>
               <Bookmark size={17} />

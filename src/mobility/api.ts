@@ -52,7 +52,7 @@ export async function searchPlaces(query: string, signal: AbortSignal): Promise<
     if (!Array.isArray(payload.places))
       throw new Error('No pudimos leer las sugerencias. Prueba otro nombre.');
     return payload.places
-      .slice(0, 6)
+      .slice(0, 12)
       .filter(
         (place: Place) =>
           typeof place?.id === 'string' &&

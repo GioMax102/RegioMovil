@@ -233,6 +233,14 @@ before(async () => {
     catalog,
     mobilityNetwork,
     now: () => new Date('2026-10-15T18:00:00.000Z'),
+    placeSuggestionsOptions: {
+      // Exercise the real API/reference resolver without a live external search
+      // dependency. Provider semantics are covered by the dedicated Photon tests.
+      transport: async () =>
+        new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    },
   });
   // Serve the current source snapshot directly so these tests cannot read stale dist.
   server = createServer((request, response) => {

@@ -40,7 +40,8 @@ test('Photon house and street suggestions preserve names, numbers and full addre
   assert.equal(places[0].name, 'Calle Praga 421');
   assert.equal(places[0].address, 'Calle Praga 421, Las Torres, Monterrey, Nuevo León, 64780');
   assert.equal(places[0].resultType, 'address');
-  assert.equal(places[1].resultType, 'street');
+  assert.equal(places[0].precision, 'exact');
+  assert.equal(places.length, 1); // A street elsewhere must not replace this requested address.
 });
 
 test('verified exact destinations take priority without consuming the suggestion provider quota', async () => {
@@ -76,7 +77,7 @@ test('suggestion LRU retains at most 200 entries and a provider 429 backs off gl
   let time = 0, blocked = false, calls = 0;
   const state = createPlaceSuggestionState();
   const search = createPlaceSuggestions({ state, now: () => time, transport: async () => { calls++; return blocked ? new Response('', { status: 429 }) : json([feature()]); } });
-  for (let i = 0; i < 201; i++) { await search(`Lugar ${i}`); time += 1000; }
+  for (let i = 0; i < 201; i++) { await search(`Lugar serie${i}`); time += 1000; }
   assert.equal(state.cache.size, 200);
   blocked = true;
   await assert.rejects(search('Lugar distinto'), error => error.retryAfter === 60);
@@ -97,4 +98,72 @@ test('suggestions reject GPS, email, malformed payloads, unsafe providers and pu
 test('suggestion transport has a six second deadline even if it ignores abort', async () => {
   const search = createPlaceSuggestions({ state: createPlaceSuggestionState(), transport: () => new Promise(() => {}) });
   await assert.rejects(search('Macroplaza'), error => error.status === 504 && error.code === 'PLACES_TIMEOUT');
+});
+
+test('automatic partial reference and alternate-name matches are combined with other Photon choices', async () => {
+  let calls = 0;
+  const search = createPlaceSuggestions({ state: createPlaceSuggestionState(), transport: async () => { calls++; return json([feature(321, { name: 'Tecnológico · otra opción' })]); } });
+  const { places } = await search('tecnologico');
+  assert.equal(calls, 1);
+  assert.equal(places[0].id, 'osm:r21104322');
+  assert.equal(places[1].id, 'osm:w321');
+});
+
+test('street plus number uses bounded structured Photon fallback, at one request per second, when free text misses the requested house', async () => {
+  const calls = [];
+  const search = createPlaceSuggestions({ state: createPlaceSuggestionState(), transport: async url => {
+    calls.push({ url, time: performance.now() });
+    return json(calls.length === 1 ? [feature(70, { name: 'Calle Praga', type: 'street' }), feature(71, { name: 'Otra casa', street: 'Calle Praga', housenumber: '500' })]
+      : [feature(72, { name: 'Dirección pública', type: 'house', street: 'Calle Praga', housenumber: '421' })]);
+  } });
+  const { places } = await search('Praga #421, Monterrey');
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url.searchParams.get('q'), 'Praga 421, Monterrey');
+  assert.equal(calls[1].url.pathname, '/structured');
+  assert.equal(calls[1].url.searchParams.get('street'), 'Praga');
+  assert.equal(calls[1].url.searchParams.get('housenumber'), '421');
+  assert.equal(calls[1].url.searchParams.get('city'), 'Monterrey');
+  assert.equal(calls[1].url.searchParams.has('q'), false);
+  assert.equal(calls[1].url.searchParams.get('bbox'), '-100.9,25.35,-99.8,26.1');
+  assert.ok(calls[1].time - calls[0].time >= 990);
+  assert.equal(places.length, 1);
+  assert.equal(places[0].id, 'osm:w72');
+  assert.equal(places[0].precision, 'exact');
+});
+
+test('missing house numbers stay as street-level choices without fabricating coordinates, numbers or a false building', async () => {
+  const search = createPlaceSuggestions({ state: createPlaceSuggestionState(), transport: async () => json([
+    feature(80, { name: 'Calle Praga', type: 'street' }),
+    feature(81, { name: 'Otro domicilio', street: 'Calle Praga', housenumber: '999', postcode: '421' }),
+    feature(82, { name: 'Calle diferente', type: 'street' }),
+  ]) });
+  const { places } = await search('Praga 421');
+  assert.equal(places.length, 1);
+  assert.equal(places[0].name, 'Calle Praga');
+  assert.equal(places[0].precision, 'street');
+  assert.equal(places[0].lat, 25.6771028);
+  assert.equal(places[0].displayName.includes('421'), false);
+});
+
+test('verified street intersections remain available when the online provider is throttled', async () => {
+  const state = createPlaceSuggestionState();
+  state.blockedUntil = Date.now() + 60_000;
+  const search = createPlaceSuggestions({ state, transport: () => assert.fail('Blocked provider must not be called') });
+  const { places } = await search('Av. Universidad y Fidel Velázquez');
+  assert.equal(places[0].resultType, 'intersection');
+  assert.match(places[0].name, /Universidad.*Fidel/);
+  assert.equal(places[0].precision, 'exact');
+});
+
+test('intersection suggestions require both street names so a similarly named venue elsewhere cannot replace the requested corner', async () => {
+  const search = createPlaceSuggestions({ state: createPlaceSuggestionState(), transport: async () => json([
+    feature(90, { name: 'Rangel Frías / Lincoln', street: 'Av. Abraham Lincoln' }),
+    feature(91, { name: 'Ecovía Lincoln', street: 'Avenida Rangel Frías' }),
+    feature(92, { name: 'CONALEP Raúl Rangel Frías', street: 'Pablo Livas', city: 'Guadalupe' }),
+    feature(93, { name: 'Calle Rangel Frías', type: 'street', city: 'Santa Catarina' }),
+  ]) });
+  const { places } = await search('Lincoln con Rangel Frias');
+  assert.equal(places[0].resultType, 'intersection');
+  assert.match(places[0].name, /Lincoln.*Rangel Frías/);
+  assert.deepEqual(places.filter(place => place.resultType !== 'intersection').map(place => place.id), ['osm:w90', 'osm:w91']);
 });

@@ -22,6 +22,7 @@ export default function LocationMap({
   online,
   origin,
   destination,
+  currentPosition,
   field,
   focus,
   journey,
@@ -33,6 +34,7 @@ export default function LocationMap({
   online: boolean;
   origin?: MapPosition | null;
   destination?: MapPosition | null;
+  currentPosition?: (MapPosition & { accuracy?: number }) | null;
   field?: 'from' | 'to' | null;
   focus?: MapPosition | null;
   journey?: MobilityJourney | null;
@@ -687,6 +689,34 @@ export default function LocationMap({
               );
             })}
           </g>
+          {currentPosition &&
+            isRegionalCoordinate([currentPosition.lng, currentPosition.lat]) &&
+            (() => {
+              const p = project(currentPosition);
+              const metersPerPixel =
+                (156543.03392 * Math.cos((currentPosition.lat * Math.PI) / 180)) / 2 ** view.zoom;
+              const accuracy = Number.isFinite(currentPosition.accuracy)
+                ? Math.max(0, currentPosition.accuracy!)
+                : 0;
+              return (
+                <g
+                  transform={`translate(${p.x} ${p.y})`}
+                  role="img"
+                  aria-label={`Tu ubicación${accuracy ? `, precisión aproximada de ${Math.round(accuracy)} metros` : ''}`}
+                  pointerEvents="none"
+                >
+                  <circle
+                    r={Math.max(13, Math.min(100, accuracy / metersPerPixel))}
+                    fill="#1871d8"
+                    fillOpacity="0.13"
+                    stroke="#1871d8"
+                    strokeOpacity="0.25"
+                  />
+                  <circle r="9" fill="#1871d8" stroke="#fff" strokeWidth="3" />
+                  <title>Tu ubicación · {Math.round(accuracy)} m de precisión</title>
+                </g>
+              );
+            })()}
         </svg>
         {field && (
           <div className={`location-map-pin ${field}`} aria-hidden="true">

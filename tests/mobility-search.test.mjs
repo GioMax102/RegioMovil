@@ -47,3 +47,17 @@ test('offline endpoint suggestions exclude nonofficial mapped reference points',
   assert.equal(searchMobilityStops(index, 'Gomez Morin', false)[0].stop.id, 'reference');
   assert.equal(searchMobilityStops(index, 'Gomez Morin', true).length, 0);
 });
+test('bus suggestions name their corridor so repeated stop names remain distinguishable', () => {
+  const repeated = {
+    routes: [
+      { id: 'tm-a', code: 'TM', name: 'Universidad – Santo Domingo' },
+      { id: 'tm-b', code: 'TM', name: 'Universidad – Las Puentes' },
+    ],
+    stops: ['tm-a', 'tm-b'].map(id => ({ id, name: 'Parada 1', mode: 'bus', routeIds: [id], official: true })),
+  };
+  const matches = searchMobilityStops(indexMobilityStops(repeated), 'Parada 1', false);
+  assert.equal(matches.length, 2);
+  assert.equal(new Set(matches.map(row => row.label)).size, 2, 'Identical names and TM codes must remain distinguishable.');
+  assert.ok(matches.some(row => row.label.includes('Santo Domingo')));
+  assert.ok(matches.some(row => row.label.includes('Las Puentes')));
+});
