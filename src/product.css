@@ -17,6 +17,10 @@
 .sidebar > * {
   flex-shrink: 0;
 }
+.sidebar .brand small {
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
 .home-plan-cta {
   background-color: var(--app-primary);
   background-image:

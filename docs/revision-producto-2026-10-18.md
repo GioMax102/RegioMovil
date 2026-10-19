@@ -57,7 +57,7 @@ Verificación automatizada:
 
 **219 pruebas aprobadas**, sin omisiones ni fallos en la suite final. Las regresiones cubren cancelación y limpieza, esperas del cuerpo HTTP, ahorro de teselas, selección/deduplicación, filtros, permisos denegados, estados GPS, pausa de 60 segundos y evidencia nueva de llegada, foco, transbordos, cabeceras, cuotas, permisos SQLite y contratos nativos. Los contratos de fuentes Java no ejecutan el ciclo de vida Android.
 
-El precache inicial continúa en aproximadamente **493 KiB** (505,291 bytes), con 15 recursos diferidos. Planeador, mapas y guía mantienen carga diferida. El APK debug compila con SDK 36/JDK 21; usa la API local mediante `adb reverse tcp:4173 tcp:4173`. No es una nueva publicación firmada. APK de 5,419,373 bytes, SHA-256 `bee998d00471f25438db201c84b7313a3db5db139b34c9efda7e6962b86e2aca`, guardado en `output/android/regiomovil-debug.apk`.
+El precache inicial continúa en aproximadamente **493 KiB** (505,351 bytes), con 15 recursos diferidos. Planeador, mapas y guía mantienen carga diferida. El APK debug compila con SDK 36/JDK 21; usa la API local mediante `adb reverse tcp:4173 tcp:4173`. No es una nueva publicación firmada. APK de 5,419,373 bytes, SHA-256 `de3e14a64e5c5711852ed1809025c88913f3cbf45c58e39e4f3895a82b4ccdba`, guardado en `output/android/regiomovil-debug.apk`.
 
 ## Pendiente en teléfono físico y operación
 
