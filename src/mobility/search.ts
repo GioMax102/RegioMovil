@@ -1,4 +1,4 @@
-import type { MobilityNetwork, MobilityStop } from './types';
+import type { MobilityNetwork, MobilityStop, Place } from './types';
 
 export const normalizeSearch = (text: string) =>
   text
@@ -7,6 +7,42 @@ export const normalizeSearch = (text: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+
+/** Preserve provider ranking while removing duplicate representations of one place.
+ * Different branches, entrances and opposing bus stops must remain selectable.
+ */
+export function distinctPlaceSuggestions(places: Place[]) {
+  const seenIds = new Set<string>();
+  const unique: Place[] = [];
+  for (const place of places) {
+    if (seenIds.has(place.id)) continue;
+    seenIds.add(place.id);
+    const name = normalizeSearch(place.name);
+    const duplicate = unique.some((other) => {
+      if (normalizeSearch(other.name) !== name || other.resultType !== place.resultType)
+        return false;
+      const meters = Math.hypot(
+        (other.lat - place.lat) * 111320,
+        (other.lng - place.lng) * 111320 * Math.cos((place.lat * Math.PI) / 180),
+      );
+      return meters < 35;
+    });
+    if (!duplicate) unique.push(place);
+  }
+  return unique;
+}
+
+/** The result title already names the place; its subtitle should locate it. */
+export function placeAddress(place: Place) {
+  const address = place.address || place.displayName;
+  const parts = address
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length > 1 && normalizeSearch(parts[0]) === normalizeSearch(place.name))
+    return parts.slice(1).join(', ');
+  return address;
+}
 const ignored = new Set(['estacion', 'parada', 'metro', 'de', 'del', 'el', 'la']);
 function oneEdit(a: string, b: string) {
   if (Math.abs(a.length - b.length) > 1 || Math.min(a.length, b.length) < 3) return false;

@@ -204,13 +204,10 @@ test('suggestions distinguish places, addresses, streets and crossings without h
   assert.ok(within(suggestions).getByText('Calle · elige el punto exacto en el mapa'));
   assert.ok(within(suggestions).getByText('Cruce de calles', { exact: true }));
   const address = within(suggestions).getByRole('button', {
-    name: /Washington 539 Washington 539, Monterrey/,
+    name: /Washington 539 Monterrey/,
   });
   assert.equal(address.querySelector('strong')?.textContent, 'Washington 539');
-  assert.equal(
-    address.querySelector('small')?.textContent,
-    'Washington 539, Monterrey, Nuevo León',
-  );
+  assert.equal(address.querySelector('small')?.textContent, 'Monterrey, Nuevo León');
 });
 
 test('editing a failed search retries automatically and leaves station suggestions available', async () => {
@@ -247,7 +244,7 @@ test('typing searches automatically after a pause, ignores short text and suppor
   await user.type(input, 'rque Fundidora');
   assert.equal(queries.length, 0);
   const result = await screen.findByRole('button', {
-    name: /Parque Fundidora Parque Fundidora, Monterrey/,
+    name: /Parque Fundidora Monterrey/,
   });
   assert.deepEqual(queries, ['Parque Fundidora']);
   assert.equal(screen.queryByRole('button', { name: 'Buscar lugares y direcciones' }), null);
@@ -282,9 +279,9 @@ test('editing or closing aborts requests and delayed old results cannot replace 
   assert.equal(pending[0].signal.aborted, true);
   await waitFor(() => assert.equal(pending.length, 2));
   await act(async () => pending[1].resolve(response('Macroplaza')));
-  await screen.findByRole('button', { name: /Macroplaza Macroplaza, Monterrey/ });
+  await screen.findByRole('button', { name: /Macroplaza Monterrey/ });
   await act(async () => pending[0].resolve(response('Fundidora')));
-  assert.equal(screen.queryByRole('button', { name: /Fundidora Fundidora, Monterrey/ }), null);
+  assert.equal(screen.queryByRole('button', { name: /Fundidora Monterrey/ }), null);
   await user.clear(input);
   await user.type(input, 'Otra calle');
   await waitFor(() => assert.equal(pending.length, 3));
@@ -309,7 +306,7 @@ test('IME composition is not sent until completed, and Escape closes the picker'
   await pause(700);
   assert.equal(calls, 0);
   fireEvent.compositionEnd(input);
-  await screen.findByRole('button', { name: /Calle Praga Calle Praga, Monterrey/ });
+  await screen.findByRole('button', { name: /Calle Praga Monterrey/ });
   assert.equal(calls, 1);
   await user.type(input, '{Escape}');
   assert.equal(closed, true);

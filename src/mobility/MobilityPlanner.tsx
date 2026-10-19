@@ -30,7 +30,6 @@ import { currentLocation } from './location';
 import MobilityJourneyDetail from './MobilityJourneyDetail';
 import SavedMobilityTrips from './SavedMobilityTrips';
 import SavedTripPreview from './SavedTripPreview';
-import { isCompactTransfer } from './journeyPresentation';
 import { saveMobilityTrip, snapshotMobilityPlan } from './savedTrips';
 import type {
   MobilityEndpoint,
@@ -158,6 +157,7 @@ export default function MobilityPlanner({
     setPreference(initialTrip.preference);
     setSubmitted(null);
     setPlan(null);
+    setTransportFilter('all');
   }, [initialTrip, network]);
   useEffect(() => {
     if (online || !network) return;
@@ -285,6 +285,7 @@ export default function MobilityPlanner({
     } else setTo(endpoint);
     setPlan(null);
     setSubmitted(null);
+    setTransportFilter('all');
     setError('');
     setNotice('');
     setMapFocus(endpointPosition(endpoint, network));
@@ -366,9 +367,7 @@ export default function MobilityPlanner({
         </p>
       ) : (
         <>
-          <p className="mobility-search-prompt">
-            Elige dónde sales y a dónde quieres llegar. Nosotros conectamos las opciones.
-          </p>
+          <p className="mobility-search-prompt">¿A dónde te llevamos?</p>
           <div className={`mobility-connection ${online ? '' : 'offline'}`}>
             <span>
               {online ? <Check size={15} /> : <WifiOff size={15} />}
@@ -423,7 +422,11 @@ export default function MobilityPlanner({
                     setTo(from);
                     setSubmitted(null);
                     setPlan(null);
+                    setTransportFilter('all');
                     setError('');
+                    setNotice('');
+                    setMapField(null);
+                    setMapDraft(null);
                     locationGeneration.current++;
                     setLocating(false);
                   }}
@@ -490,15 +493,33 @@ export default function MobilityPlanner({
                 {busy ? 'Calculando conexiones…' : 'Buscar rutas'}
                 <ArrowRight size={17} />
               </button>
+              {busy && (
+                <p className="mobility-feedback mobility-form-feedback" role="status">
+                  Actualizando las opciones con tu prioridad…
+                </p>
+              )}
+              {error && (
+                <p className="mobility-error mobility-form-feedback" role="alert">
+                  {error}
+                </p>
+              )}
+              {notice && !mapField && (
+                <p className="mobility-feedback mobility-form-feedback" role="status">
+                  {notice}
+                </p>
+              )}
               <p className="mobility-honesty">
                 <Info size={15} />
-                Tiempos simulados · Red experimental
+                Tiempos y afluencia simulados
               </p>
             </form>
             <div className="mobility-map-panel" ref={mapPanel}>
               <div className="mobility-map-heading">
                 <span>
-                  <MapPin size={17} /> Tu viaje en el mapa
+                  <MapPin size={17} />{' '}
+                  {mapField
+                    ? `Elige tu ${mapField === 'from' ? 'origen' : 'destino'}`
+                    : 'Tu viaje en el mapa'}
                 </span>
                 <div role="group" aria-label="Punto que quieres marcar en el mapa">
                   <button
@@ -517,6 +538,11 @@ export default function MobilityPlanner({
                   </button>
                 </div>
               </div>
+              {notice && mapField && (
+                <p className="mobility-feedback mobility-form-feedback" role="status">
+                  {notice}
+                </p>
+              )}
               <LocationMap
                 network={network}
                 online={online}
@@ -570,6 +596,7 @@ export default function MobilityPlanner({
                       onClick={() => {
                         setMapField(null);
                         setMapDraft(null);
+                        setNotice('');
                       }}
                     >
                       Cancelar
@@ -595,21 +622,6 @@ export default function MobilityPlanner({
               )}
             </div>
           </div>
-          {busy && (
-            <p className="mobility-feedback" role="status">
-              Actualizando las opciones con tu prioridad…
-            </p>
-          )}
-          {error && (
-            <p className="mobility-error" role="alert">
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p className="mobility-feedback" role="status">
-              {notice}
-            </p>
-          )}
           {plan && (
             <div className="mobility-results" aria-busy={busy} aria-label="Resultados multimodales">
               <div className="mobility-results-heading">
@@ -667,35 +679,40 @@ export default function MobilityPlanner({
                       {journey.durationMinutes}
                       <small> min aprox.</small>
                     </span>
-                    <span>
-                      {journey === plan.journeys[0] ? 'Mejor para tu prioridad' : 'Otra conexión'}
-                    </span>
+                    {journey === plan.journeys[0] && <span>Recomendada</span>}
                   </div>
-                  <div className="mobility-modes">
-                    {journey.steps.map((step, stepIndex) => (
-                      <span key={stepIndex} className={`mobility-mode ${step.mode}`}>
-                        {isCompactTransfer(journey.steps, stepIndex) ? (
-                          <ArrowLeftRight size={15} />
-                        ) : step.mode === 'walk' ? (
-                          <Footprints size={15} />
-                        ) : step.mode === 'metro' ? (
-                          <TrainFront size={15} />
-                        ) : (
-                          <BusFront size={15} />
-                        )}
-                        {isCompactTransfer(journey.steps, stepIndex)
-                          ? 'Transbordo'
-                          : step.mode === 'walk'
-                            ? `${Math.round(step.distanceMeters)} m`
-                            : step.mode === 'bus'
+                  <div className="mobility-modes" aria-label="Servicios de esta ruta">
+                    {journey.steps
+                      .filter((step) => step.mode !== 'walk')
+                      .map((step, stepIndex) => (
+                        <span key={stepIndex} className={`mobility-mode ${step.mode}`}>
+                          {step.mode === 'metro' ? (
+                            <TrainFront size={16} aria-hidden="true" />
+                          ) : (
+                            <BusFront size={16} aria-hidden="true" />
+                          )}
+                          <span>
+                            {step.mode === 'bus'
                               ? `${networkLabel(step.networkId)} · ${step.lineName}`
                               : step.lineName}
-                      </span>
-                    ))}
+                          </span>
+                        </span>
+                      ))}
                   </div>
-                  <p>
-                    {journey.transfers} {journey.transfers === 1 ? 'transbordo' : 'transbordos'} ·{' '}
-                    {journey.walkingMinutes} min a pie · afluencia simulada {journey.occupancy}%
+                  <div className="mobility-result-metrics">
+                    <span>
+                      <ArrowLeftRight size={15} aria-hidden="true" />
+                      {journey.transfers === 0
+                        ? 'Sin transbordos'
+                        : `${journey.transfers} ${journey.transfers === 1 ? 'transbordo' : 'transbordos'}`}
+                    </span>
+                    <span>
+                      <Footprints size={15} aria-hidden="true" />
+                      {journey.walkingMinutes} min a pie
+                    </span>
+                  </div>
+                  <p className="mobility-result-simulation">
+                    Afluencia simulada: {journey.occupancy}%
                   </p>
                   <div className="mobility-result-footer">
                     <span>Ver mapa y pasos</span>

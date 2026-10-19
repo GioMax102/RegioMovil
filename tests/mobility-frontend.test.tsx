@@ -379,7 +379,7 @@ async function goOffline() {
 
 test('App defers the multimodal network, then connects RegioRuta A33 Mederos with Metro Universidad and saves from its map', async () => {
   render(<App />);
-  await screen.findByText('API conectada');
+  await screen.findByText('En línea');
   assert.equal(
     mobilityModuleLoads,
     0,
@@ -508,6 +508,25 @@ test('transport filters act on route results and preserve endpoints without anot
   assert.equal(placeQueries.length, 0);
 });
 
+test('changing a destination resets an empty transport filter for the next route search', async () => {
+  const model = await mountModel();
+  await planMederos();
+  const filters = within(model).getByRole('group', { name: 'Filtrar rutas por transporte' });
+  await user.click(within(filters).getByRole('button', { name: /^Metro\s*0$/ }));
+  assert.equal(within(model).queryAllByRole('button', { name: /^Ver conexión/ }).length, 0);
+  await chooseOfficial('Destino', 'Padre Mier', /^Padre Mier L2$/);
+  await user.click(within(model).getByRole('button', { name: 'Buscar rutas' }));
+  await within(model).findByRole('heading', { name: 'Rutas para tu viaje' });
+  const refreshedFilters = within(model).getByRole('group', { name: 'Filtrar rutas por transporte' });
+  assert.equal(
+    within(refreshedFilters).getByRole('button', { name: /^Todas\s*\d+$/ }).getAttribute('aria-pressed'),
+    'true',
+    'The previous empty Metro filter must not hide connections to the new destination.',
+  );
+  assert.ok(within(model).getAllByRole('button', { name: /^Ver conexión/ }).length > 0);
+  assert.equal(plannedRequests.length, 2);
+});
+
 test('the unified origin search tolerates Sab bernabé and selects San Bernabé locally', async () => {
   const model = await mountModel();
   await chooseOfficial('Origen', 'Estación Sab bernabé', /^San Bernabé L1$/);
@@ -526,7 +545,7 @@ test('the unified origin search tolerates Sab bernabé and selects San Bernabé 
 test('San Bernabé to Punto Valle finds bus connections and an empty Metro filter keeps the selected places', async () => {
   const model = await mountModel();
   await chooseOfficial('Origen', 'Estación Sab bernabé', /^San Bernabé L1$/);
-  await choosePlace('Destino', 'Punto Valle', /^Punto Valle Punto Valle, Río Missouri 555/);
+  await choosePlace('Destino', 'Punto Valle', /^Punto Valle Río Missouri 555/);
   await user.click(within(model).getByRole('button', { name: 'Buscar rutas' }));
   await within(model).findByRole('heading', { name: 'Rutas para tu viaje' });
   assert.equal(plannedRequests.length, 1);

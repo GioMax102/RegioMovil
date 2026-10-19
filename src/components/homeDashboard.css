@@ -7,7 +7,7 @@
 .home-shortcuts {
   grid-column: 1/-1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
 }
 .home-shortcuts button {
@@ -17,15 +17,18 @@
   padding: 17px 20px;
   min-height: 76px;
   border: 1px solid var(--line);
-  border-radius: 15px;
-  background: var(--surface);
+  border-radius: 17px;
+  background: linear-gradient(125deg, var(--surface), var(--white));
   text-align: left;
   color: var(--dark);
 }
-.home-shortcuts button > span {
+.home-shortcuts button > span:not(.home-shortcut-icon) {
   flex: 1;
+  min-width: 0;
   font-size: 0.92rem;
   font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .home-shortcuts small {
   display: block;
@@ -34,16 +37,42 @@
   font-size: 0.77rem;
   font-weight: 400;
 }
-.home-shortcuts button > svg:first-child {
+.home-shortcut-icon,
+.home-outlook-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: var(--soft);
   color: var(--green);
+}
+.home-shortcuts button > svg {
+  flex-shrink: 0;
 }
 .home-departure,
 .home-outlook {
   min-width: 0;
   padding: 24px;
 }
+.home-dashboard .panel-heading {
+  padding: 0;
+  margin-bottom: 17px;
+  align-items: flex-start;
+}
 .home-dashboard h2 {
   font-size: 1.12rem;
+  line-height: 1.4;
+  margin-bottom: 0;
+}
+.home-dashboard .eyebrow {
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+.home-dashboard svg {
+  flex-shrink: 0;
 }
 .home-station-name {
   display: flex;
@@ -53,6 +82,8 @@
   margin: 0 0 15px;
   color: var(--muted);
   font-size: 0.88rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
 }
 .home-station-name strong {
   color: var(--dark);
@@ -60,12 +91,27 @@
 }
 .home-advice {
   border-top: 1px solid var(--line);
-  margin-top: 18px;
-  padding-top: 18px;
+  margin-top: 14px;
 }
-.home-advice h3 {
-  font-size: 0.96rem;
-  margin: 0 0 7px;
+.home-advice summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--dark);
+  list-style: none;
+}
+.home-advice summary::-webkit-details-marker {
+  display: none;
+}
+.home-advice[open] summary > svg {
+  transform: rotate(180deg);
 }
 .home-advice p {
   color: var(--muted);
@@ -79,10 +125,72 @@
   line-height: 1.5;
   color: var(--muted);
 }
+.home-outlook {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(145deg, var(--surface), var(--white));
+}
+.home-outlook > :not(.home-mountain-lines) {
+  position: relative;
+}
+.home-mountain-lines {
+  position: absolute;
+  right: 0;
+  top: 4px;
+  width: min(70%, 290px);
+  height: 115px;
+  stroke: var(--green);
+  stroke-width: 1;
+  opacity: 0.09;
+  pointer-events: none;
+}
+.home-quiet-hour {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 14px;
+  justify-content: space-between;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.home-quiet-hour strong {
+  font-size: 1rem;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+.home-outlook .forecast {
+  padding: 14px 0 0;
+}
+.home-outlook .bar-value {
+  opacity: 1;
+}
+.home-dashboard .all-arrivals {
+  padding-bottom: 0;
+}
 .home-report {
   grid-column: 1/-1;
   justify-self: start;
   margin: 0;
+  min-height: 44px;
+  text-align: left;
+  line-height: 1.5;
+}
+.home-shortcuts button:focus-visible,
+.home-advice summary:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
+.high-contrast .home-mountain-lines {
+  display: none;
+}
+.high-contrast :is(.home-shortcuts button, .home-quiet-hour) {
+  border-color: var(--dark);
 }
 @media (max-width: 760px) {
   .home-dashboard {
@@ -98,7 +206,7 @@
     gap: 9px;
     align-items: flex-start;
   }
-  .home-shortcuts button > span {
+  .home-shortcuts button > span:not(.home-shortcut-icon) {
     font-size: 0.8rem;
     line-height: 1.4;
   }
@@ -111,5 +219,21 @@
   .home-departure,
   .home-outlook {
     padding: 20px;
+  }
+}
+@media (max-width: 430px) {
+  .home-shortcuts button {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .home-shortcuts button > span:not(.home-shortcut-icon) {
+    font-size: 0.88rem;
+  }
+  .home-shortcuts small {
+    font-size: 0.74rem;
+  }
+  .home-departure,
+  .home-outlook {
+    padding: 16px;
   }
 }

@@ -22,6 +22,7 @@ import type {
   MobilityRoute,
   MobilityStop,
 } from '../src/mobility/types';
+import { DataPreferencesProvider } from '../src/dataPreferences';
 
 const styleHook = registerHooks({
   load(url, context, nextLoad) {
@@ -138,6 +139,23 @@ async function mount(props: Partial<React.ComponentProps<typeof LocationMap>> = 
   assert.ok(svg);
   return { picks, stops, svg, container: host };
 }
+
+test('ahorrar datos evita teselas remotas sin desactivar selección ni cambiar a modo sin conexión', async () => {
+  const { container } = await mount({ online: true });
+  const renderMap = (enabled: boolean) => (
+    <DataPreferencesProvider enabled={enabled}>
+      <LocationMap network={network} online field="from" onPick={() => {}} />
+    </DataPreferencesProvider>
+  );
+  await act(async () => activeRoot!.render(renderMap(true)));
+  assert.equal(container.querySelector('image[href^="https://"]'), null);
+  assert.ok(container.querySelector('image[href*="monterrey-map.svg"]'));
+  assert.match(container.textContent!, /Ahorro de datos activo/);
+  assert.ok(container.querySelector('svg[role="group"]'));
+  await act(async () => activeRoot!.render(renderMap(false)));
+  assert.ok(container.querySelector('image[href^="https://tile.openstreetmap.org/"]'));
+  assert.doesNotMatch(container.textContent!, /Ahorro de datos activo/);
+});
 function pointer(svg: SVGSVGElement, type: string, x: number, y: number, id = 1) {
   const event = new dom.window.MouseEvent(type, {
     bubbles: true,

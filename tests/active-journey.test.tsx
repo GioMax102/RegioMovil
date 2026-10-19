@@ -209,6 +209,7 @@ test('denied GPS leaves the manual route usable and releases the watch without r
   );
   await waitFor(() => assert.deepEqual(cleared, [1]));
   assert.ok(screen.getByText(/No se concedió acceso a tu ubicación/));
+  assert.ok(screen.getByText('Sin GPS · avance manual'));
   assert.ok(screen.getByRole('heading', { name: 'Tu guía está en pausa' }));
   assert.equal(screen.queryByRole('heading', { name: 'Buscando tu ubicación' }), null);
   const manual = screen.getByRole('button', { name: 'Ya llegué a Talleres' });
@@ -221,6 +222,101 @@ test('denied GPS leaves the manual route usable and releases the watch without r
   assert.ok(screen.getByText('Llegaste a tu destino'));
   fireEvent.click(screen.getByRole('button', { name: 'Cerrar guía' }));
   assert.equal(finished, 1);
+});
+
+test('guidance identifies waiting, imprecise, recent and stale GPS without implying that an unverified location is live', async () => {
+  mount(true);
+  await waitFor(() => assert.equal(watches.length, 1));
+  assert.ok(screen.getByText('Conectando con el GPS'));
+  const fix = (accuracy: number, timestamp: number) =>
+    ({
+      coords: {
+        latitude: 25.75,
+        longitude: -100.37,
+        accuracy,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp,
+    }) as GeolocationPosition;
+  const now = Date.now();
+  await act(async () => watches[0].success(fix(250, now - 25000)));
+  assert.ok(screen.getByText('Sin señal GPS reciente'));
+  await act(async () => watches[0].success(fix(250, now - 1000)));
+  assert.ok(screen.getByText('GPS impreciso'));
+  assert.ok(screen.getByRole('heading', { name: 'Ubicación imprecisa' }));
+  await act(async () => watches[0].success(fix(8, now)));
+  assert.ok(screen.getByText('Guía activa · GPS conectado'));
+  fireEvent.click(screen.getByRole('button', { name: 'Pausar guía' }));
+  assert.ok(screen.getByText('Guía en pausa'));
+});
+
+test('manual confirmation and pause stay before the map, and technical detail is available without dominating the guide', async () => {
+  mount(true);
+  const manual = screen.getByRole('button', { name: 'Ya llegué a Talleres' });
+  const map = document.querySelector('.active-journey-map')!;
+  assert.ok(manual.compareDocumentPosition(map) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
+  const details = document.querySelector('.active-journey-about') as HTMLDetailsElement;
+  assert.equal(details.open, false);
+  assert.match(details.textContent!, /no se guarda como historial/);
+  assert.match(details.textContent!, /no detecta la unidad/);
+  assert.ok(screen.getByText(/Confirma el paso sólo cuando hayas llegado/));
+});
+
+test('resuming waits for fresh GPS without replaying an old alighting alert or carrying arrival evidence across the pause', async (context) => {
+  let now = Date.now();
+  context.mock.method(Date, 'now', () => now);
+  render(
+    <ActiveJourney
+      journey={{ ...journey, steps: [ride] }}
+      network={network}
+      autoStart
+      onFinish={() => finished++}
+    />,
+  );
+  await waitFor(() => assert.equal(watches.length, 1));
+  fireEvent.click(screen.getByRole('button', { name: 'Avisos por voz' }));
+  const fixAt = (fraction: number) =>
+    ({
+      coords: {
+        latitude: 25.75 + (25.74 - 25.75) * fraction,
+        longitude: -100.368 + (-100.36 + 100.368) * fraction,
+        accuracy: 8,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: now,
+    }) as GeolocationPosition;
+  for (const fraction of [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1]) {
+    now += 6000;
+    await act(async () => watches[0].success(fixAt(fraction)));
+  }
+  assert.ok(screen.getByRole('heading', { name: 'Prepárate para bajar' }));
+  assert.ok(screen.getByRole('img', { name: /^Tu ubicación,/ }));
+  const progress = screen.getByRole('progressbar').getAttribute('value');
+  fireEvent.click(screen.getByRole('button', { name: 'Pausar guía' }));
+  now += 60000;
+  const spokenBeforeResume = spoken.length;
+  fireEvent.click(screen.getByRole('button', { name: 'Reanudar ubicación' }));
+  await waitFor(() => assert.equal(watches.length, 2));
+  assert.ok(screen.getByText('Conectando con el GPS'));
+  assert.equal(screen.queryByRole('img', { name: /^Tu ubicación,/ }), null);
+  assert.equal(screen.queryByRole('heading', { name: 'Prepárate para bajar' }), null);
+  assert.equal(screen.getByRole('progressbar').getAttribute('value'), progress);
+  assert.doesNotMatch(spoken.slice(spokenBeforeResume).join(' '), /bajar|Llegaste/);
+  assert.match(spoken.slice(spokenBeforeResume).join(' '), /Buscando tu ubicación/);
+  // A single new end-point fix must start new arrival evidence; the pause
+  // cannot provide the sustained second observation needed for completion.
+  await act(async () => watches[1].success(fixAt(1)));
+  assert.ok(screen.getByRole('heading', { name: 'Prepárate para bajar' }));
+  assert.equal(screen.queryByRole('heading', { name: 'Llegaste a tu destino' }), null);
+  now += 3500;
+  await act(async () => watches[1].success(fixAt(1)));
+  assert.ok(screen.getByRole('heading', { name: 'Llegaste a tu destino' }));
 });
 
 test('leaving the foreground pauses GPS and voice, and returning never resumes location without an action', async () => {

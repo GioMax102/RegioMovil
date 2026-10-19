@@ -4,8 +4,11 @@ import {
   Bookmark,
   BusFront,
   ChevronDown,
+  GitBranch,
+  House,
   LocateFixed,
   MapPin,
+  Route,
   Search,
   TrainFront,
   WifiOff,
@@ -14,7 +17,13 @@ import {
 import { Dialog } from '../components/Primitives';
 import { PlaceLookupError, searchPlaces } from './api';
 import { readSavedMobilityTrips } from './savedTrips';
-import { indexMobilityStops, searchMobilityStops, stopEndpoint } from './search';
+import {
+  distinctPlaceSuggestions,
+  indexMobilityStops,
+  placeAddress,
+  searchMobilityStops,
+  stopEndpoint,
+} from './search';
 import type { MobilityEndpoint, MobilityNetwork, Place, SavedMobilityTrip } from './types';
 
 const searchable = (text: string) =>
@@ -36,6 +45,18 @@ function suggestionLabel(place: Place) {
     : place.precision === 'street'
       ? `${label} · referencia de calle`
       : label;
+}
+
+function SuggestionIcon({ type }: { type: Place['resultType'] }) {
+  const Icon =
+    type === 'intersection'
+      ? GitBranch
+      : type === 'address'
+        ? House
+        : type === 'street'
+          ? Route
+          : MapPin;
+  return <Icon size={20} aria-hidden="true" />;
 }
 
 export default function EndpointPicker({
@@ -60,7 +81,7 @@ export default function EndpointPicker({
   onRefinePlace?: (place: Place) => void;
 }) {
   const [query, setQuery] = useState('');
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(8);
   const [places, setPlaces] = useState<Place[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -144,7 +165,7 @@ export default function EndpointPicker({
       try {
         const found = await searchPlaces(text, active.signal);
         if (!active.signal.aborted && generation.current === current) {
-          setPlaces(found);
+          setPlaces(distinctPlaceSuggestions(found));
           setSearched(text);
           setBusy(false);
         }
@@ -181,7 +202,8 @@ export default function EndpointPicker({
     setSearched('');
     setError('');
     setQuery(value);
-    setLimit(20);
+    setLimit(8);
+    results.current?.parentElement?.scrollTo?.({ top: 0 });
   }
   function resultButtons() {
     return [
@@ -216,13 +238,13 @@ export default function EndpointPicker({
             }}
           >
             <label className="search-field endpoint-search-field">
-              <Search size={20} />
+              <Search size={20} aria-hidden="true" />
               <input
                 ref={input}
                 data-autofocus
                 type="search"
                 aria-label={field === 'from' ? 'Buscar origen' : 'Buscar destino'}
-                placeholder="Lugar, dirección o parada"
+                placeholder="Lugar, calle y número o cruce"
                 value={query}
                 maxLength={120}
                 autoComplete="off"
@@ -279,13 +301,13 @@ export default function EndpointPicker({
             <div className="endpoint-picker-actions" aria-label="Otras formas de elegir el punto">
               {onChooseMap && (
                 <button type="button" className="endpoint-map-option" onClick={onChooseMap}>
-                  <MapPin size={18} />
+                  <MapPin size={18} aria-hidden="true" />
                   <span>Elegir en el mapa</span>
                 </button>
               )}
               {field === 'from' && online && onUseLocation && (
                 <button type="button" className="endpoint-current-location" onClick={onUseLocation}>
-                  <LocateFixed size={18} />
+                  <LocateFixed size={18} aria-hidden="true" />
                   <span>Usar mi ubicación</span>
                 </button>
               )}
@@ -295,7 +317,7 @@ export default function EndpointPicker({
         <div className="endpoint-picker-results" aria-label="Sugerencias de ubicación">
           {error && (
             <p className="mobility-error" role="alert">
-              {error} Puedes ajustar la búsqueda o elegir una parada de la lista.
+              {error} Puedes ajustar la búsqueda o elegir una parada.
             </p>
           )}
           <p
@@ -306,7 +328,7 @@ export default function EndpointPicker({
             {busy
               ? slowSearch
                 ? 'La búsqueda está tardando. Si el servidor estaba en reposo, puede tomar cerca de un minuto. Puedes seguir eligiendo estaciones o un punto en el mapa.'
-                : 'Buscando calles, direcciones y comercios de la ZMM…'
+                : 'Buscando lugares…'
               : searched
                 ? places.length
                   ? `${places.length} ${places.length === 1 ? 'lugar encontrado' : 'lugares encontrados'}.`
@@ -343,13 +365,15 @@ export default function EndpointPicker({
                 <div className="mobility-place-list">
                   {places.map((place) => (
                     <button key={place.id} type="button" onClick={() => selectPlace(place)}>
-                      <MapPin size={20} />
+                      <span className={`endpoint-suggestion-icon ${place.resultType || 'place'}`}>
+                        <SuggestionIcon type={place.resultType} />
+                      </span>
                       <span>
                         <strong>{place.name}</strong>
-                        <small>{place.address || place.displayName}</small>
+                        <small>{placeAddress(place)}</small>
                         <small className="endpoint-result-type">{suggestionLabel(place)}</small>
                       </span>
-                      <ArrowRight size={17} />
+                      <ArrowRight size={17} aria-hidden="true" />
                     </button>
                   ))}
                 </div>
@@ -357,7 +381,7 @@ export default function EndpointPicker({
             )}
             {!!savedPlaces.length && (
               <section className="endpoint-suggestions" aria-label="Lugares guardados">
-                <h3>Lugares de tus trayectos guardados</h3>
+                <h3>Tus lugares guardados</h3>
                 {!online && (
                   <p className="mobility-feedback">
                     Abre el trayecto ya guardado para consultar este lugar sin conexión.
@@ -371,7 +395,9 @@ export default function EndpointPicker({
                       disabled={!online && !onOpenSavedTrip}
                       onClick={() => (online ? onSelect(point) : onOpenSavedTrip?.(trip))}
                     >
-                      <Bookmark size={20} />
+                      <span className="endpoint-suggestion-icon saved">
+                        <Bookmark size={20} aria-hidden="true" />
+                      </span>
                       <span>
                         <strong>{point.name}</strong>
                         <small>
@@ -379,7 +405,7 @@ export default function EndpointPicker({
                           {trip.from.name ?? 'Origen'} → {trip.to.name ?? 'Destino'}
                         </small>
                       </span>
-                      <ArrowRight size={17} />
+                      <ArrowRight size={17} aria-hidden="true" />
                     </button>
                   ))}
                 </div>
@@ -388,9 +414,9 @@ export default function EndpointPicker({
             {!!matches.length && (
               <section className="endpoint-suggestions" aria-label="Paradas y estaciones">
                 <h3>
-                  {query.trim() ? 'Paradas y estaciones que coinciden' : 'Paradas y estaciones'}
+                  {query.trim() ? 'Paradas y estaciones' : 'Explora la red'}
+                  <span className="endpoint-results-count">{matches.length}</span>
                 </h3>
-                <p className="station-picker-count">{matches.length} coincidencias en la red</p>
                 <div className="mobility-stop-list">
                   {matches.slice(0, limit).map(({ stop, label }) => (
                     <button
@@ -398,7 +424,13 @@ export default function EndpointPicker({
                       type="button"
                       onClick={() => onSelect(stopEndpoint(stop))}
                     >
-                      {stop.mode === 'metro' ? <TrainFront size={20} /> : <BusFront size={20} />}
+                      <span className={`endpoint-suggestion-icon ${stop.mode}`}>
+                        {stop.mode === 'metro' ? (
+                          <TrainFront size={20} aria-hidden="true" />
+                        ) : (
+                          <BusFront size={20} aria-hidden="true" />
+                        )}
+                      </span>
                       <span>
                         <strong>{stop.name}</strong>
                         <small>
@@ -406,7 +438,7 @@ export default function EndpointPicker({
                           {!stop.official ? ' · referencia cartográfica' : ''}
                         </small>
                       </span>
-                      <ArrowRight size={17} />
+                      <ArrowRight size={17} aria-hidden="true" />
                     </button>
                   ))}
                 </div>
@@ -416,7 +448,7 @@ export default function EndpointPicker({
                     className="text-button"
                     onClick={() => setLimit((value) => value + 30)}
                   >
-                    Ver más paradas
+                    Ver más paradas ({matches.length - limit})
                     <ChevronDown size={16} />
                   </button>
                 )}
@@ -429,12 +461,15 @@ export default function EndpointPicker({
             </p>
           )}
           {online && (
-            <p className="mobility-method-note endpoint-search-privacy">
-              Se consulta el texto que escribes para sugerir lugares. Tu GPS no se envía. ©{' '}
-              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
-                OpenStreetMap · ODbL
-              </a>
-            </p>
+            <details className="endpoint-search-privacy">
+              <summary>Privacidad y datos del buscador</summary>
+              <p>
+                Se consulta el texto que escribes. Tu GPS no se envía al buscador. ©{' '}
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
+                  OpenStreetMap · ODbL
+                </a>
+              </p>
+            </details>
           )}
         </div>
       </div>

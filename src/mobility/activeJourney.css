@@ -33,20 +33,25 @@
   font-size: 0.76rem;
 }
 .active-journey-scope,
-.active-journey-footnote {
+.active-journey-about {
   font-size: 0.73rem;
   line-height: 1.55;
   color: var(--muted);
-  margin: 12px 0 16px;
+  margin: 10px 0 14px;
 }
 .active-journey-instruction {
-  background: var(--soft);
+  background: linear-gradient(135deg, var(--soft), var(--surface));
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 18px;
 }
+.active-journey-instruction.attention,
+.active-journey-instruction.completed {
+  border-color: var(--green);
+  box-shadow: inset 4px 0 0 var(--green);
+}
 .active-journey-instruction h3 {
-  font-size: 1.1rem;
+  font-size: clamp(1.13rem, 4.5vw, 1.4rem);
   margin: 8px 0;
   line-height: 1.35;
 }
@@ -57,14 +62,33 @@
 }
 .active-journey-reference {
   display: grid;
-  gap: 6px;
-  padding: 16px 2px 5px;
+  gap: 7px;
+  padding-top: 13px;
+  margin-top: 13px;
+  border-top: 1px solid var(--line);
   font-size: 0.8rem;
   overflow-wrap: anywhere;
 }
 .active-journey-reference span,
 .active-journey-reference small {
   color: var(--muted);
+}
+.active-journey-next-stop {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.active-journey-next-stop svg {
+  color: var(--green);
+}
+.active-journey-next-stop small,
+.active-journey-next-stop strong {
+  display: block;
+}
+.active-journey-next-stop strong {
+  margin-top: 2px;
+  font-size: 1rem;
+  line-height: 1.4;
 }
 .active-journey-progress {
   margin: 16px 0;
@@ -84,6 +108,9 @@
 .active-journey-options {
   margin: 14px 0;
   gap: 8px;
+}
+.active-journey-options > button {
+  flex: 1 1 140px;
 }
 .active-journey-option,
 .active-journey-control,
@@ -110,12 +137,32 @@
 }
 .active-journey-actions {
   align-items: stretch;
+  margin-top: 14px;
 }
 .active-journey-actions > button {
   flex: 1 1 160px;
 }
 .active-journey-manual {
   font-weight: 650;
+}
+.active-journey-manual-hint {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+.active-journey-about {
+  border-top: 1px solid var(--line);
+}
+.active-journey-about summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+.active-journey-about p {
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0 0 10px;
 }
 .active-journey-warning {
   padding: 12px 14px;
@@ -126,6 +173,10 @@
   line-height: 1.5;
 }
 .active-journey button:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
+.active-journey-about summary:focus-visible {
   outline: 3px solid var(--green);
   outline-offset: 3px;
 }

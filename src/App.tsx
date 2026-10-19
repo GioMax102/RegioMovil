@@ -41,6 +41,7 @@ import HomeDashboard from './components/HomeDashboard';
 import { useAppearance } from './appearance';
 import { AppearanceSettings } from './components/AppearanceSettings';
 import { ActionFeedback } from './components/ActionFeedback';
+import { DataPreferencesProvider } from './dataPreferences';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
@@ -278,7 +279,7 @@ export default function App() {
     </section>
   );
 
-  return (
+  const content = (
     <div className={`app-shell ${kiosk ? 'kiosk' : ''}`}>
       <a className="skip-link" href="#main-content">
         Saltar al contenido
@@ -382,7 +383,7 @@ export default function App() {
               ) : (
                 <span className="status-dot" />
               )}
-              {!online ? 'Sin conexión' : transport === 'local' ? 'Modo local' : 'API conectada'}
+              {!online ? 'Sin conexión' : transport === 'local' ? 'Modo local' : 'En línea'}
             </span>
             {!kiosk && (
               <button
@@ -1180,7 +1181,7 @@ export default function App() {
           <div className="setting-row">
             <span>
               <strong>Ahorrar datos</strong>
-              <small>Actualiza cada 3 minutos y reduce movimiento.</small>
+              <small>Mapa local y actualizaciones cada 3 minutos. La búsqueda sigue disponible.</small>
             </span>
             <button
               role="switch"
@@ -1345,6 +1346,7 @@ export default function App() {
       )}
     </div>
   );
+  return <DataPreferencesProvider enabled={lowData}>{content}</DataPreferencesProvider>;
 }
 
 function SourcesDialog({

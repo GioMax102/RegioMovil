@@ -131,7 +131,7 @@ function assertNoTravelAction(dialog: HTMLElement) {
 
 test('App exposes Rutas y redes, filters seven RegioRuta services and loads maps only on demand', async () => {
   render(<App />);
-  await screen.findByText('API conectada');
+  await screen.findByText('En línea');
   assert.ok(!requests.some(path => path.startsWith('/transit-catalog.json')));
   const navigation = within(screen.getByRole('navigation', { name: 'Navegación principal' }));
   await user.click(navigation.getByRole('button', { name: 'Red de transporte', exact: true }));
@@ -239,7 +239,7 @@ test('route 223 Eloy Cavazos renders 203 published points and explains experimen
 
 test('Red isolates a published route, expands one map and resets the selection when changing systems', async () => {
   render(<App />);
-  await screen.findByText('API conectada');
+  await screen.findByText('En línea');
   await user.click(within(screen.getByRole('navigation', { name: 'Navegación principal' })).getByRole('button', { name: 'Red de transporte', exact: true }));
   const route = await screen.findByRole('combobox', { name: 'Recorrido en el mapa' });
   await user.selectOptions(route, 'L1');

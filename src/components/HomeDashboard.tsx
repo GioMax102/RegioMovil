@@ -1,4 +1,4 @@
-import { ArrowRight, Bookmark, Flag, Leaf, Map, MapPin } from 'lucide-react';
+import { ArrowRight, Bookmark, ChevronDown, Flag, Leaf, Map, MapPin } from 'lucide-react';
 import type { Arrival, Board, Station } from '../types';
 import { ArrivalCard, Forecast, LineBadge } from './Primitives';
 import './homeDashboard.css';
@@ -26,22 +26,32 @@ export default function HomeDashboard({
   onStationDetails: () => void;
   onReport: () => void;
 }) {
+  const quietestHour = board?.forecast
+    .slice(0, 6)
+    .reduce<Board['forecast'][number] | null>(
+      (quietest, hour) => (!quietest || hour.occupancy < quietest.occupancy ? hour : quietest),
+      null,
+    );
   return (
     <div className="home-dashboard">
       <div className="home-shortcuts" aria-label="Accesos rápidos">
-        <button onClick={onSaved}>
-          <Bookmark size={20} />
-          <span>
-            Tus rutas guardadas<small>A la mano, sin internet</small>
+        <button type="button" onClick={onSaved}>
+          <span className="home-shortcut-icon" aria-hidden="true">
+            <Bookmark size={20} />
           </span>
-          <ArrowRight size={17} />
+          <span>
+            Tus rutas guardadas<small>También sin internet</small>
+          </span>
+          <ArrowRight size={17} aria-hidden="true" />
         </button>
-        <button onClick={onNetwork}>
-          <Map size={20} />
+        <button type="button" onClick={onNetwork}>
+          <span className="home-shortcut-icon" aria-hidden="true">
+            <Map size={20} />
+          </span>
           <span>
             Explorar la red<small>Metro, autobús y conexiones</small>
           </span>
-          <ArrowRight size={17} />
+          <ArrowRight size={17} aria-hidden="true" />
         </button>
       </div>
       <section className="panel home-departure" aria-labelledby="home-departure-title">
@@ -51,16 +61,17 @@ export default function HomeDashboard({
             <h2 id="home-departure-title">Las próximas unidades</h2>
           </div>
           <button
+            type="button"
             className="icon-button"
             aria-label={`Guardar estación ${station.name}`}
             aria-pressed={favorite}
             onClick={onFavorite}
           >
-            <Bookmark size={20} fill={favorite ? 'currentColor' : 'none'} />
+            <Bookmark size={20} fill={favorite ? 'currentColor' : 'none'} aria-hidden="true" />
           </button>
         </div>
         <p className="home-station-name">
-          <MapPin size={17} />
+          <MapPin size={17} aria-hidden="true" />
           <strong>{station.name}</strong>
           {station.lineIds.map((id) => (
             <LineBadge key={id} id={id} />
@@ -81,33 +92,55 @@ export default function HomeDashboard({
             <p role="status">Preparando tu camino…</p>
           )}
         </div>
-        <button className="all-arrivals" onClick={onStationDetails}>
+        <button type="button" className="all-arrivals" onClick={onStationDetails}>
           Ver estación y pronóstico
-          <ArrowRight size={16} />
+          <ArrowRight size={16} aria-hidden="true" />
         </button>
       </section>
       <section className="panel home-outlook" aria-labelledby="home-outlook-title">
+        <svg
+          className="home-mountain-lines"
+          viewBox="0 0 320 130"
+          aria-hidden="true"
+          focusable="false"
+          fill="none"
+        >
+          <path d="M-20 110 42 44l35 32 51-62 41 48 27-22 66 70h78" />
+          <path d="M-20 126 42 60l35 32 51-62 41 48 27-22 66 70h78" />
+          <path d="M-20 142 42 76l35 32 51-62 41 48 27-22 66 70h78" />
+        </svg>
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">ELIGE TU MOMENTO</span>
-            <h2 id="home-outlook-title">Un poco más de espacio.</h2>
+            <span className="eyebrow">AFLUENCIA SIMULADA</span>
+            <h2 id="home-outlook-title">Elige cuándo salir</h2>
           </div>
-          <Leaf size={21} />
+          <span className="home-outlook-icon" aria-hidden="true">
+            <Leaf size={21} />
+          </span>
         </div>
+        {quietestHour && (
+          <p className="home-quiet-hour">
+            <span>Menor afluencia prevista</span>
+            <strong>{quietestHour.hour}</strong>
+          </p>
+        )}
         {board && <Forecast data={board.forecast} compact />}
-        <div className="home-advice">
-          <h3>{board?.advice.title || 'Dale un respiro a tu camino.'}</h3>
+        <details className="home-advice">
+          <summary>
+            <span>{board?.advice.title || 'Compara antes de salir'}</span>
+            <ChevronDown size={17} aria-hidden="true" />
+          </summary>
           <p>
             {board?.advice.body ||
               'Compara las siguientes unidades para elegir el viaje que te acomode.'}
           </p>
-        </div>
+        </details>
         <small>Pronóstico de demostración; la afluencia real puede cambiar.</small>
       </section>
-      <button className="report-link home-report" onClick={onReport}>
-        <Flag size={15} />
+      <button type="button" className="report-link home-report" onClick={onReport}>
+        <Flag size={15} aria-hidden="true" />
         ¿Algo no está bien? Compártelo
-        <ArrowRight size={15} />
+        <ArrowRight size={15} aria-hidden="true" />
       </button>
     </div>
   );

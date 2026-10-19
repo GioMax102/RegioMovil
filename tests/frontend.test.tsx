@@ -203,7 +203,7 @@ async function closeDialog() {
 
 test('initial board comes from the real API and unit details explain simulation and unknown accessibility', async () => {
   await mount();
-  await screen.findByText('API conectada');
+  await screen.findByText('En línea');
   assert.equal(screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ }).length, 2);
   const first = screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ })[0];
   assert.match(first.getAttribute('aria-label') || '', /Afluencia simulada (Baja|Media|Alta)/);
@@ -334,7 +334,9 @@ test('accessibility settings persist and the peak scenario refreshes prediction 
   assert.equal(localStorage.getItem('regiomovil:contrast'), 'true');
   await user.click(within(dialog).getByRole('button', { name: 'Hora pico' }));
   await closeDialog();
-  await screen.findByRole('heading', { name: 'Una salida después puede ir más tranquila' });
+  const advice = await screen.findByText('Una salida después puede ir más tranquila');
+  await user.click(advice);
+  assert.equal(advice.closest('details')?.open, true);
   assert.ok(
     requests.some((request) => request.path === '/api/board?station=padre-mier&scenario=peak'),
   );

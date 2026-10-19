@@ -14,6 +14,7 @@ import {
 } from './regionalViewport';
 import type { MobilityJourney, MobilityNetwork, MobilityRoute, MobilityStop } from './types';
 import { networkLabel } from './networks';
+import { useDataSaver } from '../dataPreferences';
 import './locationMap.css';
 
 const localMapUrl = new URL('../assets/monterrey-map.svg', import.meta.url).href;
@@ -42,6 +43,7 @@ export default function LocationMap({
   onPick?: (point: MapPosition) => void;
   onStopSelect?: (stop: MobilityStop) => void;
 }) {
+  const lowData = useDataSaver();
   const container = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<MapSize>({ width: 720, height: 420 });
   const sizeRef = useRef(size);
@@ -319,7 +321,7 @@ export default function LocationMap({
   const leftTile = Math.floor(camera.x * tileCount - size.width / tileSize / 2);
   const topTile = Math.floor(camera.y * tileCount - size.height / tileSize / 2);
   const tiles = [];
-  const onlineStreets = online && !contextRoutes;
+  const onlineStreets = online && !contextRoutes && !lowData;
   if (onlineStreets && measured && !tileFailed) {
     for (let x = leftTile; x <= Math.floor(camera.x * tileCount + size.width / tileSize / 2); x++) {
       for (
@@ -862,8 +864,11 @@ export default function LocationMap({
           ? 'Mueve el mapa o toca un punto y confirma abajo.'
           : contextRoutes
             ? 'Explora los trazos publicados de los servicios seleccionados.'
-            : 'Explora tu zona. Elige los puntos y compara cómo llegar.'}
+            : journey
+              ? 'Trazo del trayecto y paradas de referencia.'
+              : 'Explora tu zona. Elige los puntos y compara cómo llegar.'}
         {!onlineStreets || tileFailed ? ' Mapa local simplificado con vialidades principales.' : ''}
+        {lowData && online ? ' Ahorro de datos activo.' : ''}
       </p>
     </div>
   );
