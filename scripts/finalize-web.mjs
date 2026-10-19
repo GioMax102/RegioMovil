@@ -15,7 +15,8 @@ async function collectAssets(directory, prefix = '') {
 }
 const allAssets = await collectAssets(resolve(root, 'assets'));
 let assets = allAssets;
-// The experiment is a lazy chunk. Cache it when opened, keeping the base install small.
+// Keep planning and active guidance deferred, but make the Red screen itself
+// available even when it has never been opened before losing connectivity.
 let manifest;
 try {
   manifest = JSON.parse(await readFile(resolve(root, '.vite/manifest.json'), 'utf8'));
@@ -25,17 +26,22 @@ try {
 if (manifest?.['index.html']) {
   const initial = new Set();
   const visited = new Set();
-  function visit(key) {
+  function visit(key, optionalMap = false) {
     if (visited.has(key)) return;
     visited.add(key);
     const chunk = manifest[key];
     if (!chunk) throw new Error(`Missing manifest dependency: ${key}`);
     for (const file of [chunk.file, ...(chunk.css || []), ...(chunk.assets || [])]) {
+      // This 497 KiB basemap is optional decoration: station/route vectors still
+      // render without it. Cache it on first map use instead of doubling the
+      // initial download. Public mobility JSON remains opt-in in its data store.
+      if (optionalMap && /^assets\/monterrey-map-[\w-]+\.svg$/.test(file)) continue;
       if (file?.startsWith('assets/')) initial.add(`/${file}`);
     }
-    for (const dependency of chunk.imports || []) visit(dependency);
+    for (const dependency of chunk.imports || []) visit(dependency, optionalMap);
   }
   visit('index.html');
+  visit('src/components/NetworkExplorer.tsx', true);
   assets = allAssets.filter((asset) => initial.has(asset));
   if (!assets.some((asset) => asset.endsWith('.js')))
     throw new Error('The initial manifest has no JavaScript entry.');

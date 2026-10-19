@@ -105,3 +105,16 @@
     background: ButtonText;
   }
 }
+.deferred-section-error > button {
+  min-height: 44px;
+  margin: 4px 12px 8px 0;
+}
+.deferred-section-error details {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.deferred-section-error summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}

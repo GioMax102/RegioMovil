@@ -175,7 +175,7 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
       }
       limit(request, 'api', 180, date);
       if (request.method === 'GET') {
-        if (url.pathname === '/api/health') return send(response, 200, { status: 'ok', service: 'RegioMovil', version: '1.0.0', mode: 'simulation', generatedAt: date.toISOString() });
+        if (url.pathname === '/api/health') return send(response, 200, { status: 'ok', service: 'RegioMovil', version: '1.1.0', mode: 'simulation', generatedAt: date.toISOString() });
         if (url.pathname === '/api/network') {
           if (request.headers['if-none-match'] === networkETag) { response.writeHead(304, { ETag: networkETag, 'Cache-Control': 'public, max-age=86400' }); response.end(); return; }
           return send(response, 200, network, { ETag: networkETag, 'Cache-Control': 'public, max-age=86400' });

@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
+import { readReleaseConfig } from './release-config.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const env = { ...process.env };
@@ -20,7 +21,9 @@ if (help) {
 
 const devLocalApi = process.argv.includes('--dev-local-api');
 const release = process.argv.includes('--release');
+const releaseConfig = readReleaseConfig(root);
 if (release && devLocalApi) fail('Una publicación no puede usar una API local.');
+if (release && process.argv.includes('--skip-web')) fail('Una publicación requiere reconstruir la web y fijar su API HTTPS. Quita --skip-web.');
 if (devLocalApi && process.argv.includes('--skip-web')) fail('--dev-local-api requiere reconstruir la web para fijar la API local. Quita --skip-web.');
 const configuredApi = env.VITE_API_BASE_URL ?? loadEnv('production', root, 'VITE_').VITE_API_BASE_URL;
 const localApi = 'http://localhost:4173';
@@ -111,6 +114,7 @@ if (release) {
   const key = path.join(signing, 'regiomovil-release.jks');
   const password = path.join(signing, 'store-password.txt');
   if (!existsSync(key)) {
+    if (existsSync(output)) fail('Ya existe un APK de publicación, pero falta su llave. Restaura el respaldo privado para conservar las actualizaciones.');
     if (existsSync(password)) fail('Hay una contraseña de firma sin llave. Revisa tu respaldo antes de continuar.');
     writeFileSync(password, randomBytes(32).toString('hex'), { mode: 0o600 });
     run(path.join(env.JAVA_HOME, 'bin', 'keytool'), ['-genkeypair', '-keystore', key, '-storetype', 'PKCS12', '-storepass:file', password, '-alias', 'regiomovil', '-keyalg', 'RSA', '-keysize', '3072', '-validity', '10000', '-dname', 'CN=RegioMovil, OU=Piloto academico, O=RegioMovil, C=MX']);
@@ -131,11 +135,18 @@ if (release) {
 const apk = readFileSync(output);
 const sha256 = createHash('sha256').update(apk).digest('hex');
 writeFileSync(`${output}.sha256`, `${sha256}  ${path.basename(output)}\n`);
-writeFileSync(path.join(out, 'build-info.json'), JSON.stringify({
-  appId: 'mx.regiomovil.app', version: '1.0.0', variant: release ? 'release' : 'debug',
+const revision = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
+const branch = spawnSync('git', ['branch', '--show-current'], { cwd: root, encoding: 'utf8' });
+const metadata = JSON.stringify({
+  ...releaseConfig, variant: release ? 'release' : 'debug',
+  commit: revision.status === 0 ? revision.stdout.trim() : null,
+  branch: branch.status === 0 ? branch.stdout.trim() : null,
   builtAt: new Date().toISOString(), bytes: apk.length, sha256,
   backend: api || 'Demostración local, sin API remota configurada',
   webBundleSha256, webAssets,
-}, null, 2) + '\n');
+}, null, 2) + '\n';
+// Keep the compatibility path, and preserve each variant's own provenance.
+writeFileSync(path.join(out, `${path.basename(output, '.apk')}.json`), metadata);
+writeFileSync(path.join(out, 'build-info.json'), metadata);
 console.log(`\nAPK listo: ${output}\nSHA-256: ${sha256}`);
 if (devLocalApi) console.log('API de desarrollo: http://localhost:4173. Con el backend activo y el teléfono conectado, ejecuta ./regiomovil android-connect antes de Run en Android Studio.');

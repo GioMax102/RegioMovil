@@ -4,7 +4,7 @@
 
 El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aquí en una experiencia verificable: red de transporte pública documentada, planeación sobre conexiones reales, escenarios de unidades, afluencia y condiciones, y fuentes visibles desde la interfaz.
 
-Esta rama, **`codex/movilidad-multimodal`**, ofrece un buscador único de lugares, calles, direcciones y paradas. Los mismos extremos se comparan entre Metro, autobús o sus combinaciones; los filtros se aplican a los resultados. La red documentada reúne **54 servicios y 3,417 puntos publicados**: tres líneas de Metro, treinta Transmetro, GMG, siete RegioRuta y trece recorridos IMA. Se calculan hasta ocho alternativas distintas por secuencia de servicios. [Cobertura y fuentes](docs/cobertura-autobuses-20261016.md), [método y benchmark](docs/modelo-movilidad.md).
+La versión candidata **1.1.0**, preparada en **`fixes`**, ofrece un buscador único de lugares, calles, direcciones y paradas. Los mismos extremos se comparan entre Metro, autobús o sus combinaciones; los filtros se aplican a los resultados. La red documentada reúne **54 servicios y 3,417 puntos publicados**: tres líneas de Metro, treinta Transmetro, GMG, siete RegioRuta y trece recorridos IMA. Se calculan hasta ocho alternativas distintas por secuencia de servicios. [Cobertura y fuentes](docs/cobertura-autobuses-20261016.md), [método y benchmark](docs/modelo-movilidad.md).
 
 Las búsquedas nuevas sin internet se restringen a puntos oficiales. Puedes etiquetar un viaje como Casa, Trabajo o Escuela y guardar las alternativas con sus mapas; los lugares o coordenadas sólo se conservan tras confirmar ese guardado. El cálculo corre localmente en un worker; la red adicional se carga al abrir Planear.
 
@@ -14,10 +14,10 @@ Verificación del buscador de lugares y conexiones: [resultado del 16 de octubre
 
 ## Qué puedes usar
 
-- **Mi camino:** próximas unidades simuladas, intervalos de llegada, ocupación y aire acondicionado del escenario.
+- **Inicio:** acceso a planeación, guardados y red; información de servicio con simulación identificada.
 - **Planear viaje:** origen y destino por nombre, calle, dirección, parada o ubicación bajo petición. La misma búsqueda compara Metro, autobús y combinaciones; puedes filtrar los resultados y cambiar la prioridad sin volver a introducir los puntos.
-- **Estaciones:** búsqueda por nombre, alias y municipio, filtros de línea, pronóstico sintético y accesibilidad explícitamente sin verificar.
-- **Rutas y redes:** 214 fichas de servicios, variantes y ampliaciones; búsqueda por número o municipio, filtros de red y estado, 51 mapas de autobús y fuentes fechadas. Disponible en Estaciones → Rutas y redes.
+- **Red de transporte:** recorridos por sistema, mapas, estaciones y catálogo de servicios. Búsqueda por número o municipio, filtros y fuentes documentadas; la accesibilidad física permanece sin verificar.
+- **Seguir un trayecto:** mapa de la etapa actual, siguiente parada y confirmaciones manuales «Ya llegué» / «Ya bajé»; GPS opcional en primer plano y controles de pausa, seguimiento y voz.
 - **Guardados:** viajes con etiqueta y hasta ocho alternativas conservadas con su mapa, consulta sin internet y borrado individual o completo. Estaciones, trayectos anteriores y canales oficiales de pago quedan agrupados aparte.
 - **Modo parada:** `/?kiosk=1&locked=1&station=padre-mier` para un módulo dedicado, interfaz de consulta con lectura en voz alta cuando el dispositivo ofrece síntesis de voz. No muestra guardados personales ni permite reportar.
 - **Accesibilidad:** texto ampliado, contraste alto, controles con nombre, teclado, diálogos nativos y respeto de movimiento reducido.
@@ -66,7 +66,11 @@ Requiere JDK 21 y Android SDK 36. Produce `output/android/regiomovil-debug.apk` 
 VITE_API_BASE_URL=https://tu-api.example pnpm android:build
 ```
 
-La URL se incorpora durante la compilación, debe usar HTTPS y no debe contener credenciales. El backend debe permitir el origen `https://localhost`. También es necesaria para buscar lugares desde el APK: sin API remota, las paradas y el modelo local siguen disponibles. La ubicación se obtiene una sola vez al pulsar su botón y requiere permiso del dispositivo. No se permite HTTP global ni se carga la aplicación desde un servidor remoto. [Compilación, kiosco y firma](docs/android.md).
+La URL se incorpora durante la compilación, debe usar HTTPS y no debe contener credenciales. El backend debe permitir el origen `https://localhost`. También es necesaria para buscar lugares desde el APK: sin API remota, las paradas y el modelo local siguen disponibles. «Usar mi ubicación» obtiene una posición bajo permiso; la guía puede seguirla mientras la app está visible y el usuario lo autoriza. No se promete seguimiento en segundo plano. No se permite HTTP global ni se carga la aplicación desde un servidor remoto. [Compilación, kiosco y firma](docs/android.md).
+
+## Preparar una actualización
+
+La publicación web y el APK deben usar la misma API HTTPS y revisión de código. `./regiomovil prepare-release` genera un paquete verificable, sin publicar, después del commit, las pruebas y el APK release. Incluye ZIP de Pages, APK firmado, notas y hashes; requiere Python 3 estándar para el ZIP. Consulta el [procedimiento de merge, publicación y rollback](docs/publicacion.md) y las [notas 1.1.0](docs/releases/1.1.0.md). Un merge a `main` no actualiza por sí solo los servicios del piloto.
 
 ## Pruebas y modelo
 
@@ -94,7 +98,7 @@ tests/        Pruebas de API, dominio y modo offline
 docs/         Producto, fuentes, API, Android y verificación
 ```
 
-Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. La base geográfica de Monterrey usa un extracto de OpenStreetMap empaquetado localmente, con atribución ODbL; se muestra al abrir el detalle de un trayecto. [Procedencia y licencia del mapa](src/data/monterrey-map.md). El buscador sugiere lugares automáticamente con Photon al escribir al menos tres caracteres y hacer una pausa de 650 ms; el backend limita las consultas y mantiene una caché. Nominatim se conserva sólo para consultas explícitas de la API. No hay analítica, seguimiento continuo de ubicación ni cuenta obligatoria. Los guardados sólo conservan lugares o coordenadas cuando confirmas guardar un viaje; se pueden borrar desde Guardados. [Búsqueda y privacidad](docs/lugares-y-privacidad.md).
+Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. La base geográfica de Monterrey usa un extracto de OpenStreetMap empaquetado localmente, con atribución ODbL; se muestra al abrir mapas de trayectos y redes. [Procedencia y licencia del mapa](src/data/monterrey-map.md). El buscador sugiere lugares automáticamente con Photon al escribir al menos tres caracteres y hacer una pausa de 650 ms; el backend limita las consultas y mantiene una caché. Nominatim se conserva sólo para consultas explícitas de la API. No hay analítica ni cuenta obligatoria. La ubicación del seguimiento autorizado permanece en memoria durante la guía en primer plano; los guardados sólo conservan lugares o coordenadas cuando confirmas guardar un viaje, y se pueden borrar desde Guardados. [Búsqueda y privacidad](docs/lugares-y-privacidad.md).
 
 ## Ejecutar en contenedor
 
