@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { loadBoard, network, readStored, sendReport, writeStored, type Transport } from './api';
 import type { Arrival, Board, Page, Preference, Scenario, Station } from './types';
-const NetworkExplorer = lazy(() => import('./components/NetworkExplorer'));
+const loadNetworkExplorer = () => import('./components/NetworkExplorer');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
 import type { MobilityEndpoint } from './mobility/types';
@@ -41,6 +41,8 @@ import HomeDashboard from './components/HomeDashboard';
 import { useAppearance } from './appearance';
 import { AppearanceSettings } from './components/AppearanceSettings';
 import { ActionFeedback } from './components/ActionFeedback';
+import { DataPreferencesProvider } from './dataPreferences';
+import DeferredSection from './components/DeferredSection';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
@@ -82,7 +84,9 @@ export default function App() {
       params.get('station') || (kiosk ? 'padre-mier' : readStored('station', 'padre-mier')),
     ),
   );
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>(
+    !kiosk && params.get('page') === 'stations' ? 'stations' : 'home',
+  );
   const [initialMobilityTrip, setInitialMobilityTrip] = useState<
     | {
         from: MobilityEndpoint;
@@ -278,7 +282,7 @@ export default function App() {
     </section>
   );
 
-  return (
+  const content = (
     <div className={`app-shell ${kiosk ? 'kiosk' : ''}`}>
       <a className="skip-link" href="#main-content">
         Saltar al contenido
@@ -382,7 +386,7 @@ export default function App() {
               ) : (
                 <span className="status-dot" />
               )}
-              {!online ? 'Sin conexión' : transport === 'local' ? 'Modo local' : 'API conectada'}
+              {!online ? 'Sin conexión' : transport === 'local' ? 'Modo local' : 'En línea'}
             </span>
             {!kiosk && (
               <button
@@ -734,15 +738,18 @@ export default function App() {
           )}
           {page === 'stations' && networkTab === 'routes' && (
             <div id="network-routes-panel" role="tabpanel" aria-labelledby="network-routes-tab">
-              <Suspense
-                fallback={
-                  <p role="status" className="empty-small">
-                    Abriendo las redes…
-                  </p>
-                }
-              >
-                <NetworkExplorer
-                  onPlanLine={(lineId) => {
+              <DeferredSection
+                load={loadNetworkExplorer}
+                loadingLabel="Abriendo las redes…"
+                onRetry={() => {
+                  // Failed ESM downloads remain rejected for the current document.
+                  // Explicitly reload and resume Red without discarding local saves.
+                  const target = new URL(location.href);
+                  target.searchParams.set('page', 'stations');
+                  location.replace(target.href);
+                }}
+                componentProps={{
+                  onPlanLine: (lineId: string) => {
                     const line = network.lines.find((item) => item.id === lineId);
                     if (!line) return;
                     setInitialMobilityTrip({
@@ -751,9 +758,21 @@ export default function App() {
                       preference: 'fastest',
                     });
                     setPage('plan');
-                  }}
-                />
-              </Suspense>
+                  },
+                }}
+                fallback={
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => {
+                      setNetworkTab('stations');
+                      document.getElementById('network-stations-tab')?.focus();
+                    }}
+                  >
+                    Ver estaciones de Metro
+                  </button>
+                }
+              />
             </div>
           )}
           {page === 'stations' && networkTab === 'stations' && (
@@ -1180,7 +1199,9 @@ export default function App() {
           <div className="setting-row">
             <span>
               <strong>Ahorrar datos</strong>
-              <small>Actualiza cada 3 minutos y reduce movimiento.</small>
+              <small>
+                Mapa local y actualizaciones cada 3 minutos. La búsqueda sigue disponible.
+              </small>
             </span>
             <button
               role="switch"
@@ -1345,6 +1366,7 @@ export default function App() {
       )}
     </div>
   );
+  return <DataPreferencesProvider enabled={lowData}>{content}</DataPreferencesProvider>;
 }
 
 function SourcesDialog({

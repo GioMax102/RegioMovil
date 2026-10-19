@@ -1,5 +1,7 @@
 /** Explicit, bounded place/address lookup for the ZMM trip planner. No reverse geocoding. */
 import { findPlaceReferences } from './place-references.mjs';
+import { normalizePlaceQuery, parseIntersection } from './place-query.mjs';
+import { findStreetJunctions } from './street-junctions.mjs';
 export const ZMM_BOUNDS = [-100.9, 25.35, -99.8, 26.1];
 export const PLACE_ATTRIBUTION = Object.freeze({ text: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright', license: 'ODbL' });
 export const DEFAULT_PLACE_PROVIDER = 'https://nominatim.openstreetmap.org/search';
@@ -89,7 +91,8 @@ function placesFrom(payload) {
     const name = cleanText(row.namedetails?.['name:es']) || cleanText(row.name) || streetAddress || displayName.split(',')[0].trim();
     if (!name) continue;
     seen.add(rawId);
-    places.push({ id: `osm:${rawId}`, name: name.slice(0, 180), address, displayName, lat, lng, kind: 'place', resultType: houseNumber ? 'address' : street && ['highway', 'place'].includes(row.category) ? 'street' : 'place' });
+    const isStreet = street && ['highway', 'place'].includes(row.category);
+    places.push({ id: `osm:${rawId}`, name: name.slice(0, 180), address, displayName, lat, lng, kind: 'place', resultType: houseNumber ? 'address' : isStreet ? 'street' : 'place', precision: houseNumber ? 'exact' : isStreet ? 'street' : 'approximate' });
     if (places.length === 6) break;
   }
   return places;
@@ -100,7 +103,8 @@ export function createPlaceSearch({ providerUrl = DEFAULT_PLACE_PROVIDER, userAg
   if (typeof transport !== 'function' || typeof userAgent !== 'string' || userAgent.length < 12 || userAgent.length > 300 || /[\r\n]/.test(userAgent)) throw new TypeError('A named provider transport and identifying User-Agent are required.');
   return async input => {
     const query = queryText(input);
-    const references = findPlaceReferences(query);
+    const junctions = parseIntersection(query) ? await findStreetJunctions(query) : [];
+    const references = [...junctions, ...findPlaceReferences(query)];
     // Exact, sourced references remain available even while the external quota is busy.
     // They do not turn arbitrary or partial text into a guessed destination.
     if (references.length) return { places: references, provider: 'Referencias verificadas / OpenStreetMap', attribution: PLACE_ATTRIBUTION, cached: false };
@@ -131,7 +135,7 @@ export function createPlaceSearch({ providerUrl = DEFAULT_PLACE_PROVIDER, userAg
         return placesFrom(await boundedJson(response));
       };
       const work = (async () => {
-        let places = await lookup(query);
+        let places = await lookup(normalizePlaceQuery(query));
         // Regional context can resolve otherwise ambiguous names and full addresses.
         // At most one fallback, only after an empty response, under the SAME global
         // request quota and six-second deadline. It is not an autocomplete service.

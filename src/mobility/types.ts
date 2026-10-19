@@ -54,6 +54,7 @@ export interface MobilityStep {
   minutes: number;
   distanceMeters: number;
   stationCount: number;
+  stopIds?: string[];
   geometry: Coordinates[];
   experimental: boolean;
   stopOrderVerified: boolean;
@@ -110,7 +111,8 @@ export interface Place extends Exclude<MobilityEndpoint, { id: string }> {
   kind: 'place';
   displayName: string;
   address?: string;
-  resultType?: 'place' | 'street' | 'address';
+  resultType?: 'place' | 'street' | 'address' | 'intersection';
+  precision?: 'exact' | 'street' | 'approximate';
 }
 export interface MobilityRequest {
   from: MobilityEndpoint;

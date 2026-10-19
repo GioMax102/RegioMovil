@@ -14,6 +14,7 @@ import {
 } from './regionalViewport';
 import type { MobilityJourney, MobilityNetwork, MobilityRoute, MobilityStop } from './types';
 import { networkLabel } from './networks';
+import { useDataSaver } from '../dataPreferences';
 import './locationMap.css';
 
 const localMapUrl = new URL('../assets/monterrey-map.svg', import.meta.url).href;
@@ -22,10 +23,12 @@ export default function LocationMap({
   online,
   origin,
   destination,
+  currentPosition,
   field,
   focus,
   journey,
   contextRoutes,
+  navigationMode = false,
   onPick,
   onStopSelect,
 }: {
@@ -33,13 +36,16 @@ export default function LocationMap({
   online: boolean;
   origin?: MapPosition | null;
   destination?: MapPosition | null;
+  currentPosition?: (MapPosition & { accuracy?: number }) | null;
   field?: 'from' | 'to' | null;
   focus?: MapPosition | null;
   journey?: MobilityJourney | null;
   contextRoutes?: MobilityRoute[];
+  navigationMode?: boolean;
   onPick?: (point: MapPosition) => void;
   onStopSelect?: (stop: MobilityStop) => void;
 }) {
+  const lowData = useDataSaver();
   const container = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<MapSize>({ width: 720, height: 420 });
   const sizeRef = useRef(size);
@@ -317,7 +323,7 @@ export default function LocationMap({
   const leftTile = Math.floor(camera.x * tileCount - size.width / tileSize / 2);
   const topTile = Math.floor(camera.y * tileCount - size.height / tileSize / 2);
   const tiles = [];
-  const onlineStreets = online && !contextRoutes;
+  const onlineStreets = online && !contextRoutes && !lowData;
   if (onlineStreets && measured && !tileFailed) {
     for (let x = leftTile; x <= Math.floor(camera.x * tileCount + size.width / tileSize / 2); x++) {
       for (
@@ -397,8 +403,109 @@ export default function LocationMap({
   const baseNW = project({ lng: geography.bounds[0], lat: geography.bounds[3] });
   const baseSE = project({ lng: geography.bounds[2], lat: geography.bounds[1] });
   const paths = journey?.steps || contextPaths;
+  const stationCard = inspected && (
+    <section
+      className="location-station-card"
+      aria-label="Estación seleccionada"
+      aria-live="polite"
+    >
+      <MapPin size={19} aria-hidden="true" />
+      <div>
+        <strong>{inspected.stop.name}</strong>
+        <p>
+          {inspected.connections
+            .map((id) => routeById.get(id))
+            .filter((route): route is MobilityRoute => !!route)
+            .map((route) =>
+              route.mode === 'metro'
+                ? route.name
+                : `${networkLabel(route.networkId)} · ${route.name}`,
+            )
+            .slice(0, 3)
+            .join(' · ')}
+          {inspected.connections.length > 3
+            ? ` · +${inspected.connections.length - 3} recorridos`
+            : ''}
+        </p>
+      </div>
+      <button
+        type="button"
+        className="icon-button"
+        aria-label={`Centrar estación ${inspected.stop.name}`}
+        onClick={() => move({ ...inspected.stop, zoom: Math.max(view.zoom, 14) })}
+      >
+        <LocateFixed size={18} />
+      </button>
+      <button
+        type="button"
+        className="icon-button"
+        aria-label="Cerrar información de estación"
+        onClick={() => setInspectedId('')}
+      >
+        <X size={18} />
+      </button>
+    </section>
+  );
+  const mapLegend = (
+    <div className="location-map-legend" role="group" aria-label="Leyenda del mapa">
+      {legend.map((item) => (
+        <span key={item.id}>
+          <i style={{ backgroundColor: item.color }} />
+          {item.label}
+        </span>
+      ))}
+      <span>
+        <i className="location-map-legend-stop" />
+        Estación o parada
+      </span>
+    </div>
+  );
+  const stopSelection = !field && !!visibleTransitStops.length && (
+    <>
+      <label htmlFor={`map-stop-${mapId}`}>Estaciones y paradas visibles</label>
+      <select
+        id={`map-stop-${mapId}`}
+        value={inspectedId}
+        onChange={(event) => {
+          setInspectedId(event.target.value);
+          if (navigationMode && event.target.value) {
+            const references = event.currentTarget.closest('details');
+            if (references) {
+              references.open = false;
+              references.querySelector('summary')?.focus();
+            }
+          }
+        }}
+      >
+        <option value="">Elige una estación o tócala en el mapa</option>
+        {inspected && !visibleTransitStops.some((item) => item.stop.id === inspectedId) && (
+          <option value={inspectedId}>{inspected.stop.name}</option>
+        )}
+        {visibleTransitStops.map(({ stop }) => (
+          <option key={stop.id} value={stop.id}>
+            {stop.name}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+  const mapCaption = (
+    <p className="location-map-caption">
+      {field
+        ? 'Mueve el mapa o toca un punto y confirma abajo.'
+        : contextRoutes
+          ? 'Explora los trazos publicados de los servicios seleccionados.'
+          : journey
+            ? 'Trazo del trayecto y paradas de referencia.'
+            : 'Explora tu zona. Elige los puntos y compara cómo llegar.'}
+      {!onlineStreets || tileFailed ? ' Mapa local simplificado con vialidades principales.' : ''}
+      {lowData && online ? ' Ahorro de datos activo.' : ''}
+    </p>
+  );
   return (
-    <div className={`location-map ${field ? 'choosing' : ''}`}>
+    <div
+      className={`location-map ${field ? 'choosing' : ''}${navigationMode ? ' navigating' : ''}`}
+    >
       <div ref={container} className="location-map-canvas">
         <svg
           viewBox={`0 0 ${size.width} ${size.height}`}
@@ -687,6 +794,34 @@ export default function LocationMap({
               );
             })}
           </g>
+          {currentPosition &&
+            isRegionalCoordinate([currentPosition.lng, currentPosition.lat]) &&
+            (() => {
+              const p = project(currentPosition);
+              const metersPerPixel =
+                (156543.03392 * Math.cos((currentPosition.lat * Math.PI) / 180)) / 2 ** view.zoom;
+              const accuracy = Number.isFinite(currentPosition.accuracy)
+                ? Math.max(0, currentPosition.accuracy!)
+                : 0;
+              return (
+                <g
+                  transform={`translate(${p.x} ${p.y})`}
+                  role="img"
+                  aria-label={`Tu ubicación${accuracy ? `, precisión aproximada de ${Math.round(accuracy)} metros` : ''}`}
+                  pointerEvents="none"
+                >
+                  <circle
+                    r={Math.max(13, Math.min(100, accuracy / metersPerPixel))}
+                    fill="#1871d8"
+                    fillOpacity="0.13"
+                    stroke="#1871d8"
+                    strokeOpacity="0.25"
+                  />
+                  <circle r="9" fill="#1871d8" stroke="#fff" strokeWidth="3" />
+                  <title>Tu ubicación · {Math.round(accuracy)} m de precisión</title>
+                </g>
+              );
+            })()}
         </svg>
         {field && (
           <div className={`location-map-pin ${field}`} aria-hidden="true">
@@ -694,7 +829,20 @@ export default function LocationMap({
             <i />
           </div>
         )}
-        <div className="location-map-area">MONTERREY · ZMM</div>
+        {!navigationMode && <div className="location-map-area">MONTERREY · ZMM</div>}
+        {navigationMode && (
+          <details className="location-stop-picker location-navigation-info">
+            <summary>
+              <MapPin size={15} aria-hidden="true" />
+              Paradas y leyenda
+            </summary>
+            <div className="location-navigation-info-body">
+              {stopSelection}
+              {mapLegend}
+              {mapCaption}
+            </div>
+          </details>
+        )}
         <div className="location-map-controls">
           <button
             type="button"
@@ -714,7 +862,13 @@ export default function LocationMap({
           </button>
           <button
             type="button"
-            aria-label={contextRoutes ? 'Centrar mapa en las rutas' : 'Centrar mapa en el viaje'}
+            aria-label={
+              contextRoutes
+                ? 'Centrar mapa en las rutas'
+                : navigationMode
+                  ? 'Ver etapa completa'
+                  : 'Centrar mapa en el viaje'
+            }
             onClick={() => {
               const positions = journey
                 ? journey.steps
@@ -739,6 +893,7 @@ export default function LocationMap({
             Reintentar calles
           </button>
         )}
+        {navigationMode && stationCard}
         <a
           className="location-map-credit"
           href="https://www.openstreetmap.org/copyright"
@@ -748,93 +903,18 @@ export default function LocationMap({
           © OpenStreetMap · ODbL
         </a>
       </div>
-      {inspected && (
-        <section
-          className="location-station-card"
-          aria-label="Estación seleccionada"
-          aria-live="polite"
-        >
-          <MapPin size={19} aria-hidden="true" />
-          <div>
-            <strong>{inspected.stop.name}</strong>
-            <p>
-              {inspected.connections
-                .map((id) => routeById.get(id))
-                .filter((route): route is MobilityRoute => !!route)
-                .map((route) =>
-                  route.mode === 'metro'
-                    ? route.name
-                    : `${networkLabel(route.networkId)} · ${route.name}`,
-                )
-                .slice(0, 3)
-                .join(' · ')}
-              {inspected.connections.length > 3
-                ? ` · +${inspected.connections.length - 3} recorridos`
-                : ''}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={`Centrar estación ${inspected.stop.name}`}
-            onClick={() => move({ ...inspected.stop, zoom: Math.max(view.zoom, 14) })}
-          >
-            <LocateFixed size={18} />
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Cerrar información de estación"
-            onClick={() => setInspectedId('')}
-          >
-            <X size={18} />
-          </button>
-        </section>
-      )}
-      <div className="location-map-legend" role="group" aria-label="Leyenda del mapa">
-        {legend.map((item) => (
-          <span key={item.id}>
-            <i style={{ backgroundColor: item.color }} />
-            {item.label}
-          </span>
-        ))}
-        <span>
-          <i className="location-map-legend-stop" />
-          Estación o parada
-        </span>
-      </div>
-      {!field && !!visibleTransitStops.length && (
+      {!navigationMode && stationCard}
+      {!navigationMode && mapLegend}
+      {!navigationMode && stopSelection && (
         <details className="location-stop-picker">
           <summary>
             <MapPin size={14} />
             Consultar una estación
           </summary>
-          <label htmlFor={`map-stop-${mapId}`}>Estaciones y paradas visibles</label>
-          <select
-            id={`map-stop-${mapId}`}
-            value={inspectedId}
-            onChange={(event) => setInspectedId(event.target.value)}
-          >
-            <option value="">Elige una estación o tócala en el mapa</option>
-            {inspected && !visibleTransitStops.some((item) => item.stop.id === inspectedId) && (
-              <option value={inspectedId}>{inspected.stop.name}</option>
-            )}
-            {visibleTransitStops.map(({ stop }) => (
-              <option key={stop.id} value={stop.id}>
-                {stop.name}
-              </option>
-            ))}
-          </select>
+          {stopSelection}
         </details>
       )}
-      <p className="location-map-caption">
-        {field
-          ? 'Mueve el mapa o toca un punto y confirma abajo.'
-          : contextRoutes
-            ? 'Explora los trazos publicados de los servicios seleccionados.'
-            : 'Explora tu zona. Elige los puntos y compara cómo llegar.'}
-        {!onlineStreets || tileFailed ? ' Mapa local simplificado con vialidades principales.' : ''}
-      </p>
+      {!navigationMode && mapCaption}
     </div>
   );
 }

@@ -15,9 +15,9 @@ const assets = ['index-Abc12345.js', 'index-Qwe56789.css', 'inter-latin-Dx4kXJAl
 let directory;
 let worker;
 
-async function finalize() {
-  await execute(process.execPath, [join(root, 'scripts/finalize-web.mjs')], {cwd:directory});
-  return readFile(join(directory, 'dist/sw.js'), 'utf8');
+async function finalize(target = directory) {
+  await execute(process.execPath, [join(root, 'scripts/finalize-web.mjs')], {cwd:target});
+  return readFile(join(target, 'dist/sw.js'), 'utf8');
 }
 
 before(async () => {
@@ -247,7 +247,108 @@ test('changing public shell content changes the worker version even when asset f
   assert.ok(!stats.files.some(file => file.file.endsWith('.map')));
 });
 
-test('current production build precaches the base graph and stores deferred experiment assets when opened', async t => {
+test('Red opens offline on first use with its static dependencies, while planning and the optional basemap remain deferred', async () => {
+  const target = await mkdtemp(join(tmpdir(), 'regiomovil-network-precache-'));
+  const manifest = {
+    'index.html': {
+      file: 'assets/index-Entry1234.js',
+      css: ['assets/index-Entry1234.css'],
+      imports: ['_shared.js'],
+      dynamicImports: ['src/components/NetworkExplorer.tsx', 'src/mobility/MobilityPlanner.tsx'],
+    },
+    '_shared.js': { file: 'assets/shared-Shared12.js', assets: ['assets/inter-local123.woff2'] },
+    'src/components/NetworkExplorer.tsx': {
+      file: 'assets/NetworkExplorer-Network1.js',
+      css: ['assets/NetworkExplorer-Network1.css'],
+      assets: ['assets/network-pin123.svg'],
+      imports: ['index.html', '_map.js'],
+      dynamicImports: ['src/mobility/ActiveJourney.tsx'],
+    },
+    '_map.js': {
+      file: 'assets/LocationMap-Map12345.js',
+      css: ['assets/LocationMap-Map12345.css'],
+      assets: ['assets/monterrey-map-Basemap1.svg'],
+      imports: ['_shared.js', '_geography.js'],
+    },
+    '_geography.js': { file: 'assets/geography-Geo12345.js' },
+    'src/mobility/MobilityPlanner.tsx': { file: 'assets/MobilityPlanner-Plan1234.js' },
+    'src/mobility/ActiveJourney.tsx': { file: 'assets/ActiveJourney-Guide123.js' },
+  };
+  const required = [
+    'index-Entry1234.js',
+    'index-Entry1234.css',
+    'shared-Shared12.js',
+    'inter-local123.woff2',
+    'NetworkExplorer-Network1.js',
+    'NetworkExplorer-Network1.css',
+    'network-pin123.svg',
+    'LocationMap-Map12345.js',
+    'LocationMap-Map12345.css',
+    'geography-Geo12345.js',
+  ].map((file) => `/assets/${file}`);
+  const deferred = [
+    'monterrey-map-Basemap1.svg',
+    'MobilityPlanner-Plan1234.js',
+    'ActiveJourney-Guide123.js',
+  ].map((file) => `/assets/${file}`);
+  try {
+    await mkdir(join(target, 'public'));
+    await mkdir(join(target, 'dist/assets'), { recursive: true });
+    await mkdir(join(target, 'dist/.vite'));
+    await writeFile(join(target, 'public/sw.js'), await readFile(join(root, 'public/sw.js')));
+    for (const path of [
+      ...required,
+      ...deferred,
+      '/index.html',
+      '/manifest.webmanifest',
+      '/icon.svg',
+      '/icon-192.png',
+      '/icon-512.png',
+      '/mobility-network.json',
+    ]) {
+      await writeFile(join(target, 'dist', path.slice(1)), `fixture ${path}`);
+    }
+    await writeFile(join(target, 'dist/.vite/manifest.json'), JSON.stringify(manifest));
+    const finalized = await finalize(target);
+    const harness = workerHarness(finalized);
+    await harness.lifecycle('install');
+    for (const path of required)
+      assert.equal(
+        harness.added.filter((file) => file === path).length,
+        1,
+        `${path} must be cached once, including transitive/shared imports.`,
+      );
+    for (const path of [...deferred, '/mobility-network.json'])
+      assert.ok(!harness.added.includes(path), `${path} must not increase the base install.`);
+    harness.setOffline();
+    const requestsBefore = harness.fetched.length;
+    for (const path of required)
+      assert.equal(
+        (await harness.fetch(path)).response.status,
+        200,
+        `First offline opening needs ${path}.`,
+      );
+    assert.equal(
+      harness.fetched.length,
+      requestsBefore,
+      'The first Red opening must not need a network request for its code or styles.',
+    );
+    const stats = JSON.parse(await readFile(join(target, 'dist/bundle-stats.json'), 'utf8'));
+    assert.deepEqual(stats.deferredAssets, deferred.toSorted());
+    assert.ok(!stats.files.some((file) => file.file === 'mobility-network.json'));
+
+    // A missing transitive chunk must fail the build instead of shipping a Red
+    // screen that only breaks once the juror is disconnected.
+    manifest['_map.js'].imports.push('_missing.js');
+    await mkdir(join(target, 'dist/.vite'), { recursive: true });
+    await writeFile(join(target, 'dist/.vite/manifest.json'), JSON.stringify(manifest));
+    await assert.rejects(finalize(target), /Missing manifest dependency: _missing\.js/);
+  } finally {
+    await rm(target, { recursive: true, force: true });
+  }
+});
+
+test('current production build precaches the base and Red graphs and stores deferred experiment assets when opened', async t => {
   let production;
   try {production = await readFile(join(root,'dist/sw.js'),'utf8');}
   catch (error) {if (error.code === 'ENOENT') {t.skip('Run npm run build to also verify the production artifact.');return;} throw error;}
@@ -261,6 +362,9 @@ test('current production build precaches the base graph and stores deferred expe
   const stats = JSON.parse(await readFile(join(root,'dist/bundle-stats.json'),'utf8'));
   const initial = stats.files.filter(file => file.file.startsWith('assets/')).map(file => `/${file.file}`);
   for (const file of initial) assert.ok(harness.added.includes(file), `Production precache is missing ${file}`);
+  for (const file of files.filter(file => /^(?:NetworkExplorer|LocationMap|networks)-.*\.(?:js|css)$/.test(file))) {
+    assert.ok(initial.includes(`/assets/${file}`), `Red needs ${file} before its first offline opening.`);
+  }
   for (const file of files.filter(file => file.endsWith('.woff2'))) assert.ok(initial.includes(`/assets/${file}`));
   for (const file of files.filter(file => /^monterrey-map-.*\.svg$/.test(file))) {
     assert.ok((stats.deferredAssets || []).includes(`/assets/${file}`), 'The offline basemap is cached when its journey screen opens.');

@@ -53,6 +53,7 @@ const { render, cleanup, screen, within, waitFor, act } = await import('@testing
 const { default: userEvent } = await import('@testing-library/user-event');
 const { default: App } = await import('../src/App');
 const { default: TransitCatalog } = await import('../src/components/TransitCatalog');
+const { default: NetworkExplorer } = await import('../src/components/NetworkExplorer');
 let application: ReturnType<typeof createApp>;
 let server: Server;
 let base = '';
@@ -129,9 +130,30 @@ function assertNoTravelAction(dialog: HTMLElement) {
   assert.deepEqual(plannedLines, []);
 }
 
+test('Red can retry its public map document after a connection failure without leaving the section', async () => {
+  offline = true;
+  render(<NetworkExplorer onPlanLine={() => {}} />);
+  await screen.findByText('El mapa no está disponible. Puedes consultar las fichas de las rutas.');
+  assert.equal(screen.queryByRole('combobox', { name: 'Recorrido en el mapa' }), null);
+  offline = false;
+  await user.click(screen.getByRole('button', { name: 'Reintentar mapa', exact: true }));
+  await screen.findByRole('combobox', { name: 'Recorrido en el mapa' });
+  assert.ok(screen.getByRole('group', { name: /^Mapa interactivo/ }));
+  assert.equal(screen.queryByRole('button', { name: 'Reintentar mapa', exact: true }), null);
+});
+
+test('a network-module recovery link resumes Red instead of returning to Inicio', async () => {
+  dom.window.history.replaceState({}, '', '/?page=stations');
+  render(<App />);
+  await screen.findByRole('heading', { name: 'Rutas y redes.' });
+  await screen.findByText('214 rutas · 6 redes');
+  assert.equal(screen.getByRole('tab', { name: /Rutas y redes/ }).getAttribute('aria-selected'), 'true');
+  assert.equal(screen.queryByRole('heading', { name: 'Muévete con más calma.' }), null);
+});
+
 test('App exposes Rutas y redes, filters seven RegioRuta services and loads maps only on demand', async () => {
   render(<App />);
-  await screen.findByText('API conectada');
+  await screen.findByText('En línea');
   assert.ok(!requests.some(path => path.startsWith('/transit-catalog.json')));
   const navigation = within(screen.getByRole('navigation', { name: 'Navegación principal' }));
   await user.click(navigation.getByRole('button', { name: 'Red de transporte', exact: true }));
@@ -239,7 +261,7 @@ test('route 223 Eloy Cavazos renders 203 published points and explains experimen
 
 test('Red isolates a published route, expands one map and resets the selection when changing systems', async () => {
   render(<App />);
-  await screen.findByText('API conectada');
+  await screen.findByText('En línea');
   await user.click(within(screen.getByRole('navigation', { name: 'Navegación principal' })).getByRole('button', { name: 'Red de transporte', exact: true }));
   const route = await screen.findByRole('combobox', { name: 'Recorrido en el mapa' });
   await user.selectOptions(route, 'L1');

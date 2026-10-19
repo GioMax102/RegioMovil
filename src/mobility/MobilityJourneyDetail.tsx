@@ -1,17 +1,37 @@
-import { ArrowRight, BusFront, Clock3, Footprints, Repeat2, TrainFront } from 'lucide-react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import {
+  ArrowRight,
+  BusFront,
+  Clock3,
+  Footprints,
+  Navigation,
+  Repeat2,
+  TrainFront,
+} from 'lucide-react';
 import MobilityMap from './MobilityMap';
 import { networkLabel } from './networks';
 import { presentJourneySteps } from './journeyPresentation';
 import type { MobilityJourney, MobilityNetwork } from './types';
 import './journeyDetail.css';
 
+const ActiveJourney = lazy(() => import('./ActiveJourney'));
+
 export default function MobilityJourneyDetail({
   journey,
   network,
+  onGuidanceChange,
 }: {
   journey: MobilityJourney;
   network: MobilityNetwork;
+  onGuidanceChange?: (guiding: boolean) => void;
 }) {
+  const [guiding, setGuiding] = useState(false);
+  const startButton = useRef<HTMLButtonElement>(null);
+  const wasGuiding = useRef(false);
+  useEffect(() => {
+    if (!guiding && wasGuiding.current) startButton.current?.focus();
+    wasGuiding.current = guiding;
+  }, [guiding]);
   const routeIds = new Set(journey.steps.map((step) => step.lineId));
   const sourceIds = new Set(
     network.routes.filter((route) => routeIds.has(route.id)).flatMap((route) => route.sourceIds),
@@ -19,9 +39,23 @@ export default function MobilityJourneyDetail({
   const unverifiedBus = journey.steps.some(
     (step) => step.mode === 'bus' && (!step.stopOrderVerified || step.directionVerified !== true),
   );
+  if (guiding)
+    return (
+      <Suspense fallback={<p role="status">Abriendo tu guía de viaje…</p>}>
+        <ActiveJourney
+          key={journey.id}
+          journey={journey}
+          network={network}
+          autoStart
+          onFinish={() => {
+            setGuiding(false);
+            onGuidanceChange?.(false);
+          }}
+        />
+      </Suspense>
+    );
   return (
     <div className="journey-detail">
-      <MobilityMap key={journey.id} journey={journey} network={network} />
       <div className="journey-detail-summary" aria-label="Resumen del trayecto">
         <span className="journey-detail-duration">
           <Clock3 size={16} aria-hidden="true" />
@@ -40,9 +74,28 @@ export default function MobilityJourneyDetail({
           {Math.round(journey.walkingMeters)} m a pie
         </span>
       </div>
-      <p className="journey-detail-note">
-        Tiempos estimados con simulación · Caminatas aproximadas.
+      <p className="journey-detail-note">Tiempo simulado · Caminatas aproximadas</p>
+      {unverifiedBus && (
+        <p className="journey-detail-caution journey-detail-boarding">
+          Autobús: confirma el sentido al abordar.
+        </p>
+      )}
+      <button
+        ref={startButton}
+        type="button"
+        className="primary-button full-width journey-start"
+        onClick={() => {
+          setGuiding(true);
+          onGuidanceChange?.(true);
+        }}
+      >
+        <Navigation size={18} aria-hidden="true" /> Iniciar trayecto
+      </button>
+      <p className="journey-detail-note journey-guide-scope">
+        Guía con la app abierta · GPS en tu dispositivo
       </p>
+      <MobilityMap key={journey.id} journey={journey} network={network} />
+      <h3 className="journey-detail-section-title">Tu recorrido</h3>
       <ol className="journey-detail-steps" aria-label="Etapas del trayecto">
         {presentJourneySteps(journey.steps).map((entry) => {
           const { step, index } = entry;
@@ -101,7 +154,7 @@ export default function MobilityJourneyDetail({
         })}
       </ol>
       <details className="journey-detail-sources">
-        <summary>Fuentes y límites</summary>
+        <summary>Antes de viajar · fuentes y límites</summary>
         <p>
           Red experimental con trazos y puntos publicados. Las caminatas punteadas son enlaces
           aproximados: verifica accesos y cruces. No son indicaciones por calles. La accesibilidad

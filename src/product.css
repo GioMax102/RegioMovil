@@ -1,0 +1,120 @@
+/* Small static details: no raster texture, extra font or continuously painted effect. */
+:root {
+  --surface-grain: linear-gradient(135deg, #06785004, transparent 60%);
+  --surface-shadow: 0 4px 16px #103e3609;
+}
+:root[data-theme='dark'] {
+  --surface-grain: linear-gradient(135deg, #78ddaf05, transparent 60%);
+  --surface-shadow: 0 4px 16px #00000012;
+}
+.brand > svg {
+  color: var(--app-primary);
+}
+.sidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sidebar > * {
+  flex-shrink: 0;
+}
+.sidebar .brand small {
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.home-plan-cta {
+  background-color: var(--app-primary);
+  background-image:
+    radial-gradient(ellipse at 100% 110%, #ffffff12 0 24%, transparent 24.3%),
+    radial-gradient(ellipse at 100% 110%, transparent 0 37%, #ffffff0d 37.3% 38%, transparent 38.3%);
+  border-color: var(--app-primary);
+  border-radius: 20px;
+  box-shadow: 0 7px 20px #103e3612;
+}
+.home-plan-cta:hover {
+  background-color: #066447;
+}
+.home-plan-cta .soft-icon {
+  border: 1px solid #ffffff38;
+  border-radius: 50%;
+}
+.location-button {
+  box-shadow: 0 2px 7px #103e3606;
+}
+.connection-pill {
+  white-space: nowrap;
+}
+.setting-row > :first-child {
+  min-width: 0;
+}
+.setting-row .switch {
+  /* The full visible control is a 46×44 target, independent of its track. */
+  height: 44px;
+  min-height: 44px;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+}
+.setting-row .switch::before {
+  inset: 8.5px 0;
+  background: #c7d5cf;
+  border: 1px solid var(--muted);
+  border-radius: 30px;
+}
+.setting-row .switch.on::before {
+  background: var(--app-primary);
+  border-color: var(--app-primary);
+}
+.setting-row .switch > span {
+  position: relative;
+}
+:root[data-theme='dark'] .setting-row .switch::before {
+  background: #52675b;
+}
+:root[data-theme='dark'] .setting-row .switch.on::before {
+  background: var(--app-primary);
+}
+.high-contrast .home-plan-cta {
+  background-image: none;
+  border: 2px solid currentColor;
+}
+:root.high-contrast {
+  --surface-grain: none;
+  --surface-shadow: none;
+}
+@media (max-width: 760px) {
+  .home-plan-cta {
+    padding: 20px;
+    min-height: 100px;
+    margin-bottom: 18px;
+  }
+}
+@media (forced-colors: active) {
+  :root,
+  :root[data-theme] {
+    --surface-grain: none;
+    --surface-shadow: none;
+  }
+  .home-plan-cta {
+    background-image: none;
+    border: 2px solid ButtonText;
+  }
+  .setting-row .switch::before {
+    border-color: ButtonText;
+  }
+  .setting-row .switch > span {
+    background: ButtonText;
+  }
+}
+.deferred-section-error > button {
+  min-height: 44px;
+  margin: 4px 12px 8px 0;
+}
+.deferred-section-error details {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.deferred-section-error summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}

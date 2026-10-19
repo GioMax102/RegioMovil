@@ -233,6 +233,14 @@ before(async () => {
     catalog,
     mobilityNetwork,
     now: () => new Date('2026-10-15T18:00:00.000Z'),
+    placeSuggestionsOptions: {
+      // Exercise the real API/reference resolver without a live external search
+      // dependency. Provider semantics are covered by the dedicated Photon tests.
+      transport: async () =>
+        new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    },
   });
   // Serve the current source snapshot directly so these tests cannot read stale dist.
   server = createServer((request, response) => {
@@ -371,7 +379,7 @@ async function goOffline() {
 
 test('App defers the multimodal network, then connects RegioRuta A33 Mederos with Metro Universidad and saves from its map', async () => {
   render(<App />);
-  await screen.findByText('API conectada');
+  await screen.findByText('En línea');
   assert.equal(
     mobilityModuleLoads,
     0,
@@ -500,6 +508,29 @@ test('transport filters act on route results and preserve endpoints without anot
   assert.equal(placeQueries.length, 0);
 });
 
+test('changing a destination resets an empty transport filter for the next route search', async () => {
+  const model = await mountModel();
+  await planMederos();
+  const filters = within(model).getByRole('group', { name: 'Filtrar rutas por transporte' });
+  await user.click(within(filters).getByRole('button', { name: /^Metro\s*0$/ }));
+  assert.equal(within(model).queryAllByRole('button', { name: /^Ver conexión/ }).length, 0);
+  await chooseOfficial('Destino', 'Padre Mier', /^Padre Mier L2$/);
+  await user.click(within(model).getByRole('button', { name: 'Buscar rutas' }));
+  await within(model).findByRole('heading', { name: 'Rutas para tu viaje' });
+  const refreshedFilters = within(model).getByRole('group', {
+    name: 'Filtrar rutas por transporte',
+  });
+  assert.equal(
+    within(refreshedFilters)
+      .getByRole('button', { name: /^Todas\s*\d+$/ })
+      .getAttribute('aria-pressed'),
+    'true',
+    'The previous empty Metro filter must not hide connections to the new destination.',
+  );
+  assert.ok(within(model).getAllByRole('button', { name: /^Ver conexión/ }).length > 0);
+  assert.equal(plannedRequests.length, 2);
+});
+
 test('the unified origin search tolerates Sab bernabé and selects San Bernabé locally', async () => {
   const model = await mountModel();
   await chooseOfficial('Origen', 'Estación Sab bernabé', /^San Bernabé L1$/);
@@ -518,7 +549,7 @@ test('the unified origin search tolerates Sab bernabé and selects San Bernabé 
 test('San Bernabé to Punto Valle finds bus connections and an empty Metro filter keeps the selected places', async () => {
   const model = await mountModel();
   await chooseOfficial('Origen', 'Estación Sab bernabé', /^San Bernabé L1$/);
-  await choosePlace('Destino', 'Punto Valle', /^Punto Valle Punto Valle, Río Missouri 555/);
+  await choosePlace('Destino', 'Punto Valle', /^Punto Valle Río Missouri 555/);
   await user.click(within(model).getByRole('button', { name: 'Buscar rutas' }));
   await within(model).findByRole('heading', { name: 'Rutas para tu viaje' });
   assert.equal(plannedRequests.length, 1);
@@ -792,4 +823,44 @@ test('choosing a map pin cancels a pending GPS reply and gives keyboard focus to
   assert.ok(within(model).getByRole('button', { name: 'Usar este destino' }));
   assert.ok(within(model).getByRole('button', { name: 'Origen: Padre Mier' }));
   assert.equal(placeQueries.length, 0);
+});
+
+test('following a route expands one accessible guide, hides saving and restores the detail on finish', async () => {
+  await mountModel();
+  await chooseOfficial('Destino', 'Universidad', /^Universidad L2/);
+  await user.click(screen.getByRole('button', { name: 'Buscar rutas' }));
+  await screen.findByRole('heading', { name: 'Rutas para tu viaje' });
+  const detail = await openFirstConnection();
+  detail.scrollTop = 180;
+  await user.click(within(detail).getByRole('button', { name: 'Iniciar trayecto' }));
+  const guide = await screen.findByRole('dialog', { name: 'Sigue tu ruta' });
+  const controls = await within(guide).findByRole('region', { name: 'Guía de tu trayecto' });
+  assert.ok(guide.classList.contains('journey-guidance-dialog'));
+  assert.equal(
+    guide.scrollTop,
+    0,
+    'Starting shows the guidance header instead of retaining the detail scroll.',
+  );
+  assert.equal(
+    screen.getAllByRole('dialog').length,
+    1,
+    'Guidance reuses the modal and its focus lock.',
+  );
+  assert.equal(within(guide).queryByRole('button', { name: 'Guardar sin internet' }), null);
+  assert.ok(within(controls).getByRole('button', { name: /^Ya (llegué|bajé)/ }));
+  guide.scrollTop = 160;
+  await user.click(within(controls).getByRole('button', { name: /^Ya (llegué|bajé)/ }));
+  assert.equal(guide.scrollTop, 0, 'Confirming a step brings the next instruction back into view.');
+  await user.click(within(guide).getByRole('button', { name: 'Cerrar guía' }));
+  const restored = screen.getByRole('dialog', { name: 'Tu conexión, paso a paso' });
+  assert.equal(restored.classList.contains('journey-guidance-dialog'), false);
+  const start = within(restored).getByRole('button', { name: 'Iniciar trayecto' });
+  assert.equal(document.activeElement, start);
+  assert.ok(within(restored).getByRole('button', { name: 'Guardar sin internet' }));
+  await user.click(start);
+  await within(guide).findByRole('region', { name: 'Guía de tu trayecto' });
+  await user.click(within(guide).getByRole('button', { name: 'Cerrar ventana' }));
+  assert.equal(screen.queryByRole('dialog'), null);
+  const reopened = await openFirstConnection();
+  assert.equal(reopened.classList.contains('journey-guidance-dialog'), false);
 });

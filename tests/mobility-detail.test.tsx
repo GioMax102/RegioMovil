@@ -96,6 +96,19 @@ test('journey detail retains travel facts, uncertainty and relevant provenance i
     'Mapa de la ruta',
   );
   assert.equal(doc.querySelector('a[href="https://example.org/otro"]'), null);
+  const summary = doc.querySelector('[aria-label="Resumen del trayecto"]')!;
+  const start = doc.querySelector('.journey-start')!;
+  assert.ok(summary.compareDocumentPosition(start) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
+  const boarding = doc.querySelector('.journey-detail-boarding')!;
+  assert.match(boarding.textContent!, /confirma el sentido al abordar/);
+  assert.equal(boarding.closest('details'), null);
+  assert.ok(boarding.compareDocumentPosition(start) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
+  assert.match(
+    doc.querySelector('.journey-guide-scope')!.textContent!,
+    /app abierta.*GPS en tu dispositivo/,
+  );
+  assert.match(doc.querySelector('.journey-detail-note')!.textContent!, /Tiempo simulado/);
+  assert.equal((doc.querySelector('details') as HTMLDetailsElement).open, false);
   dom.window.close();
 });
 
@@ -117,6 +130,7 @@ test('verified journeys remove bus uncertainty and describe a direct trip withou
     dom.window.document.body.textContent!,
     /Sentido por confirmar|orden inferido del mapa/,
   );
+  assert.equal(dom.window.document.querySelector('.journey-detail-boarding'), null);
   dom.window.close();
 });
 

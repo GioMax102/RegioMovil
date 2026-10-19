@@ -23,9 +23,11 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
   const [routeId, setRouteId] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [online, setOnline] = useState(navigator.onLine !== false);
   useEffect(() => {
     let active = true;
+    setError('');
     loadMobilityNetwork()
       .then((data) => {
         if (active) setNetwork(data);
@@ -42,7 +44,7 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
       window.removeEventListener('online', update);
       window.removeEventListener('offline', update);
     };
-  }, []);
+  }, [attempt]);
   const routes = useMemo(
     () =>
       (
@@ -139,6 +141,15 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
           )
         ) : (
           <p role="status">{error || 'Preparando el mapa de las redes…'}</p>
+        )}
+        {error && (
+          <button
+            type="button"
+            className="network-expand-button"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            Reintentar mapa
+          </button>
         )}
         {network && (
           <small className="network-coverage-note">

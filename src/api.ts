@@ -1,5 +1,6 @@
 import rawNetwork from '../data/network.json';
 import { buildBoard, planJourney } from '../server/domain.mjs';
+import { withRequestTimeout } from './request';
 import type {
   Board,
   Network,
@@ -16,12 +17,14 @@ const apiBase = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
 export type Transport = 'api' | 'local';
 
 async function get<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiBase}/api${path}`, {
-    signal: AbortSignal.timeout(4500),
-    headers: { Accept: 'application/json' },
-  });
-  if (!response.ok) throw new Error('El servidor no está disponible.');
-  return response.json() as Promise<T>;
+  return withRequestTimeout(async (signal) => {
+    const response = await fetch(`${apiBase}/api${path}`, {
+      signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) throw new Error('El servidor no está disponible.');
+    return response.json() as Promise<T>;
+  }, 4500);
 }
 export async function loadBoard(
   station: string,
@@ -61,22 +64,29 @@ export async function sendReport(
   category: string,
   detail: string,
 ): Promise<void> {
-  let response: Response;
+  let result: { ok: boolean; payload: { error?: { message?: string } } | null };
   try {
-    response = await fetch(`${apiBase}/api/reports`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stationId, category, detail }),
-      signal: AbortSignal.timeout(5000),
-    });
+    result = await withRequestTimeout(async (signal) => {
+      const response = await fetch(`${apiBase}/api/reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stationId, category, detail }),
+        signal,
+      });
+      return {
+        ok: response.ok,
+        payload: response.ok ? null : await response.json().catch(() => null),
+      };
+    }, 5000);
   } catch {
     throw new Error(
       'No hay conexión con el servidor del piloto. Tu texto sigue aquí; vuelve a intentar.',
     );
   }
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    throw new Error(payload?.error?.message || 'No pudimos enviar el reporte. Intenta de nuevo.');
+  if (!result.ok) {
+    throw new Error(
+      result.payload?.error?.message || 'No pudimos enviar el reporte. Intenta de nuevo.',
+    );
   }
 }
 export function readStored<T>(key: string, fallback: T): T {
@@ -110,9 +120,11 @@ export async function readPublicDocument<T>(
     }
   }
   try {
-    const response = await fetch(path, { cache: 'no-store', signal: AbortSignal.timeout(10000) });
-    if (!response.ok) throw new Error('PUBLIC_DOCUMENT_UNAVAILABLE');
-    const data = (await response.clone().json()) as T;
+    const { response, data } = await withRequestTimeout(async (signal) => {
+      const response = await fetch(path, { cache: 'no-store', signal });
+      if (!response.ok) throw new Error('PUBLIC_DOCUMENT_UNAVAILABLE');
+      return { response, data: (await response.clone().json()) as T };
+    }, 10000);
     if (typeof caches !== 'undefined') {
       try {
         const cache = await caches.open(routeCache);

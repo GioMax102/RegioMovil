@@ -1,6 +1,6 @@
 {
   "name": "regiomovil",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "packageManager": "pnpm@11.25.0",
   "type": "module",
@@ -20,7 +20,8 @@
     "test:backend": "node --test tests/backend*.test.mjs",
     "android:sync": "pnpm build && cap sync android",
     "android:open": "cap open android",
-    "android:build": "node scripts/android-build.mjs"
+    "android:build": "node scripts/android-build.mjs",
+    "release:prepare": "node scripts/prepare-release.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

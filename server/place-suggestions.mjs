@@ -1,5 +1,7 @@
 /** Photon supports search-as-you-type; the public Nominatim endpoint does not. */
-import { findPlaceReferences } from './place-references.mjs';
+import { suggestPlaceReferences } from './place-references.mjs';
+import { normalizePlaceQuery, normalizePlaceText, parseStreetAddress, parseIntersection, streetTokens, similarToken } from './place-query.mjs';
+import { findStreetJunctions } from './street-junctions.mjs';
 import { ZMM_BOUNDS, PLACE_ATTRIBUTION, DEFAULT_USER_AGENT, PlaceSearchError, queryText, providerAddress, boundedJson, cleanText } from './places.mjs';
 
 export const DEFAULT_SUGGESTION_PROVIDER = 'https://photon.komoot.io/api/';
@@ -34,7 +36,7 @@ function photonPlaces(payload) {
     const addressKey = `${name}|${address}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-MX');
     if (seenAddresses.has(addressKey)) continue;
     const displayName = [...new Set([name, address, cleanText(details.country)].filter(Boolean))].join(', ').slice(0, 500);
-    places.push({ id, name, address: address || displayName, displayName, lat, lng, kind: 'place', resultType: house ? 'address' : details.type === 'street' ? 'street' : 'place' });
+    places.push({ id, name, address: address || displayName, displayName, lat, lng, kind: 'place', resultType: house ? 'address' : details.type === 'street' ? 'street' : 'place', precision: house ? 'exact' : details.type === 'street' ? 'street' : 'approximate' });
     seen.add(id);
     seenAddresses.add(addressKey);
     if (places.length === 6) break;
@@ -42,32 +44,65 @@ function photonPlaces(payload) {
   return places;
 }
 
-export function createPlaceSuggestions({ providerUrl = DEFAULT_SUGGESTION_PROVIDER, userAgent = DEFAULT_USER_AGENT, transport = globalThis.fetch, now = Date.now, state = sharedState } = {}) {
+function mergePlaces(...groups) {
+  const seenIds = new Set();
+  const seenLabels = new Set();
+  return groups.flat().filter(place => {
+    const label = `${normalizePlaceText(place.name)}|${normalizePlaceText(place.address)}`;
+    if (seenIds.has(place.id) || seenLabels.has(label)) return false;
+    seenIds.add(place.id); seenLabels.add(label);
+    return true;
+  }).slice(0, 12);
+}
+
+export function createPlaceSuggestions({ providerUrl = DEFAULT_SUGGESTION_PROVIDER, userAgent = DEFAULT_USER_AGENT, transport = globalThis.fetch, now = Date.now, state = sharedState, junctionLookup = findStreetJunctions } = {}) {
   const provider = providerAddress(providerUrl);
   // Changing the URL must never accidentally turn public Nominatim into autocomplete.
   if (provider.hostname === 'nominatim.openstreetmap.org') throw new TypeError('Nominatim public does not permit autocomplete. Configure a Photon API endpoint.');
   if (typeof transport !== 'function' || typeof userAgent !== 'string' || userAgent.length < 12 || userAgent.length > 300 || /[\r\n]/.test(userAgent)) throw new TypeError('A Photon transport and identifying User-Agent are required.');
   return async input => {
     const query = queryText(input);
-    const references = findPlaceReferences(query);
-    if (references.length) return { places: references, provider: 'Referencias verificadas / OpenStreetMap', attribution: PLACE_ATTRIBUTION, cached: false };
+    const normalizedQuery = normalizePlaceQuery(query);
+    const addressQuery = parseStreetAddress(normalizedQuery);
+    const intersection = parseIntersection(query);
+    const junctions = intersection ? await junctionLookup(query) : [];
+    const references = mergePlaces(junctions, suggestPlaceReferences(query));
+    const localResult = () => ({ places: references, provider: 'Referencias verificadas / OpenStreetMap', attribution: PLACE_ATTRIBUTION, cached: false });
     const time = now();
     const key = `${provider.href}|${query.toLocaleLowerCase('es-MX')}`;
     for (const [entry, cached] of state.cache) if (time - cached.createdAt >= CACHE_TTL) state.cache.delete(entry);
     const hit = state.cache.get(key);
     if (hit) { state.cache.delete(key); state.cache.set(key, hit); return { ...structuredClone(hit.result), cached: true }; }
-    if (state.inFlight || time - state.lastStarted < 1000 || time < state.blockedUntil) throw new PlaceSearchError(429, 'PLACES_BUSY', 'Las sugerencias tardarán un momento. Puedes elegir una parada mientras tanto.', Math.max(1, Math.ceil((state.blockedUntil - time) / 1000)));
+    if (state.inFlight || time - state.lastStarted < 1000 || time < state.blockedUntil) {
+      if (references.length) return localResult();
+      throw new PlaceSearchError(429, 'PLACES_BUSY', 'Las sugerencias tardarán un momento. Puedes elegir una parada mientras tanto.', Math.max(1, Math.ceil((state.blockedUntil - time) / 1000)));
+    }
     state.inFlight = true;
     state.lastStarted = time;
     const controller = new AbortController();
     let timer;
     const deadline = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new PlaceSearchError(504, 'PLACES_TIMEOUT', 'No pudimos cargar las sugerencias a tiempo. Prueba otro nombre o una parada.')); }, 6000); });
     try {
-      const url = new URL(provider);
-      // Use local/default language: the public Photon demo does not support lang=es.
-      // This static city box is identical for everybody. No GPS or client IP is proxied.
-      url.search = new URLSearchParams({ q: query, limit: '6', bbox: ZMM_BOUNDS.join(','), countrycode: 'MX' }).toString();
-      const work = (async () => {
+      const lookup = async (text, structured = false) => {
+        const delay = Math.max(0, 1000 - (now() - state.lastStarted));
+        if (structured || text !== normalizedQuery) {
+          if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        if (controller.signal.aborted) throw new PlaceSearchError(504, 'PLACES_TIMEOUT', 'No pudimos cargar las sugerencias a tiempo.');
+        const url = new URL(provider);
+        const parameters = { q: text, limit: '6', bbox: ZMM_BOUNDS.join(','), countrycode: 'MX' };
+        if (structured) {
+          // Photon explicitly supports house-number/street structured search.
+          // Only derive the sibling endpoint from the configured API, never user input.
+          url.pathname = url.pathname.replace(/api\/?$/, 'structured');
+          delete parameters.q;
+          Object.assign(parameters, { street: addressQuery.street, housenumber: addressQuery.houseNumber,
+            ...(addressQuery.city ? { city: addressQuery.city } : {}) });
+        }
+        // Use local/default language: the public Photon demo does not support lang=es.
+        // This static city box is identical for everybody. No GPS or client IP is proxied.
+        url.search = new URLSearchParams(parameters).toString();
+        state.lastStarted = now();
         const response = await transport(url, { method: 'GET', headers: { Accept: 'application/json', 'User-Agent': userAgent }, signal: controller.signal, redirect: 'error' });
         if (!response.ok) {
           await response.body?.cancel().catch(() => {});
@@ -75,13 +110,47 @@ export function createPlaceSuggestions({ providerUrl = DEFAULT_SUGGESTION_PROVID
           throw new PlaceSearchError(response.status === 429 ? 429 : 502, 'PLACES_UNAVAILABLE', 'Las sugerencias no están disponibles. Puedes elegir una parada o un lugar guardado.', response.status === 429 ? 60 : undefined);
         }
         return photonPlaces(await boundedJson(response));
+      };
+      const work = (async () => {
+        let places = await lookup(normalizedQuery);
+        if (addressQuery) {
+          const queryTokens = streetTokens(addressQuery.street);
+          const correctAddress = place => {
+            const streetAddress = place.address.split(',')[0];
+            return place.resultType === 'address' &&
+              normalizePlaceText(streetAddress).endsWith(` ${normalizePlaceText(addressQuery.houseNumber)}`) &&
+              queryTokens.every(token => streetTokens(streetAddress).some(candidate => similarToken(token, candidate)));
+          };
+          const exact = places.filter(correctAddress);
+          if (exact.length) return exact;
+          if (/\/api\/?$/.test(provider.pathname)) {
+            const targeted = await lookup(normalizedQuery, true);
+            const matching = targeted.filter(correctAddress);
+            if (matching.length) return matching;
+            places = mergePlaces(places, targeted);
+          }
+          // The provider may ignore a missing house number and return its street.
+          // Never attach the requested number to that street centroid or a wrong house.
+          return places.filter(place => place.resultType === 'street' && queryTokens.every(token => streetTokens(place.name).some(candidate => similarToken(token, candidate))));
+        }
+        if (intersection) {
+          const requestedStreets = intersection.streets.map(streetTokens);
+          // A place named after one street can be miles from the requested corner.
+          // Require evidence of BOTH streets in the actual provider label/address.
+          return places.filter(place => {
+            const candidateTokens = streetTokens(`${place.name} ${place.address}`);
+            return requestedStreets.every(tokens => tokens.every(token => candidateTokens.some(candidate => similarToken(token, candidate))));
+          });
+        }
+        return places;
       })();
-      const places = await Promise.race([work, deadline]);
+      const places = mergePlaces(references, await Promise.race([work, deadline]));
       const result = { places, provider: 'Photon / OpenStreetMap', attribution: PLACE_ATTRIBUTION };
       state.cache.set(key, { createdAt: now(), result: structuredClone(result) });
       while (state.cache.size > 200) state.cache.delete(state.cache.keys().next().value);
       return { ...result, cached: false };
     } catch (error) {
+      if (references.length) return localResult();
       if (error instanceof PlaceSearchError) throw error;
       throw new PlaceSearchError(502, 'PLACES_UNAVAILABLE', 'No pudimos conectar con las sugerencias. Puedes elegir una parada o un lugar guardado.');
     } finally { clearTimeout(timer); state.inFlight = false; }

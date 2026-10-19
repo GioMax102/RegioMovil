@@ -5,6 +5,7 @@ import './styles.css';
 import './responsive.css';
 import './route-planning.css';
 import './appearance.css';
+import './product.css';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };

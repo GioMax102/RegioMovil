@@ -18,5 +18,6 @@ case "${1:-start}" in
   test) exec "$app_node" --import tsx --test tests/*.test.mjs tests/*.test.tsx ;;
   android) shift; exec "$app_node" scripts/android-build.mjs "$@" ;;
   android-connect) shift; exec "$app_node" scripts/android-connect.mjs "$@" ;;
-  *) echo "Uso: ./regiomovil [dev|start|build|test|android|android-connect]" >&2; exit 1 ;;
+  prepare-release) shift; exec "$app_node" scripts/prepare-release.mjs "$@" ;;
+  *) echo "Uso: ./regiomovil [dev|start|build|test|android|android-connect|prepare-release]" >&2; exit 1 ;;
 esac

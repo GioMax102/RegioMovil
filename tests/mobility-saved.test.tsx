@@ -14,6 +14,7 @@ import {
   snapshotMobilityPlan,
 } from '../src/mobility/savedTrips';
 import type { MobilityNetwork, MobilityPlan } from '../src/mobility/types';
+import { createGuidanceRoute } from '../src/mobility/guidance';
 
 const network = JSON.parse(
   await readFile(new URL('../data/mobility-network.json', import.meta.url), 'utf8'),
@@ -156,4 +157,17 @@ test('corrupt snapshots are ignored while legacy official IDs remain available u
   assert.equal(values.get(legacyMobilityKey), JSON.stringify([legacy]));
   deleteLegacyMobilityTrip(legacy.from, legacy.to);
   assert.deepEqual(readLegacyMobilityTrips(), []);
+});
+
+test('saved route keeps intermediate metro stops so foreground guidance can name the next station offline', () => {
+  const snapshot = snapshotMobilityPlan(plan, network, 'Guía sin internet', savedAt);
+  const preserved = new Set(snapshot.network.stops.map((stop) => stop.id));
+  for (const journey of snapshot.journeys) {
+    for (const id of journey.stationIds)
+      assert.ok(preserved.has(id), `Missing intermediate stop ${id}`);
+    const route = createGuidanceRoute(journey, snapshot.network);
+    const metro = route.legs.filter((leg) => leg.step.mode === 'metro');
+    assert.ok(metro.length);
+    assert.ok(metro.every((leg) => leg.stopsComplete));
+  }
 });
