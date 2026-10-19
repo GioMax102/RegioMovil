@@ -27,7 +27,7 @@ import { type MapPosition } from './regionalViewport';
 import { stopEndpoint } from './search';
 import { networkLabel } from './networks';
 import { currentLocation } from './location';
-import MobilityJourneyDetail from './MobilityJourneyDetail';
+import JourneyDialog from './JourneyDialog';
 import SavedMobilityTrips from './SavedMobilityTrips';
 import SavedTripPreview from './SavedTripPreview';
 import { saveMobilityTrip, snapshotMobilityPlan } from './savedTrips';
@@ -813,16 +813,21 @@ export default function MobilityPlanner({
       )}
       <ActionFeedback key={savedFeedback} message={savedFeedback} />
       {detail && network && (
-        <Dialog title="Tu conexión, paso a paso" onClose={() => setDetail(null)} wide>
-          <MobilityJourneyDetail key={detail.id} journey={detail} network={network} />
-          <div className="mobility-save-action">
-            <button className="primary-button full-width" disabled={busy} onClick={startSaving}>
-              <Bookmark size={17} />
-              Guardar sin internet
-            </button>
-            <small>Se guarda solo en este dispositivo</small>
-          </div>
-        </Dialog>
+        <JourneyDialog
+          title="Tu conexión, paso a paso"
+          onClose={() => setDetail(null)}
+          journey={detail}
+          network={network}
+          after={
+            <div className="mobility-save-action">
+              <button className="primary-button full-width" disabled={busy} onClick={startSaving}>
+                <Bookmark size={17} />
+                Guardar sin internet
+              </button>
+              <small>Se guarda solo en este dispositivo</small>
+            </div>
+          }
+        />
       )}
       {saveDraft && (
         <Dialog title="Guarda tu viaje" onClose={() => setSaveDraft(null)}>

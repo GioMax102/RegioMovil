@@ -10,8 +10,7 @@ import {
   WifiOff,
   BriefcaseBusiness,
 } from 'lucide-react';
-import { Dialog } from '../components/Primitives';
-import MobilityJourneyDetail from './MobilityJourneyDetail';
+import JourneyDialog from './JourneyDialog';
 import {
   deleteLegacyMobilityTrip,
   deleteMobilityAlternative,
@@ -211,20 +210,23 @@ export default function SavedMobilityTrips({
         </details>
       )}
       {selected && (
-        <Dialog
+        <JourneyDialog
           title={`${selected.trip.label} · ruta guardada`}
           onClose={() => setSelected(null)}
-          wide
-        >
-          <p className="saved-mobility-snapshot-note">
-            <WifiOff size={16} />
-            Disponible sin internet · Cálculo del {savedDate(selected.trip.generatedAt)}
-          </p>
-          <MobilityJourneyDetail journey={selected.journey} network={selected.trip.network} />
-          <p className="mobility-method-note">
-            Consulta guardada; horarios y condiciones pueden cambiar.
-          </p>
-        </Dialog>
+          journey={selected.journey}
+          network={selected.trip.network}
+          before={
+            <p className="saved-mobility-snapshot-note">
+              <WifiOff size={16} />
+              Disponible sin internet · Cálculo del {savedDate(selected.trip.generatedAt)}
+            </p>
+          }
+          after={
+            <p className="mobility-method-note">
+              Consulta guardada; horarios y condiciones pueden cambiar.
+            </p>
+          }
+        />
       )}
     </>
   );

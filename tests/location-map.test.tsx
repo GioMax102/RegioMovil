@@ -631,3 +631,89 @@ test('aislar una línea conserva la información real de conexiones de una estac
   assert.ok(svg.querySelector('[data-line="L1"]'));
   assert.equal(svg.querySelector('[data-line="L2"]'), null);
 });
+
+test('la guía deja el mapa en primer plano y conserva la consulta accesible de paradas sin desplazarlo', async () => {
+  const routes = publishedNetwork.routes.filter((route) => route.mode === 'metro');
+  const { svg, container, picks, stops } = await mount({
+    network: publishedNetwork,
+    contextRoutes: routes,
+    navigationMode: true,
+    field: null,
+  });
+  const map = container.querySelector('.location-map.navigating')!;
+  const canvas = map.querySelector('.location-map-canvas')!;
+  assert.equal(map.children.length, 1, 'No agrega leyendas ni fichas debajo del mapa de la guía.');
+  const references = canvas.querySelector<HTMLDetailsElement>('.location-navigation-info')!;
+  assert.ok(references);
+  assert.equal(references.open, false, 'La información secundaria empieza cerrada.');
+  assert.match(references.querySelector('summary')!.textContent!, /Paradas y leyenda/);
+  assert.match(references.textContent!, /Mapa local simplificado/);
+  assert.ok(references.querySelector('[aria-label="Leyenda del mapa"]'));
+  const selector = references.querySelector<HTMLSelectElement>('select')!;
+  assert.equal(
+    references.querySelector('label')!.htmlFor,
+    selector.id,
+    'El selector nativo de paradas conserva su etiqueta para teclado y lector de pantalla.',
+  );
+  for (const label of ['Acercar mapa', 'Alejar mapa', 'Centrar mapa en las rutas'])
+    assert.ok(canvas.querySelector(`button[aria-label="${label}"]`));
+  const trace = svg.querySelector('[data-line="L1"]')!;
+  await act(async () => key(svg, 'ArrowRight'));
+  const explored = trace.getAttribute('points');
+  await act(async () => {
+    references.open = true;
+    selector.value = 'metro:cuauhtemoc';
+    selector.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  });
+  const card = canvas.querySelector('[aria-label="Estación seleccionada"]')!;
+  assert.ok(
+    card,
+    'La ficha se muestra dentro del mapa en lugar de empujar las acciones de la guía.',
+  );
+  assert.match(card.textContent!, /Cuauhtémoc.*Línea 1.*Línea 2/);
+  assert.equal(
+    references.open,
+    false,
+    'La lista se cierra para dejar visible la parada consultada.',
+  );
+  assert.equal(
+    document.activeElement,
+    references.querySelector('summary'),
+    'El foco no queda dentro de una lista oculta al seleccionar con el teclado.',
+  );
+  assert.equal(
+    trace.getAttribute('points'),
+    explored,
+    'Consultar una parada no cambia el encuadre.',
+  );
+  await act(async () =>
+    card
+      .querySelector('button[aria-label="Cerrar información de estación"]')!
+      .dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })),
+  );
+  assert.equal(canvas.querySelector('[aria-label="Estación seleccionada"]'), null);
+  assert.equal(picks.length, 0);
+  assert.equal(stops.length, 0);
+});
+
+test('el modo compacto no altera el trazo ni la exploración del mapa y las otras vistas mantienen sus referencias', async () => {
+  const routes = publishedNetwork.routes.filter((route) => route.mode === 'metro');
+  const { svg, container } = await mount({
+    network: publishedNetwork,
+    contextRoutes: routes,
+    navigationMode: true,
+    field: null,
+  });
+  await act(async () => key(svg, 'ArrowRight'));
+  const explored = svg.querySelector('[data-line="L1"]')!.getAttribute('points');
+  await act(async () =>
+    activeRoot!.render(
+      <LocationMap network={publishedNetwork} online={false} field={null} contextRoutes={routes} />,
+    ),
+  );
+  assert.equal(svg.querySelector('[data-line="L1"]')!.getAttribute('points'), explored);
+  assert.equal(container.querySelector('.location-navigation-info'), null);
+  assert.ok(container.querySelector('.location-map > .location-map-legend'));
+  assert.ok(container.querySelector('.location-map > .location-map-caption'));
+  assert.ok(container.querySelector('.location-map-area'));
+});

@@ -1,6 +1,54 @@
 .journey-detail {
   min-width: 0;
 }
+.journey-start {
+  min-height: 52px;
+  font-size: 1rem;
+  gap: 10px;
+}
+.dialog.journey-guidance-dialog {
+  width: calc(100% - 16px);
+  max-width: 1020px;
+  height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 16px);
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 16px);
+  padding: 14px;
+  border-radius: 20px;
+}
+.journey-guidance-dialog > .dialog-heading {
+  position: relative;
+  height: 0;
+  margin: 0;
+  z-index: 3;
+}
+.journey-guidance-dialog > .dialog-heading h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.journey-guidance-dialog > .dialog-heading .icon-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+}
+.journey-guidance-dialog .active-journey-top {
+  padding-right: 46px;
+  min-height: 44px;
+}
+.journey-guidance-dialog > p[role='status'] {
+  padding-right: 46px;
+  min-height: 44px;
+}
+@media (min-width: 800px) and (min-height: 650px) {
+  .dialog.journey-guidance-dialog {
+    padding: 20px;
+  }
+}
 .journey-detail .mobility-map > svg {
   background: var(--soft);
 }

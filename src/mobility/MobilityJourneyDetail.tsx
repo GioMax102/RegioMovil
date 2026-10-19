@@ -19,9 +19,11 @@ const ActiveJourney = lazy(() => import('./ActiveJourney'));
 export default function MobilityJourneyDetail({
   journey,
   network,
+  onGuidanceChange,
 }: {
   journey: MobilityJourney;
   network: MobilityNetwork;
+  onGuidanceChange?: (guiding: boolean) => void;
 }) {
   const [guiding, setGuiding] = useState(false);
   const startButton = useRef<HTMLButtonElement>(null);
@@ -45,7 +47,10 @@ export default function MobilityJourneyDetail({
           journey={journey}
           network={network}
           autoStart
-          onFinish={() => setGuiding(false)}
+          onFinish={() => {
+            setGuiding(false);
+            onGuidanceChange?.(false);
+          }}
         />
       </Suspense>
     );
@@ -79,7 +84,10 @@ export default function MobilityJourneyDetail({
         ref={startButton}
         type="button"
         className="primary-button full-width journey-start"
-        onClick={() => setGuiding(true)}
+        onClick={() => {
+          setGuiding(true);
+          onGuidanceChange?.(true);
+        }}
       >
         <Navigation size={18} aria-hidden="true" /> Iniciar trayecto
       </button>

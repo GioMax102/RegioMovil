@@ -37,3 +37,19 @@ Para revisar en Android Studio: servidor local en 4173, teléfono conectado por 
 APK de pruebas final: SHA-256 `a6b3d72be62a76b3d87851ed0245ddaee153e220c0708132fcae0e0ac9e6e44a`. No había teléfono o emulador conectado al ejecutar `android-connect`; no se validó movimiento GPS en un dispositivo físico.
 
 Revisión nativa final: una pausa/cierre invalida también las solicitudes de permiso pendientes; al volver no se reactiva el GPS. La primera ubicación tiene un límite de 20 s y su temporizador se cancela al recibirla o al detener la guía.
+
+## Guía más clara · 19 de octubre de 2026
+
+La guía prioriza la indicación y el mapa de la etapa actual. Muestra «Camina hasta», «Viaja hasta» o el transbordo correspondiente junto al nombre de la parada. El mapa se encuadra al iniciar cada etapa; las actualizaciones GPS no restablecen ese encuadre cuando la persona desactiva «Seguirme». La distancia visible corresponde a la etapa y el indicador de avance conserva el progreso del trayecto completo.
+
+La acción principal es «Ya llegué» o «Ya bajé», acompañada por la parada que se confirma. Pausa/reanudación, seguimiento del mapa y voz se agrupan como controles secundarios. «Terminar guía» permanece disponible; al completar el viaje aparece «Cerrar guía». Los estados de GPS, pausa e incertidumbre se distinguen sin sustituir la indicación del siguiente paso. La guía sigue funcionando sólo con la aplicación visible.
+
+Los trayectos nuevos y guardados utilizan un mismo diálogo ampliado para seguir la ruta. Mientras la guía está abierta se ocultan el guardado y los datos secundarios del detalle. Al iniciar o confirmar una etapa, el foco vuelve a la indicación y el diálogo se desplaza al principio; al terminar, regresa al botón «Iniciar trayecto». Las estaciones y la leyenda se consultan mediante un panel plegable dentro del mapa, con desplazamiento propio para conservar espacio para los controles y la atribución.
+
+Se aprobaron **225 pruebas** en la verificación integrada, incluidas regresiones del diálogo único, ocultamiento del guardado, foco, confirmación manual, encuadre por etapa y conservación de la exploración entre actualizaciones GPS. La revisión visual en navegador cubrió 390×844 y 320×700, incluida la combinación de tema oscuro y texto ampliado a 18 px. Se revisaron etapas a pie, transporte y transbordo, la visibilidad de la confirmación principal y la ausencia de desbordamiento horizontal.
+
+Las capturas de esta revisión se encuentran en `output/qa/guia-simple-caminata.png`, `output/qa/guia-simple-transporte.png`, `output/qa/guia-simple-transbordo.png` y `output/qa/guia-simple-oscura-320.png`. Queda pendiente validar un recorrido GPS y la navegación con TalkBack en un teléfono físico. Estos cambios permanecen en `fixes`; esta revisión no sustituye la versión pública.
+
+También se comprobó el recorrido completo por confirmaciones manuales hasta la llegada y el cierre. En horizontal a 844×390, indicación y confirmación se sitúan junto al mapa; la acción principal queda visible sin desplazamiento, incluso con texto ampliado. Evidencia: `output/qa/guia-simple-horizontal.png`.
+
+La web y el APK debug compilaron correctamente. El APK actualizado está en `output/android/regiomovil-debug.apk`, con SHA-256 `71722031e0c1586abcf3037bdc84108dc1cce99a85255d9ce4e038d4c12e55b1`; usa la API local de pruebas mediante USB. El servidor respondió correctamente en el puerto 4173. No había dispositivos Android conectados durante esta comprobación.

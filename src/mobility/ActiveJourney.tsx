@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
-  ChevronRight,
   LocateFixed,
   MapPin,
   Navigation,
@@ -50,13 +49,35 @@ export default function ActiveJourney({
   const [voice, setVoice] = useState(false);
   const [online, setOnline] = useState(navigator.onLine !== false);
   const mounted = useRef(true);
+  const instructionHeading = useRef<HTMLHeadingElement>(null);
+  const focusAfterConfirmation = useRef(true);
   const speechAvailable =
     typeof window.speechSynthesis !== 'undefined' &&
     typeof window.SpeechSynthesisUtterance === 'function';
   const instruction = describeGuidance(route, state);
   const leg = route.legs[state.stepIndex];
-  const originPoint = route.legs[0]?.points[0];
-  const destinationPoint = route.legs.at(-1)?.points.at(-1);
+  // Stable between GPS samples: fit the current leg when a step changes,
+  // while the original route remains responsible for guidance and total progress.
+  const mapJourney = useMemo(
+    () => ({
+      ...journey,
+      id: `${journey.id}:guide:${state.stepIndex}`,
+      steps: leg ? [{ ...leg.step, geometry: leg.points }] : [],
+      stationIds:
+        leg?.stopsComplete && leg.step.stopOrderVerified ? leg.stops.map((stop) => stop.id) : [],
+    }),
+    [journey, leg, state.stepIndex],
+  );
+  const originPoint = leg?.points[0];
+  const destinationPoint = leg?.points.at(-1);
+
+  useEffect(() => {
+    if (!focusAfterConfirmation.current) return;
+    focusAfterConfirmation.current = false;
+    instructionHeading.current?.focus({ preventScroll: true });
+    const dialog = instructionHeading.current?.closest('dialog');
+    if (dialog) dialog.scrollTop = 0;
+  }, [state.stepIndex, state.completed]);
 
   useEffect(() => {
     mounted.current = true;
@@ -160,28 +181,68 @@ export default function ActiveJourney({
     if (speechAvailable) window.speechSynthesis.cancel();
     onFinish();
   }
+  function confirmStep() {
+    focusAfterConfirmation.current = true;
+    setStarted(true);
+    setState((previous) => advanceGuidance(route, previous));
+  }
   const status = state.completed
     ? 'Trayecto completado'
     : !running
       ? pauseReason === 'location'
-        ? 'Sin GPS · avance manual'
+        ? 'Sin GPS'
         : started
-          ? 'Guía en pausa'
+          ? 'En pausa'
           : 'Lista para iniciar'
       : state.quality === 'waiting'
-        ? 'Conectando con el GPS'
+        ? 'Buscando GPS'
         : state.quality === 'imprecise'
           ? 'GPS impreciso'
           : state.quality === 'stale'
-            ? 'Sin señal GPS reciente'
+            ? 'Sin señal GPS'
             : state.quality === 'off-route' || state.quality === 'unconfirmed'
-              ? 'Ubicación por confirmar'
-              : 'Guía activa · GPS conectado';
+              ? 'GPS por confirmar'
+              : 'GPS conectado';
   const locationUncertain = running && state.quality !== 'good';
+  const stepMeters = Math.max(0, (leg?.length ?? 0) - state.along);
   const distance =
-    instruction.remainingMeters >= 1000
-      ? `${(instruction.remainingMeters / 1000).toFixed(1)} km`
-      : `${Math.round(instruction.remainingMeters)} m`;
+    stepMeters >= 1000 ? `${(stepMeters / 1000).toFixed(1)} km` : `${Math.round(stepMeters)} m`;
+  const nextRide = route.legs.slice(state.stepIndex + 1).find((item) => item.step.mode !== 'walk');
+  // GPS quality belongs in the status, not in place of the stop the person needs.
+  // A paused fix must not keep presenting a live alighting instruction.
+  const actionTitle = state.completed
+    ? 'Llegaste a tu destino'
+    : running && state.quality === 'good' && instruction.kind === 'alight'
+      ? instruction.title
+      : running && state.quality === 'good' && instruction.kind === 'step-end'
+        ? 'Llegaste a'
+        : leg?.compactTransfer && nextRide
+          ? `Transborda a ${nextRide.step.lineName}`
+          : running && state.quality === 'good' && instruction.kind === 'transfer'
+            ? 'Baja y haz transbordo en'
+            : leg?.step.mode === 'walk'
+              ? 'Camina hasta'
+              : 'Viaja hasta';
+  const positionHint =
+    !running || state.completed
+      ? ''
+      : state.quality === 'waiting'
+        ? 'Buscando señal. Puedes confirmar cada paso.'
+        : state.quality === 'imprecise'
+          ? 'Avance sin actualizar hasta tener mejor precisión.'
+          : state.quality === 'stale'
+            ? 'Sin señal reciente. Confirma tu parada con las señales.'
+            : state.quality === 'off-route'
+              ? 'Revisa tu ubicación y confirma el recorrido.'
+              : state.quality === 'unconfirmed'
+                ? 'Ubicación por confirmar. Revisa las señales.'
+                : '';
+  const showNextStop = !!(
+    running &&
+    state.quality === 'good' &&
+    instruction.nextStopVerified &&
+    instruction.nextStop
+  );
 
   return (
     <section className="active-journey" aria-label="Guía de tu trayecto">
@@ -197,177 +258,174 @@ export default function ActiveJourney({
           ) : (
             <Navigation size={15} aria-hidden="true" />
           )}
-          {status}
+          <span>{status}</span>
         </span>
-        <button type="button" className="active-journey-link" onClick={finish}>
-          {state.completed ? 'Cerrar guía' : 'Terminar guía'}
-        </button>
+        {!state.completed && (
+          <button type="button" className="active-journey-link" onClick={finish}>
+            Terminar guía
+          </button>
+        )}
       </div>
-      <p className="active-journey-scope">
-        Guía con la app visible. Al salir se pausa; no emite avisos en segundo plano.
-      </p>
-      {locationError && (
-        <p className="active-journey-warning" role="status">
-          {locationError}
-        </p>
-      )}
       <div
         className={`active-journey-instruction ${state.completed ? 'completed' : instruction.kind === 'transfer' || instruction.kind === 'alight' ? 'attention' : ''}`}
       >
-        <span className="eyebrow">
-          {state.completed ? 'DESTINO' : `PASO ${state.stepIndex + 1} DE ${route.legs.length}`}
-        </span>
-        <div aria-live="polite" aria-atomic="true">
-          <h3>
-            {!running && !state.completed
-              ? started
-                ? 'Tu guía está en pausa'
-                : 'Empieza cuando estés listo'
-              : instruction.kind === 'waiting' && leg
-                ? leg.step.mode === 'walk'
-                  ? `Camina hacia ${leg.step.to}`
-                  : `${leg.step.lineName} hacia ${leg.step.to}`
-                : instruction.title}
-          </h3>
-          <p>
-            {!running && !state.completed
-              ? leg
-                ? `Siguiente paso: ${leg.step.mode === 'walk' ? (leg.compactTransfer ? 'transbordo' : 'camina') : leg.step.lineName} hacia ${leg.step.to}.`
-                : 'Puedes cerrar la guía.'
-              : instruction.kind === 'waiting'
-                ? 'El GPS está conectando. También puedes confirmar cada paso manualmente.'
-                : instruction.detail}
-          </p>
-        </div>
-        {leg && !state.completed && (
-          <div className="active-journey-reference">
+        <span className="active-journey-step">
+          {state.completed
+            ? 'TRAYECTO COMPLETADO'
+            : `PASO ${state.stepIndex + 1} DE ${route.legs.length}`}
+          {leg && !state.completed && (
             <span>
+              {' · '}
               {leg.step.mode === 'walk'
                 ? leg.compactTransfer
                   ? 'Transbordo'
                   : 'A pie'
                 : leg.step.lineName}
             </span>
-            {instruction.nextStop && (
-              <div className="active-journey-next-stop">
-                <MapPin size={18} aria-hidden="true" />
-                <div>
-                  <small>
-                    {instruction.nextStopVerified && running && state.quality === 'good'
-                      ? 'Próxima parada · según el trazo'
-                      : 'Referencia del trazo'}
-                  </small>
-                  <strong>{instruction.nextStop.name}</strong>
-                </div>
-              </div>
-            )}
-            {instruction.remainingStops !== null && (
-              <small>
-                {instruction.remainingStops}{' '}
-                {instruction.remainingStops === 1
-                  ? 'parada hasta tu bajada'
-                  : 'paradas hasta tu bajada'}{' '}
-                · según el trazo
-              </small>
-            )}
-          </div>
-        )}
-      </div>
-      {!state.completed && (
-        <div className="active-journey-actions" aria-label="Controles de la guía">
-          {running ? (
-            <button
-              type="button"
-              className="active-journey-control"
-              onClick={() => {
-                setPauseReason('user');
-                setRunning(false);
-              }}
-            >
-              <Pause size={17} aria-hidden="true" /> Pausar guía
-            </button>
-          ) : (
-            <button type="button" className="primary-button" onClick={start}>
-              <Play size={17} aria-hidden="true" />
-              {started ? 'Reanudar ubicación' : 'Iniciar guía'}
-            </button>
           )}
-          <button
-            type="button"
-            className="active-journey-manual"
-            onClick={() => {
-              setStarted(true);
-              setState((previous) => advanceGuidance(route, previous));
-            }}
-          >
-            {state.stepIndex === route.legs.length - 1 ? (
-              <Check size={17} aria-hidden="true" />
-            ) : (
-              <ChevronRight size={17} aria-hidden="true" />
-            )}
-            {instruction.manualLabel}
-          </button>
-          <span className="active-journey-manual-hint">
-            Confirma el paso sólo cuando hayas llegado.
-          </span>
-        </div>
-      )}
-      <div className="active-journey-progress">
-        <progress
-          max={1}
-          value={instruction.progress}
-          aria-label="Avance aproximado del trayecto"
-        />
-        <span>
-          {state.completed
-            ? 'Destino alcanzado'
-            : route.totalMeters > 0
-              ? `${distance} de trazo por recorrer`
-              : 'Avance manual · sin geometría disponible'}
         </span>
+        <div aria-live="polite" aria-atomic="true">
+          <h3 ref={instructionHeading} tabIndex={-1}>
+            {actionTitle}
+            {leg && !state.completed && <strong> {leg.step.to}</strong>}
+          </h3>
+        </div>
+        {showNextStop && instruction.nextStop && (
+          <p className="active-journey-next-stop">
+            <MapPin size={16} aria-hidden="true" />
+            <span>
+              Próxima: <strong>{instruction.nextStop.name}</strong>
+              {instruction.remainingStops !== null && instruction.remainingStops > 1 && (
+                <small> · {instruction.remainingStops} paradas hasta bajar</small>
+              )}
+            </span>
+          </p>
+        )}
+        {positionHint && <p className="active-journey-position-hint">{positionHint}</p>}
+        {!state.completed &&
+          leg?.step.mode === 'bus' &&
+          (!leg.step.stopOrderVerified || leg.step.directionVerified !== true) && (
+            <p className="active-journey-position-hint">
+              Confirma el sentido y la bajada con el operador.
+            </p>
+          )}
       </div>
       <div className="active-journey-map">
         <LocationMap
           network={network}
           online={online}
-          journey={journey}
+          journey={mapJourney}
+          navigationMode
           field={null}
           origin={originPoint ? { lng: originPoint[0], lat: originPoint[1] } : null}
           destination={
             destinationPoint ? { lng: destinationPoint[0], lat: destinationPoint[1] } : null
           }
-          currentPosition={state.position}
+          currentPosition={running && state.quality === 'good' ? state.position : null}
           focus={following && running && state.quality === 'good' ? state.acceptedFix : null}
         />
+        <div className="active-journey-progress">
+          <progress
+            max={1}
+            value={instruction.progress}
+            aria-label="Avance aproximado del trayecto"
+          />
+          <span>
+            {state.completed
+              ? 'Destino alcanzado'
+              : route.totalMeters > 0
+                ? `${distance} de esta etapa · aprox.`
+                : 'Avance manual · trazo no disponible'}
+          </span>
+        </div>
       </div>
-      <div className="active-journey-options">
+      {!state.completed ? (
+        <div className="active-journey-controls" aria-label="Controles de la guía">
+          <button
+            type="button"
+            className="active-journey-manual"
+            aria-label={instruction.manualLabel}
+            onClick={confirmStep}
+          >
+            <Check size={21} aria-hidden="true" />
+            <span>
+              <strong>{leg?.step.mode === 'walk' ? 'Ya llegué' : 'Ya bajé'}</strong>
+              <small>{leg?.step.to || 'Mi destino'}</small>
+            </span>
+          </button>
+          <div className="active-journey-options">
+            {running ? (
+              <button
+                type="button"
+                className="active-journey-option"
+                aria-label="Pausar guía"
+                onClick={() => {
+                  setPauseReason('user');
+                  setRunning(false);
+                }}
+              >
+                <Pause size={17} aria-hidden="true" /> Pausar
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="active-journey-option"
+                aria-label={started ? 'Reanudar ubicación' : 'Iniciar guía'}
+                onClick={start}
+              >
+                <Play size={17} aria-hidden="true" />
+                {started ? 'Reanudar' : 'Activar GPS'}
+              </button>
+            )}
+            <button
+              type="button"
+              className="active-journey-option"
+              aria-pressed={following}
+              aria-label="Seguirme en el mapa"
+              onClick={() => setFollowing((value) => !value)}
+            >
+              <LocateFixed size={17} aria-hidden="true" /> Seguirme
+            </button>
+            <button
+              type="button"
+              className="active-journey-option"
+              aria-label={speechAvailable ? 'Avisos por voz' : 'Voz no disponible'}
+              aria-pressed={voice}
+              disabled={!speechAvailable}
+              onClick={() => setVoice((value) => !value)}
+            >
+              {voice ? (
+                <Volume2 size={17} aria-hidden="true" />
+              ) : (
+                <VolumeX size={17} aria-hidden="true" />
+              )}
+              {speechAvailable ? 'Voz' : 'Sin voz'}
+            </button>
+          </div>
+          <p className="active-journey-manual-hint">Confirma sólo cuando estés en esa parada.</p>
+        </div>
+      ) : (
         <button
           type="button"
-          className="active-journey-option"
-          aria-pressed={following}
-          onClick={() => setFollowing((value) => !value)}
+          className="active-journey-manual active-journey-close"
+          onClick={finish}
         >
-          <LocateFixed size={17} aria-hidden="true" />
-          Seguir mi ubicación
+          <Check size={20} aria-hidden="true" /> Cerrar guía
         </button>
-        <button
-          type="button"
-          className="active-journey-option"
-          aria-pressed={voice}
-          disabled={!speechAvailable}
-          onClick={() => setVoice((value) => !value)}
-        >
-          {voice ? (
-            <Volume2 size={17} aria-hidden="true" />
-          ) : (
-            <VolumeX size={17} aria-hidden="true" />
-          )}
-          {speechAvailable ? 'Avisos por voz' : 'Voz no disponible'}
-        </button>
-      </div>
+      )}
+      <p className="active-journey-scope">Sólo con la app visible · se pausa al salir.</p>
+      {locationError && !state.completed && (
+        <p className="active-journey-warning" role="status">
+          {locationError}
+        </p>
+      )}
       <details className="active-journey-about">
         <summary>Sobre la guía y tu ubicación</summary>
         <p>Tu ubicación se procesa en este dispositivo y no se guarda como historial.</p>
+        <p>
+          La guía no emite avisos en segundo plano. Al volver, reanuda el GPS para obtener una
+          posición nueva.
+        </p>
         <p>
           El mapa en línea consulta OpenStreetMap; activa Ahorrar datos para usar el mapa local.
         </p>
