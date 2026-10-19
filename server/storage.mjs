@@ -1,11 +1,19 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 export function createReportStore(path = ':memory:') {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(path);
+  // SQLite otherwise inherits the process umask (often world-readable 0644).
+  // Set permissions before WAL creation so the journal inherits the same mode.
+  if (path !== ':memory:') {
+    for (const file of [path, `${path}-wal`, `${path}-shm`]) {
+      try { chmodSync(file, 0o600); }
+      catch (error) { if (error.code !== 'ENOENT') { db.close(); throw error; } }
+    }
+  }
   db.exec(`PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 3000;
     CREATE TABLE IF NOT EXISTS reports (
       id TEXT PRIMARY KEY,

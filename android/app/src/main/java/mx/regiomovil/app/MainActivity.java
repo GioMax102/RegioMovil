@@ -27,6 +27,9 @@ public class MainActivity extends BridgeActivity {
             // Debug builds may reach only the localhost API through an ADB reverse tunnel.
             bridge.getWebView().getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
+        // A station display may be launched from a stopped process as well as
+        // through the singleTask activity's onNewIntent path.
+        applyStationMode(getIntent());
     }
 
     @Override

@@ -16,6 +16,11 @@ const MIME = { '.txt': 'text/plain; charset=utf-8', '.html': 'text/html; charset
 const TEXT_EXTENSIONS = new Set(['.html','.js','.mjs','.css','.json','.svg','.webmanifest']);
 const gzipAsync = promisify(gzip);
 const brotliAsync = promisify(brotliCompress);
+// Keep this policy in sync with public/_headers (Cloudflare Pages).
+// Inline styles are required by React's map positioning and the static help pages.
+// Scripts, workers and fonts are bundled locally; only the published API and OSM
+// map tiles may be requested remotely by the web application.
+export const CONTENT_SECURITY_POLICY = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; font-src 'self'; connect-src 'self' https://regiomovil-api.onrender.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
 function preferredEncoding(header = '') {
   const qualities = new Map(String(header).toLowerCase().split(',').map(part => {
@@ -147,7 +152,9 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
   async function handler(request, response) {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('Content-Security-Policy', CONTENT_SECURITY_POLICY);
+    response.setHeader('Permissions-Policy', 'geolocation=(self), camera=(), microphone=()');
     response.setHeader('Vary', 'Origin');
     const origin = request.headers.origin;
     try {
@@ -211,6 +218,7 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
           return send(response, 200, buildBoard(network, station.id, scenario, date));
         }
         if (url.pathname === '/api/plan') {
+          limit(request, 'plan', 20, date);
           if (!url.searchParams.get('from') || !url.searchParams.get('to')) throw new HttpError(400, 'MISSING_STATIONS', 'Indica las estaciones de origen y destino.');
           const from = validStation(url.searchParams.get('from'));
           const to = validStation(url.searchParams.get('to'));
@@ -228,6 +236,10 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
       }
       if (request.method === 'POST' && url.pathname === '/api/mobility/plan') {
         if (!mobilityNetwork) throw new HttpError(503, 'MOBILITY_UNAVAILABLE', 'La red experimental no está preparada. Puedes usar el planificador de Metro.');
+        // Route calculation is synchronous and more expensive than cached data.
+        // Use the same budget as Metro planning, so switching endpoints cannot
+        // bypass it. Do not trust spoofable X-Forwarded-For headers for identity.
+        limit(request, 'plan', 20, date);
         const body = await readJson(request, 'la consulta');
         if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['from', 'to', 'preference', 'scenario', 'offline', 'transport'].includes(key))) throw new HttpError(400, 'INVALID_MOBILITY_PLAN', 'Indica origen, destino y opciones válidas para el trayecto.');
         if (body.offline !== undefined && typeof body.offline !== 'boolean') throw new HttpError(400, 'INVALID_MOBILITY_PLAN', 'offline debe ser verdadero o falso.');

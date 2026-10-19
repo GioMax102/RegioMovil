@@ -81,7 +81,7 @@ public class RegioLocationPlugin extends Plugin {
             watchCall = call;
             watchListener = new LocationListener() {
                 @Override public void onLocationChanged(Location location) {
-                    if (watchCall == null || location == null || !location.hasAccuracy()) return;
+                    if (!foreground || watchCall == null || location == null || !location.hasAccuracy()) return;
                     long age = (SystemClock.elapsedRealtimeNanos() - location.getElapsedRealtimeNanos()) / 1000000L;
                     if (age < 0 || age > 30000) return;
                     if (watchTimeout != null) { main.removeCallbacks(watchTimeout); watchTimeout = null; }
@@ -167,6 +167,9 @@ public class RegioLocationPlugin extends Plugin {
     @SuppressWarnings("deprecation")
     private void start(PluginCall call) {
         main.post(() -> {
+            // A permission response can arrive after the app has been hidden.
+            // Do not register new listeners while the pause cleanup is queued.
+            if (!foreground) { call.reject("Se interrumpió la lectura de ubicación. Vuelve a intentarlo al regresar.", "LOCATION_CANCELLED"); return; }
             if (pending != null) { call.reject("Ya estamos buscando tu ubicación.", "LOCATION_BUSY"); return; }
             manager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
             if (manager == null) { call.reject("Este dispositivo no ofrece ubicación.", "LOCATION_UNAVAILABLE"); return; }
@@ -186,7 +189,8 @@ public class RegioLocationPlugin extends Plugin {
                 for (String provider : providers) {
                     if (!manager.isProviderEnabled(provider)) continue;
                     Location cached = manager.getLastKnownLocation(provider);
-                    if (cached != null && SystemClock.elapsedRealtimeNanos() - cached.getElapsedRealtimeNanos() <= 30_000_000_000L && cached.hasAccuracy() && cached.getAccuracy() <= 100) {
+                    long cachedAge = cached == null ? -1 : SystemClock.elapsedRealtimeNanos() - cached.getElapsedRealtimeNanos();
+                    if (cached != null && cachedAge >= 0 && cachedAge <= 30_000_000_000L && cached.hasAccuracy() && cached.getAccuracy() <= 100) {
                         complete(cached); return;
                     }
                     manager.requestLocationUpdates(provider, 1000, 0, listener, Looper.getMainLooper());
@@ -201,9 +205,10 @@ public class RegioLocationPlugin extends Plugin {
     }
 
     private void complete(Location location) {
-        if (pending == null || location == null || !location.hasAccuracy()) return;
+        if (!foreground || pending == null || location == null || !location.hasAccuracy()) return;
         // Reject stale callbacks and fixes too broad to select a transit connection.
-        if (SystemClock.elapsedRealtimeNanos() - location.getElapsedRealtimeNanos() > 60_000_000_000L || location.getAccuracy() > 1500) return;
+        long age = SystemClock.elapsedRealtimeNanos() - location.getElapsedRealtimeNanos();
+        if (age < 0 || age > 60_000_000_000L || location.getAccuracy() > 1500) return;
         PluginCall call = pending;
         cleanup();
         JSObject result = new JSObject();

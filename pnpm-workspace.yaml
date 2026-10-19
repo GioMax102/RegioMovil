@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+
+# xcode 3 uses only uuid.v4(), whose CommonJS API remains compatible in v11.
+# Older uuid versions are affected by GHSA-w5hq-g745-h8pq.
+overrides:
+  'xcode>uuid': 11.1.1
