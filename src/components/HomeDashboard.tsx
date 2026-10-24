@@ -1,4 +1,4 @@
-import { ArrowRight, Bookmark, ChevronDown, Flag, Leaf, Map, MapPin } from 'lucide-react';
+import { ArrowRight, Bookmark, ChevronDown, Flag, Users, Map, MapPin } from 'lucide-react';
 import type { Arrival, Board, Station } from '../types';
 import { ArrivalCard, Forecast, LineBadge } from './Primitives';
 import './homeDashboard.css';
@@ -58,7 +58,7 @@ export default function HomeDashboard({
         <div className="panel-heading">
           <div>
             <span className="eyebrow">ANTES DE SALIR</span>
-            <h2 id="home-departure-title">Las próximas unidades</h2>
+            <h2 id="home-departure-title">Próximas llegadas</h2>
           </div>
           <button
             type="button"
@@ -93,7 +93,7 @@ export default function HomeDashboard({
           )}
         </div>
         <button type="button" className="all-arrivals" onClick={onStationDetails}>
-          Ver estación y pronóstico
+          Ver estación
           <ArrowRight size={16} aria-hidden="true" />
         </button>
       </section>
@@ -115,7 +115,7 @@ export default function HomeDashboard({
             <h2 id="home-outlook-title">Elige cuándo salir</h2>
           </div>
           <span className="home-outlook-icon" aria-hidden="true">
-            <Leaf size={21} />
+            <Users size={21} />
           </span>
         </div>
         {quietestHour && (

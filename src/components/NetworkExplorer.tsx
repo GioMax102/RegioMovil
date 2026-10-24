@@ -127,6 +127,18 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
             </button>
           </div>
         )}
+        {selectedRoute && (
+          <div className="network-selected-route" role="status">
+            <strong>
+              {selectedRoute.code} · {selectedRoute.name}
+            </strong>
+            <span>
+              {selectedRoute.segments.length > 1
+                ? `${selectedRoute.segments.length} tramos publicados · continuidad por confirmar`
+                : 'Trazo publicado'}
+            </span>
+          </div>
+        )}
         {network ? (
           routes.length ? (
             expanded ? (

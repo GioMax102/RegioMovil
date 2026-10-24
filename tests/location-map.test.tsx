@@ -385,7 +385,11 @@ test('network context draws only selected services and keeps exploration across 
   assert.ok(svg.querySelector('[data-line="test-bus"]'));
   assert.equal(svg.querySelector('[data-line="test-metro"]'), null);
   const trace = svg.querySelector('[data-line="test-bus"]')!;
-  assert.ok(trace.getAttribute('points')!.split(' ').length <= 200);
+  assert.equal(
+    trace.getAttribute('points')!.split(' ').length,
+    dense.length,
+    'A selected service retains every published vertex.',
+  );
   assert.match(container.textContent!, /trazos publicados/);
   await act(async () => key(svg, 'ArrowRight'));
   const moved = trace.getAttribute('points');

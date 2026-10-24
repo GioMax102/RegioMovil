@@ -27,6 +27,7 @@ import { type MapPosition } from './regionalViewport';
 import { stopEndpoint } from './search';
 import { networkLabel } from './networks';
 import { currentLocation } from './location';
+import { isRegionalCoordinate } from './mapGeography';
 import JourneyDialog from './JourneyDialog';
 import SavedMobilityTrips from './SavedMobilityTrips';
 import SavedTripPreview from './SavedTripPreview';
@@ -79,6 +80,7 @@ export default function MobilityPlanner({
   const [from, setFrom] = useState<MobilityEndpoint | null>(null);
   const [to, setTo] = useState<MobilityEndpoint | null>(null);
   const [picker, setPicker] = useState<'from' | 'to' | null>(null);
+  const [searchPreview, setSearchPreview] = useState<(MapPosition & { name: string }) | null>(null);
   const [mapField, setMapField] = useState<'from' | 'to' | null>(null);
   const [mapDraft, setMapDraft] = useState<MapPosition | null>(null);
   const [mapFocus, setMapFocus] = useState<MapPosition | null>(null);
@@ -98,6 +100,7 @@ export default function MobilityPlanner({
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const [saveDraft, setSaveDraft] = useState<SavedMobilityTrip | null>(null);
   const [saveLabel, setSaveLabel] = useState('Casa');
   const [customLabel, setCustomLabel] = useState('');
@@ -113,6 +116,10 @@ export default function MobilityPlanner({
     const timer = setTimeout(() => setSavedFeedback(''), 4800);
     return () => clearTimeout(timer);
   }, [savedFeedback]);
+  useEffect(() => {
+    setSearchPreview(null);
+    setLocationError('');
+  }, [picker]);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine !== false);
     window.addEventListener('online', update);
@@ -292,15 +299,27 @@ export default function MobilityPlanner({
     setMapField(null);
     setMapDraft(null);
   }
+  function closePicker() {
+    locationGeneration.current++;
+    setLocating(false);
+    setPicker(null);
+    setSearchPreview(null);
+    setLocationError('');
+  }
   async function locate() {
-    if (!online) return;
+    if (!online) return false;
     const generation = ++locationGeneration.current;
     setLocating(true);
     setError('');
+    setLocationError('');
     setNotice('');
     try {
       const endpoint = await currentLocation();
-      if (generation !== locationGeneration.current || !onlineRef.current) return;
+      if (generation !== locationGeneration.current || !onlineRef.current) return false;
+      if (!('lat' in endpoint) || !isRegionalCoordinate([endpoint.lng, endpoint.lat]))
+        throw new Error(
+          'Tu ubicación está fuera de la ZMM. Busca una parada o elige un punto en el mapa.',
+        );
       if ('accuracy' in endpoint && endpoint.accuracy && endpoint.accuracy > 1500)
         throw new Error(
           'La ubicación es demasiado imprecisa. Elige una parada o busca un lugar cercano.',
@@ -310,9 +329,14 @@ export default function MobilityPlanner({
         setNotice(
           `Ubicación obtenida. Precisión aproximada: ${Math.round(endpoint.accuracy ?? 0)} m.`,
         );
+      return true;
     } catch (cause) {
-      if (generation === locationGeneration.current)
-        setError(cause instanceof Error ? cause.message : 'No pudimos leer tu ubicación.');
+      if (generation === locationGeneration.current) {
+        const message = cause instanceof Error ? cause.message : 'No pudimos leer tu ubicación.';
+        setError(message);
+        setLocationError(message);
+      }
+      return false;
     } finally {
       if (generation === locationGeneration.current) setLocating(false);
     }
@@ -412,6 +436,19 @@ export default function MobilityPlanner({
                     <MapPin size={16} />
                     Mapa
                   </button>
+                  <button
+                    type="button"
+                    className="mobility-origin-location-action"
+                    onClick={() => void locate()}
+                    disabled={!online || locating}
+                    aria-describedby="mobility-location-privacy"
+                  >
+                    <LocateFixed size={17} aria-hidden="true" />
+                    {locating ? 'Obteniendo ubicación…' : 'Usar mi ubicación actual'}
+                  </button>
+                  <span className="sr-only" id="mobility-location-privacy">
+                    Obtiene una ubicación puntual. No inicia seguimiento.
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -457,18 +494,6 @@ export default function MobilityPlanner({
                     Mapa
                   </button>
                 </div>
-              </div>
-              <div className="mobility-location-row">
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={locate}
-                  disabled={!online || locating}
-                >
-                  <LocateFixed size={16} />
-                  {locating ? 'Obteniendo ubicación…' : 'Usar mi ubicación'}
-                </button>
-                <small>Sin seguimiento. Sólo se guarda si tú lo eliges.</small>
               </div>
               <fieldset className="mobility-priorities">
                 <legend>Tu prioridad</legend>
@@ -543,19 +568,21 @@ export default function MobilityPlanner({
                   {notice}
                 </p>
               )}
-              <LocationMap
-                network={network}
-                online={online}
-                origin={originPoint}
-                destination={destinationPoint}
-                field={mapField}
-                focus={mapFocus || destinationPoint || originPoint}
-                journey={visibleJourneys[0]}
-                onPick={setMapDraft}
-                onStopSelect={(stop) => {
-                  if (mapField) changeEndpoint(mapField, stopEndpoint(stop));
-                }}
-              />
+              {!picker && (
+                <LocationMap
+                  network={network}
+                  online={online}
+                  origin={originPoint}
+                  destination={destinationPoint}
+                  field={mapField}
+                  focus={mapFocus || destinationPoint || originPoint}
+                  journey={visibleJourneys[0]}
+                  onPick={setMapDraft}
+                  onStopSelect={(stop) => {
+                    if (mapField) changeEndpoint(mapField, stopEndpoint(stop));
+                  }}
+                />
+              )}
               {mapField && (
                 <div className="mobility-pin-confirm" aria-label="Confirma el punto del mapa">
                   <div>
@@ -778,10 +805,24 @@ export default function MobilityPlanner({
           field={picker}
           network={network}
           online={online}
-          onClose={() => setPicker(null)}
+          onClose={closePicker}
+          locating={locating}
+          locationError={locationError}
+          onPreview={setSearchPreview}
+          map={
+            <LocationMap
+              network={network}
+              online={online}
+              origin={originPoint}
+              destination={destinationPoint}
+              focus={searchPreview || mapFocus || destinationPoint || originPoint}
+              preview={searchPreview}
+              inspectStops={false}
+            />
+          }
           onChooseMap={() => chooseOnMap(picker)}
           onRefinePlace={(place) => {
-            setPicker(null);
+            closePicker();
             setMapField(picker);
             const point = { lat: place.lat, lng: place.lng };
             setMapFocus(point);
@@ -791,12 +832,11 @@ export default function MobilityPlanner({
             );
           }}
           onOpenSavedTrip={(trip) => {
-            setPicker(null);
+            closePicker();
             setPreviewSaved(trip);
           }}
-          onUseLocation={() => {
-            setPicker(null);
-            void locate();
+          onUseLocation={async () => {
+            if (await locate()) setPicker(null);
           }}
           onSelect={(endpoint) => {
             changeEndpoint(picker, endpoint);

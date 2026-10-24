@@ -1,0 +1,26 @@
+{
+  "reviewedAt": "2026-10-23",
+  "photos": [
+    {
+      "stationKey": "metro:talleres",
+      "file": "/assets/station-photos/talleres-2007-07f15f134e2f.webp",
+      "title": "Arriving Train Talleres Station",
+      "author": "Omaaar",
+      "taken": "2007-08-15",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Arriving_Train_Talleres_Station.jpg",
+      "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Arriving_Train_Talleres_Station.jpg",
+      "license": "Public domain, released by copyright holder (PD-self)",
+      "licenseDeclaration": "Author grants use for any purpose without conditions unless required by law.",
+      "originalSha1": "30dbe50f4b7fb5df400aa098b692fe9370403975",
+      "localSha256": "07f15f134e2f9f8443e0b590e52efcf845c15fcd0bb8a873e5cb991a7f973fcb",
+      "changes": "Resized to 768x555 and re-encoded as WebP quality 75; no visual content added or removed.",
+      "limitations": "Historical platform photograph. Not street-level imagery, a current entrance reference, or live conditions. Never shown for another station."
+    }
+  ],
+  "streetViewLinks": {
+    "docs": "https://developers.google.com/maps/documentation/urls/get-started",
+    "requiresApiKey": false,
+    "automaticExternalRequests": false,
+    "embeddedStaticApiNotEnabled": "https://developers.google.com/maps/documentation/streetview/usage-and-billing"
+  }
+}

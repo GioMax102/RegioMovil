@@ -43,6 +43,10 @@ import { AppearanceSettings } from './components/AppearanceSettings';
 import { ActionFeedback } from './components/ActionFeedback';
 import { DataPreferencesProvider } from './dataPreferences';
 import DeferredSection from './components/DeferredSection';
+import SectionLoading from './components/SectionLoading';
+import { usePageFocus } from './usePageFocus';
+import StationStreetView from './components/StationStreetView';
+import MetroStationBrowser from './components/MetroStationBrowser';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
@@ -87,6 +91,7 @@ export default function App() {
   const [page, setPage] = useState<Page>(
     !kiosk && params.get('page') === 'stations' ? 'stations' : 'home',
   );
+  const pageTitle = usePageFocus(page);
   const [initialMobilityTrip, setInitialMobilityTrip] = useState<
     | {
         from: MobilityEndpoint;
@@ -213,7 +218,6 @@ export default function App() {
   function openMobilityPlanner() {
     setInitialMobilityTrip(undefined);
     setPage('plan');
-    window.scrollTo({ top: 0 });
   }
   function toggleKiosk() {
     if (lockedKiosk) return;
@@ -253,13 +257,6 @@ export default function App() {
     utterance.rate = 0.9;
     speechSynthesis.speak(utterance);
   }
-  const filteredStations = network.stations.filter(
-    (s) =>
-      (lineFilter === 'all' || s.lineIds.includes(lineFilter)) &&
-      normalize(`${s.name} ${s.municipality} ${s.aliases?.join(' ') ?? ''}`).includes(
-        normalize(stationQuery),
-      ),
-  );
   const forecastPanel = board && (
     <section className="panel forecast-panel">
       <div className="panel-heading">
@@ -406,7 +403,13 @@ export default function App() {
             )}
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} key={page} className="page-transition">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          key={page}
+          className="page-transition"
+          aria-labelledby="page-title"
+        >
           <div className={`page-heading ${page === 'home' || kiosk ? '' : 'compact-heading'}`}>
             <div>
               {(page === 'home' || kiosk) && (
@@ -414,7 +417,7 @@ export default function App() {
                   {kiosk ? 'EN ESTA PARADA' : 'TU CIUDAD, A TU RITMO'}
                 </span>
               )}
-              <h1>
+              <h1 id="page-title" ref={pageTitle} tabIndex={-1}>
                 {kiosk
                   ? currentStation.name
                   : page === 'home'
@@ -435,7 +438,7 @@ export default function App() {
                 </p>
               )}
             </div>
-            {!kiosk && (page === 'home' || (page === 'stations' && networkTab === 'stations')) && (
+            {!kiosk && page === 'home' && (
               <button
                 className="location-button"
                 onClick={() => {
@@ -675,13 +678,7 @@ export default function App() {
           )}
 
           {page === 'plan' && !kiosk && (
-            <Suspense
-              fallback={
-                <p role="status" className="panel empty-small">
-                  Abriendo el planificador…
-                </p>
-              }
-            >
+            <Suspense fallback={<SectionLoading label="Abriendo el planificador…" />}>
               <MobilityPlanner
                 scenario={scenario}
                 initialTrip={initialMobilityTrip}
@@ -717,11 +714,12 @@ export default function App() {
                 role="tab"
                 aria-selected={networkTab === 'stations'}
                 aria-controls="network-stations-panel"
+                aria-label="Estaciones de Metro"
                 tabIndex={networkTab === 'stations' ? 0 : -1}
                 onClick={() => setNetworkTab('stations')}
               >
                 <TrainFront size={17} />
-                Estaciones de Metro
+                Metro
               </button>
               <button
                 id="network-routes-tab"
@@ -732,7 +730,7 @@ export default function App() {
                 onClick={() => setNetworkTab('routes')}
               >
                 <Route size={17} />
-                Rutas y redes<span className="network-new-label">NUEVO</span>
+                Rutas y redes
               </button>
             </div>
           )}
@@ -782,70 +780,16 @@ export default function App() {
               role="tabpanel"
               aria-labelledby="network-stations-tab"
             >
-              <section className="panel station-browser">
-                <div className="panel-heading">
-                  <h2>Explora las estaciones</h2>
-                  <span className="count-pill">{network.stations.length}</span>
-                </div>
-                <label className="search-field">
-                  <MapPin size={18} />
-                  <input
-                    value={stationQuery}
-                    onChange={(e) => setStationQuery(e.target.value)}
-                    placeholder="Nombre o municipio"
-                    aria-label="Buscar estación por nombre o municipio"
-                  />
-                  {stationQuery && (
-                    <button onClick={() => setStationQuery('')} aria-label="Limpiar búsqueda">
-                      <X size={16} />
-                    </button>
-                  )}
-                </label>
-                <div className="line-filters" role="group" aria-label="Filtrar por línea">
-                  {['all', ...network.lines.map((l) => l.id)].map((id) => (
-                    <button
-                      key={id}
-                      aria-pressed={lineFilter === id}
-                      className={lineFilter === id ? 'active' : ''}
-                      onClick={() => setLineFilter(id)}
-                    >
-                      {id === 'all' ? 'Todas' : id.replace('L', 'Línea ')}
-                    </button>
-                  ))}
-                </div>
-                <div className="station-list">
-                  {filteredStations.map((s) => (
-                    <button
-                      key={s.id}
-                      className={`station-list-item ${station === s.id ? 'selected' : ''}`}
-                      onClick={() => setStation(s.id)}
-                    >
-                      <span className="station-circle">
-                        <TrainFront size={17} />
-                      </span>
-                      <span>
-                        <strong>{s.name}</strong>
-                        <small>{s.municipality}</small>
-                      </span>
-                      <span className="station-line-dots">
-                        {s.lineIds.map((id) => (
-                          <i
-                            key={id}
-                            style={{ background: network.lines.find((l) => l.id === id)?.color }}
-                            title={id}
-                          />
-                        ))}
-                      </span>
-                      <ChevronRight size={16} />
-                    </button>
-                  ))}
-                  {!filteredStations.length && (
-                    <p className="empty-small">
-                      No encontramos esa estación. Prueba otro nombre o municipio.
-                    </p>
-                  )}
-                </div>
-              </section>
+              <MetroStationBrowser
+                stations={network.stations}
+                lines={network.lines}
+                selectedStationId={station}
+                query={stationQuery}
+                lineFilter={lineFilter}
+                onQueryChange={setStationQuery}
+                onLineFilterChange={setLineFilter}
+                onSelect={setStation}
+              />
               <div className="station-detail">
                 <section className="station-detail-hero">
                   <span className="eyebrow">TU PARADA, EN CONTEXTO</span>
@@ -873,6 +817,10 @@ export default function App() {
                     ))}
                   </div>
                 </section>
+                <details className="station-context-disclosure">
+                  <summary>Reconocer esta estación</summary>
+                  <StationStreetView key={currentStation.id} station={currentStation} />
+                </details>
                 <div className="station-detail-grid">
                   {forecastPanel}
                   <section className="panel facilities-panel">
@@ -919,13 +867,7 @@ export default function App() {
 
           {page === 'mobility' && (
             <>
-              <Suspense
-                fallback={
-                  <p role="status" className="empty-small">
-                    Abriendo guardados…
-                  </p>
-                }
-              >
+              <Suspense fallback={<SectionLoading label="Abriendo guardados…" />}>
                 <SavedMobilityTrips
                   onStartPlanning={openMobilityPlanner}
                   onPlan={(trip) => {
@@ -1108,7 +1050,6 @@ export default function App() {
               onClick={() => {
                 setPage(item.id);
                 setStationQuery('');
-                window.scrollTo({ top: 0 });
               }}
             >
               <item.icon size={21} />

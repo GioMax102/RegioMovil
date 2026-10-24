@@ -2,6 +2,7 @@ import test, { after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import React from 'react';
+import { registerHooks } from 'node:module';
 import type { MobilityEndpoint, MobilityNetwork, SavedMobilityTrip } from '../src/mobility/types';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   url: 'http://localhost/',
@@ -41,6 +42,13 @@ dom.window.HTMLDialogElement.prototype.close = function () {
 const { render, screen, within, cleanup, act, fireEvent, waitFor } =
   await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
+const styles = registerHooks({
+  load(url, context, nextLoad) {
+    return url.endsWith('.css')
+      ? { format: 'module', source: '', shortCircuit: true }
+      : nextLoad(url, context);
+  },
+});
 const { default: EndpointPicker } = await import('../src/mobility/EndpointPicker');
 const user = userEvent.setup({ document: dom.window.document });
 const originalFetch = globalThis.fetch;
@@ -50,6 +58,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 after(() => {
+  styles.deregister();
   for (const [name, descriptor] of previous)
     descriptor
       ? Object.defineProperty(globalThis, name, descriptor)

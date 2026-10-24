@@ -17,6 +17,7 @@ import { loadRoutePack, loadTransitCatalog, network } from '../api';
 import type { RoutePack, TransitCatalogData, TransitRoute } from '../types';
 import { Dialog } from './Primitives';
 import NetworkMap from './NetworkMap';
+import ServiceIdentity from './ServiceIdentity';
 import './transit-catalog.css';
 
 export const serviceColors: Record<string, string> = {
@@ -333,6 +334,13 @@ function ServiceDetails({
           Fecha del dato: {dateLabel(route.statusAsOf)}. Consulta la fuente para confirmar cambios.
         </p>
       </div>
+      <ServiceIdentity
+        networkId={route.networkId}
+        routeId={route.id}
+        code={route.code}
+        mode={route.mode}
+        status={route.status}
+      />
       {(route.from || route.to) && (
         <div className="service-endpoints">
           <span>

@@ -105,6 +105,22 @@
 .network-show-all {
   margin-top: 16px;
 }
+.network-selected-route {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-inline-start: 3px solid var(--green);
+  border-radius: 4px 12px 12px 4px;
+  background: var(--surface);
+  color: var(--dark);
+  line-height: 1.5;
+  font-size: 0.88rem;
+}
+.network-selected-route > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
 .network-coverage-note {
   display: flex;
   gap: 7px;

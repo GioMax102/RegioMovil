@@ -90,7 +90,12 @@ test('journey detail retains travel facts, uncertainty and relevant provenance i
     doc.querySelector('ol')!.textContent!,
     /Ruta 130.*Origen.*Destino.*Sentido por confirmar.*27 min.*12 tramos/,
   );
-  assert.match(doc.querySelector('details')!.textContent!, /orden inferido del mapa/);
+  assert.match(
+    doc.querySelector('.journey-detail-sources')!.textContent!,
+    /orden inferido del mapa/,
+  );
+  assert.equal(doc.querySelector('.journey-service-details summary')!.textContent, 'Unidad y pago');
+  assert.ok(doc.querySelector('.service-payment-chip.unconfirmed'));
   assert.equal(
     doc.querySelector('a[href="https://example.org/mapa"]')?.textContent,
     'Mapa de la ruta',

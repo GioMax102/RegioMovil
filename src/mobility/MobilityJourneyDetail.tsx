@@ -12,6 +12,7 @@ import MobilityMap from './MobilityMap';
 import { networkLabel } from './networks';
 import { presentJourneySteps } from './journeyPresentation';
 import type { MobilityJourney, MobilityNetwork } from './types';
+import ServiceIdentity from '../components/ServiceIdentity';
 import './journeyDetail.css';
 
 const ActiveJourney = lazy(() => import('./ActiveJourney'));
@@ -139,6 +140,26 @@ export default function MobilityJourneyDetail({
                 </div>
                 {step.mode === 'bus' && step.directionVerified !== true && (
                   <span className="journey-detail-caution">Sentido por confirmar</span>
+                )}
+                {step.mode !== 'walk' && (
+                  <details className="journey-service-details">
+                    <summary>Unidad y pago</summary>
+                    <ServiceIdentity
+                      key={step.lineId}
+                      networkId={
+                        step.networkId ??
+                        network.routes.find((route) => route.id === step.lineId)?.networkId ??
+                        (step.mode === 'metro' ? 'metrorrey' : 'unknown')
+                      }
+                      routeId={step.lineId}
+                      code={
+                        step.code ??
+                        network.routes.find((route) => route.id === step.lineId)?.code ??
+                        step.lineName
+                      }
+                      mode={step.mode}
+                    />
+                  </details>
                 )}
               </div>
               <div className="journey-detail-step-meta">

@@ -134,8 +134,11 @@
   gap: 7px;
   font-size: 14px;
   font-weight: 650;
-  color: var(--service-color);
+  color: var(--dark);
   line-height: 1.6;
+}
+.service-route-code > svg {
+  color: var(--service-color);
 }
 .service-status {
   font-size: 10px;

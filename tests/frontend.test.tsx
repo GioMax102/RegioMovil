@@ -199,6 +199,45 @@ async function closeDialog() {
     within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar ventana' }),
   );
 }
+
+test('screen changes from home, sidebar and mobile consistently reset scroll and focus the new heading', async () => {
+  await mount();
+  const originalScrollTo = window.scrollTo;
+  const scrolls: ScrollToOptions[] = [];
+  window.scrollTo = ((options: ScrollToOptions) => scrolls.push(options)) as typeof window.scrollTo;
+  try {
+    await user.click(screen.getByRole('button', { name: /Explorar la red Metro/ }));
+    const title = screen.getByRole('heading', { name: 'Rutas y redes.', exact: true });
+    assert.equal(document.activeElement, title);
+    assert.equal(screen.getByRole('main').getAttribute('aria-labelledby'), title.id);
+    assert.deepEqual(scrolls, [{ top: 0, left: 0, behavior: 'auto' }]);
+    // A module finishing its download must not take focus a second time.
+    await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
+    const search = screen.getByRole('textbox', { name: 'Buscar estación por nombre o municipio' });
+    await user.click(search);
+    await user.type(search, 'Anahuac');
+    assert.equal(document.activeElement, search);
+    assert.equal(scrolls.length, 1);
+    await user.click(mainNavigation().getByRole('button', { name: 'Mi camino', exact: true }));
+    assert.equal(
+      document.activeElement,
+      screen.getByRole('heading', { name: 'Muévete con más calma.' }),
+    );
+    await user.click(
+      within(screen.getByRole('navigation', { name: 'Navegación móvil' })).getByRole('button', {
+        name: 'Red',
+        exact: true,
+      }),
+    );
+    assert.equal(
+      document.activeElement,
+      screen.getByRole('heading', { name: 'Estaciones.', exact: true }),
+    );
+    assert.equal(scrolls.length, 3);
+  } finally {
+    window.scrollTo = originalScrollTo;
+  }
+});
 // Unified place search, routing, save and offline regressions live in mobility-frontend.test.tsx.
 
 test('initial board comes from the real API and unit details explain simulation and unknown accessibility', async () => {
@@ -527,16 +566,19 @@ test('opening the current station from home resets a previous line filter', asyn
     filters.getByRole('button', { name: 'Línea 1', exact: true }).getAttribute('aria-pressed'),
     'true',
   );
-  assert.equal(screen.queryByRole('button', { name: 'Padre Mier Monterrey', exact: true }), null);
+  assert.equal(
+    screen.queryByRole('button', { name: 'Padre Mier Monterrey Línea 2', exact: true }),
+    null,
+  );
   await navigate('Mi camino');
-  await user.click(screen.getByRole('button', { name: 'Ver estación y pronóstico' }));
+  await user.click(screen.getByRole('button', { name: 'Ver estación', exact: true }));
   assert.equal(
     within(screen.getByRole('group', { name: 'Filtrar por línea' }))
       .getByRole('button', { name: 'Todas' })
       .getAttribute('aria-pressed'),
     'true',
   );
-  assert.ok(screen.getByRole('button', { name: 'Padre Mier Monterrey', exact: true }));
+  assert.ok(screen.getByRole('button', { name: 'Padre Mier Monterrey Línea 2', exact: true }));
 });
 
 test('a locked public kiosk never reads personal station, journeys or favorites and has no exit control', async () => {

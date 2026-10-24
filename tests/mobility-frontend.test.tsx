@@ -85,6 +85,7 @@ let offline = false;
 Object.defineProperty(dom.window.navigator, 'onLine', { configurable: true, get: () => !offline });
 let locationCalls = 0;
 let holdGps = false;
+let denyGps = false;
 let pendingGps: (() => void) | null = null;
 const gpsPoint = { latitude: 25.614502, longitude: -100.275917, accuracy: 24 };
 Object.defineProperty(dom.window.navigator, 'geolocation', {
@@ -92,13 +93,15 @@ Object.defineProperty(dom.window.navigator, 'geolocation', {
   value: {
     getCurrentPosition(
       success: PositionCallback,
-      _error: PositionErrorCallback,
+      error: PositionErrorCallback,
       options: PositionOptions,
     ) {
       locationCalls++;
       assert.equal(options.enableHighAccuracy, true);
       const reply = () =>
-        success({ coords: gpsPoint, timestamp: Date.now() } as GeolocationPosition);
+        denyGps
+          ? error({ code: 1 } as GeolocationPositionError)
+          : success({ coords: gpsPoint, timestamp: Date.now() } as GeolocationPosition);
       if (holdGps) pendingGps = reply;
       else queueMicrotask(reply);
     },
@@ -285,6 +288,7 @@ beforeEach(() => {
   offline = false;
   locationCalls = 0;
   holdGps = false;
+  denyGps = false;
   pendingGps = null;
   dom.window.localStorage.clear();
   dom.window.history.replaceState({}, '', '/');
@@ -622,7 +626,7 @@ test('foreground GPS remains in memory until explicit labelled offline saving an
     'Opening the experiment must not request permission or track location.',
   );
   await chooseOfficial('Destino', 'Universidad', /^Universidad L2/);
-  await user.click(within(model).getByRole('button', { name: 'Usar mi ubicación' }));
+  await user.click(within(model).getByRole('button', { name: 'Usar mi ubicación actual' }));
   await within(model).findByRole('button', { name: 'Origen: Mi ubicación' });
   assert.equal(locationCalls, 1);
   await user.click(within(model).getByRole('button', { name: 'Buscar rutas' }));
@@ -684,6 +688,77 @@ test('foreground GPS remains in memory until explicit labelled offline saving an
   );
 });
 
+test('place search previews its result on the only map without confirming a destination', async () => {
+  const model = await mountModel();
+  await user.click(within(model).getByRole('button', { name: /^Destino:/ }));
+  const picker = screen.getByRole('dialog', { name: '¿A dónde vas?' });
+  const mapRegion = within(picker).getByRole('region', { name: 'Mapa de la búsqueda' });
+  assert.equal(
+    model.querySelectorAll('.location-map').length,
+    1,
+    'Search must reuse one map surface.',
+  );
+  const search = within(picker).getByRole('searchbox', { name: 'Buscar destino' });
+  await user.type(search, 'Ciudad Universitaria UANL');
+  await within(mapRegion).findByRole('img', { name: /Vista previa de Ciudad Universitaria UANL/ });
+  assert.ok(
+    within(model).getByRole('button', { name: 'Destino: Elige un lugar, dirección o parada' }),
+  );
+  assert.equal(plannedRequests.length, 0);
+  assert.equal(
+    document.activeElement,
+    search,
+    'Updating map context must not dismiss the keyboard.',
+  );
+  const places = within(picker).getByRole('region', { name: 'Lugares y direcciones' });
+  await user.click(within(places).getByRole('button', { name: /Ciudad Universitaria UANL/ }));
+  assert.equal(screen.queryByRole('dialog'), null);
+  assert.ok(within(model).getByRole('button', { name: 'Destino: Ciudad Universitaria UANL' }));
+  assert.equal(model.querySelectorAll('.location-map').length, 1);
+  assert.equal(model.querySelector('.location-search-preview'), null);
+});
+
+test('denied GPS keeps the origin picker open and offers manual search without retrying automatically', async () => {
+  const model = await mountModel();
+  denyGps = true;
+  await user.click(within(model).getByRole('button', { name: /^Origen:/ }));
+  const picker = screen.getByRole('dialog', { name: '¿Desde dónde sales?' });
+  await user.click(within(picker).getByRole('button', { name: 'Usar mi ubicación actual' }));
+  assert.match((await within(picker).findByRole('alert')).textContent!, /No se concedió acceso/);
+  assert.equal(locationCalls, 1);
+  assert.equal(
+    (within(picker).getByRole('button', { name: 'Usar mi ubicación actual' }) as HTMLButtonElement)
+      .disabled,
+    false,
+  );
+  const search = within(picker).getByRole('searchbox', { name: 'Buscar origen' });
+  await user.type(search, 'Universidad');
+  const stops = within(picker).getByRole('region', { name: 'Paradas y estaciones' });
+  await user.click(within(stops).getByRole('button', { name: /^Universidad L2/ }));
+  assert.equal(screen.queryByRole('dialog'), null);
+  assert.ok(within(model).getByRole('button', { name: 'Origen: Universidad' }));
+  assert.equal(locationCalls, 1);
+});
+
+test('closing the origin picker invalidates a late GPS permission response', async () => {
+  const model = await mountModel();
+  holdGps = true;
+  await user.click(within(model).getByRole('button', { name: /^Origen:/ }));
+  const picker = screen.getByRole('dialog', { name: '¿Desde dónde sales?' });
+  await user.click(within(picker).getByRole('button', { name: 'Usar mi ubicación actual' }));
+  assert.ok(pendingGps);
+  assert.equal(
+    (within(picker).getByRole('button', { name: 'Obteniendo ubicación…' }) as HTMLButtonElement)
+      .disabled,
+    true,
+  );
+  await user.click(within(picker).getByRole('button', { name: 'Cerrar ventana' }));
+  await act(async () => pendingGps?.());
+  assert.ok(within(model).getByRole('button', { name: 'Origen: Padre Mier' }));
+  assert.equal(screen.queryByRole('dialog'), null);
+  assert.equal(locationCalls, 1);
+});
+
 test('a cached model works offline with official bus and Metro stops while GPS and online place search are unavailable', async () => {
   await mountModel();
   await waitFor(() => assert.ok(cachedResponses.has(cacheKey('/mobility-network.json'))));
@@ -693,7 +768,7 @@ test('a cached model works offline with official bus and Metro stops while GPS a
   const model = await mountModel();
   assert.ok(within(model).getByText('Sin conexión · sólo puntos oficiales'));
   assert.equal(
-    (within(model).getByRole('button', { name: 'Usar mi ubicación' }) as HTMLButtonElement)
+    (within(model).getByRole('button', { name: 'Usar mi ubicación actual' }) as HTMLButtonElement)
       .disabled,
     true,
   );
@@ -811,7 +886,7 @@ test('Las Estaciones to the real Tec campus resolves both references through the
 test('choosing a map pin cancels a pending GPS reply and gives keyboard focus to the map', async () => {
   const model = await mountModel();
   holdGps = true;
-  await user.click(within(model).getByRole('button', { name: 'Usar mi ubicación' }));
+  await user.click(within(model).getByRole('button', { name: 'Usar mi ubicación actual' }));
   assert.ok(pendingGps);
   await user.click(within(model).getByRole('button', { name: /^Destino:/ }));
   await user.click(

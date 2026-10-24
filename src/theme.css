@@ -1,0 +1,48 @@
+/* Sierra green, warm limestone and sky blue. Text colors are independent of
+   transport line colors: a route's paint color is never its only identifier. */
+:root {
+  --green: #00745b;
+  --dark: #173c35;
+  --muted: #526860;
+  --line: #d5e3dd;
+  --cream: #f4f7f4;
+  --soft: #e4f3ea;
+  --white: #ffffff;
+  --surface: #f8faf7;
+  --yellow: #f2bd51;
+  --app-primary: #006c54;
+  --on-primary: #ffffff;
+  --focus: #235d85;
+  --accent-blue: #235d85;
+  --accent-blue-surface: #eaf2f8;
+  --accent-amber: #835207;
+  --accent-amber-surface: #fff2d7;
+  --app-warning-text: #835207;
+  --app-warning-surface: #fff2d7;
+  --app-danger-text: #9a3e31;
+  --app-danger-surface: #fff1e9;
+  --surface-grain: linear-gradient(135deg, #00745b05, transparent 60%);
+  --surface-shadow: 0 4px 16px #173c350b;
+}
+:root[data-theme='dark'] {
+  --green: #80dfb7;
+  --dark: #e7f5ed;
+  --muted: #adc6bc;
+  --line: #405d52;
+  --cream: #101f1d;
+  --soft: #27483b;
+  --white: #192e28;
+  --surface: #203630;
+  --app-primary: #096d54;
+  --focus: #a8d4ff;
+  --accent-blue: #a8d4ff;
+  --accent-blue-surface: #203b4e;
+  --accent-amber: #f5cc82;
+  --accent-amber-surface: #3b301c;
+  --app-warning-text: #f5cc82;
+  --app-warning-surface: #3b301c;
+  --app-danger-text: #ffb8a7;
+  --app-danger-surface: #422c25;
+  --surface-grain: linear-gradient(135deg, #80dfb706, transparent 60%);
+  --surface-shadow: 0 4px 16px #00000020;
+}

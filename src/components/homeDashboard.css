@@ -1,3 +1,5 @@
+@import './arrivalCard.css';
+
 .home-dashboard {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
@@ -21,6 +23,15 @@
   background: linear-gradient(125deg, var(--surface), var(--white));
   text-align: left;
   color: var(--dark);
+  box-shadow: var(--surface-shadow);
+}
+.home-shortcuts button:first-child .home-shortcut-icon {
+  color: var(--accent-amber, var(--app-warning-text));
+  background: var(--accent-amber-surface, var(--app-warning-surface));
+}
+.home-shortcuts button:last-child .home-shortcut-icon {
+  color: var(--accent-blue, var(--green));
+  background: var(--accent-blue-surface, var(--soft));
 }
 .home-shortcuts button > span:not(.home-shortcut-icon) {
   flex: 1;
@@ -57,6 +68,14 @@
   min-width: 0;
   padding: 24px;
 }
+.home-departure {
+  box-shadow: var(--surface-shadow);
+  border-top: 3px solid var(--accent-blue, var(--green));
+}
+.home-departure .arrival-list {
+  padding: 0;
+  gap: 14px;
+}
 .home-dashboard .panel-heading {
   padding: 0;
   margin-bottom: 17px;
@@ -68,7 +87,7 @@
   margin-bottom: 0;
 }
 .home-dashboard .eyebrow {
-  font-size: 0.64rem;
+  font-size: 0.69rem;
   line-height: 1.5;
 }
 .home-dashboard svg {
@@ -129,6 +148,7 @@
   position: relative;
   isolation: isolate;
   background: linear-gradient(145deg, var(--surface), var(--white));
+  border-top: 3px solid var(--green);
 }
 .home-outlook > :not(.home-mountain-lines) {
   position: relative;
@@ -191,6 +211,9 @@
 }
 .high-contrast :is(.home-shortcuts button, .home-quiet-hour) {
   border-color: var(--dark);
+}
+.high-contrast .home-shortcuts button {
+  box-shadow: none;
 }
 @media (max-width: 760px) {
   .home-dashboard {

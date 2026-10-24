@@ -1,0 +1,122 @@
+.station-street-view {
+  padding: 20px;
+  margin-top: 18px;
+  min-width: 0;
+}
+.station-street-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.station-street-heading > span {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-blue-surface, var(--soft));
+  color: var(--accent-blue, var(--green));
+}
+.station-street-heading h3 {
+  margin: 0;
+  color: var(--dark);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.station-street-heading p,
+.station-photo-unavailable {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.station-street-heading p {
+  margin: 2px 0 0;
+}
+.station-photo-unavailable {
+  margin: 12px 0;
+}
+.station-archive-photo {
+  margin: 15px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.station-archive-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 250px;
+  object-fit: contain;
+}
+.station-archive-photo figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 11px 13px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.station-archive-photo figcaption strong {
+  font-weight: 650;
+  color: var(--dark);
+}
+.station-archive-photo figcaption a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  color: var(--green);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.station-street-action > a {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 48px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--green);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.station-street-action > a span {
+  flex: 1;
+  min-width: 0;
+}
+.station-street-action svg {
+  flex-shrink: 0;
+}
+.station-street-action small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.station-street-view a:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
+.high-contrast .station-street-view a {
+  color: var(--dark);
+  text-decoration: underline;
+}
+.high-contrast .station-street-action > a {
+  border-color: var(--dark);
+}
+@media (max-width: 430px) {
+  .station-street-view {
+    padding: 16px;
+  }
+}

@@ -15,25 +15,16 @@
 }
 :root {
   font-family: 'Inter Variable', sans-serif;
-  color: #143e35;
-  background: #f1f8f7;
+  color: var(--dark);
+  background: var(--cream);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --green: #067850;
-  --dark: #103e36;
-  --muted: #536f68;
-  --line: #dcebe6;
-  --cream: #f1f8f7;
-  --soft: #ddf5e9;
-  --white: #fff;
-  --surface: #f7fbfa;
-  --yellow: #f2bd51;
   --app-safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   --app-safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
   --app-safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --app-safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
-  font-size: 14px;
+  font-size: 15px;
 }
 * {
   box-sizing: border-box;
@@ -73,7 +64,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #1274ba;
+  outline: 3px solid var(--focus);
   outline-offset: 4px;
 }
 button svg,

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { X, Users, TrainFront, Snowflake, CircleHelp } from 'lucide-react';
+import { X, Users, TrainFront, Snowflake, CircleHelp, ChevronRight, Clock3 } from 'lucide-react';
 import { network } from '../api';
 import type { Arrival } from '../types';
 
@@ -103,7 +103,7 @@ export function LineBadge({ id }: { id: string }) {
 export function Occupancy({ value, label }: { value: number; label?: string }) {
   return (
     <span className={`occupancy ${value >= 75 ? 'high' : value >= 45 ? 'medium' : 'low'}`}>
-      <Users size={14} />
+      <Users size={14} aria-hidden="true" />
       {label ??
         (value >= 75 ? 'Alta afluencia' : value >= 45 ? 'Afluencia media' : 'Poca afluencia')}
     </span>
@@ -112,35 +112,61 @@ export function Occupancy({ value, label }: { value: number; label?: string }) {
 export function ArrivalCard({ arrival, onDetails }: { arrival: Arrival; onDetails: () => void }) {
   return (
     <button
-      className="arrival-card"
+      className="arrival-card arrival-card-refined"
+      type="button"
       onClick={onDetails}
       aria-label={`${arrival.lineName} hacia ${arrival.direction}, llegada simulada en ${arrival.etaRange[0]} a ${arrival.etaRange[1]} minutos. Afluencia simulada ${arrival.occupancyLabel}. Aire acondicionado simulado: ${arrival.climate === 'working' ? 'funcionando' : arrival.climate === 'unavailable' ? 'no disponible' : 'sin información'}. Ver detalles.`}
     >
       <div className="arrival-top">
-        <span className="train-icon">
-          <TrainFront size={19} />
+        <span className="train-icon" aria-hidden="true">
+          <TrainFront size={21} />
         </span>
         <div>
           <span className="arrival-badges">
             <LineBadge id={arrival.lineId} />
             <small>Simulación</small>
           </span>
-          <h3>Hacia {arrival.direction}</h3>
+          <h3>
+            <span className="arrival-direction-label">Hacia</span> {arrival.direction}
+          </h3>
         </div>
+        <ChevronRight className="arrival-details-arrow" size={20} aria-hidden="true" />
+      </div>
+      <div className="arrival-estimate">
+        <span className="arrival-estimate-label">
+          <Clock3 size={16} aria-hidden="true" /> Llegada estimada
+        </span>
         <span className="arrival-time">
-          <strong>{Math.round(arrival.etaMinutes)}</strong>
-          <small>min aprox.</small>
+          <strong>
+            {arrival.etaRange[0]}–{arrival.etaRange[1]}
+          </strong>
+          <small>min</small>
         </span>
       </div>
       <div className="arrival-bottom">
-        <Occupancy value={arrival.occupancy} />
-        <span className="climate">
-          {arrival.climate === 'working' ? <Snowflake size={14} /> : <CircleHelp size={14} />}{' '}
-          {arrival.climate === 'working'
-            ? 'Con clima'
-            : arrival.climate === 'unavailable'
-              ? 'Sin clima'
-              : 'Clima sin dato'}
+        <span
+          className={`arrival-metric arrival-crowding ${arrival.occupancy >= 75 ? 'is-busy' : ''}`}
+        >
+          <span className="arrival-metric-label">Afluencia</span>
+          <Occupancy
+            value={arrival.occupancy}
+            label={arrival.occupancy >= 75 ? 'Alta' : arrival.occupancy >= 45 ? 'Media' : 'Baja'}
+          />
+        </span>
+        <span className="arrival-metric arrival-cooling">
+          <span className="arrival-metric-label">Aire acondicionado</span>
+          <span className="climate">
+            {arrival.climate === 'working' ? (
+              <Snowflake size={15} aria-hidden="true" />
+            ) : (
+              <CircleHelp size={15} aria-hidden="true" />
+            )}
+            {arrival.climate === 'working'
+              ? 'Disponible'
+              : arrival.climate === 'unavailable'
+                ? 'No disponible'
+                : 'Sin información'}
+          </span>
         </span>
       </div>
     </button>
