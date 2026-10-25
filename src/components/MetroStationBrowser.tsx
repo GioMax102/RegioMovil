@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Check, ChevronRight, LocateFixed, Search, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, LocateFixed, Search, X } from 'lucide-react';
 import type { Line, Station } from '../types';
 import './metroStationBrowser.css';
 
@@ -150,13 +150,14 @@ export default function MetroStationBrowser({
               setExpanded(true);
             }}
           >
-            <option value="all">Metro</option>
+            <option value="all">Línea</option>
             {lines.map((line) => (
               <option key={line.id} value={line.id}>
                 {line.name}
               </option>
             ))}
           </select>
+          <ChevronDown size={16} aria-hidden="true" />
         </label>
         <div className="metro-browser-search">
           <Search size={18} aria-hidden="true" />

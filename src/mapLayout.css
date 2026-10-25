@@ -17,6 +17,79 @@ summary:focus-visible {
 .topbar {
   background: var(--white);
 }
+.context-page .workspace {
+  position: relative;
+}
+.context-page .context-topbar {
+  position: absolute;
+  inset: 10px 16px auto auto;
+  z-index: 24;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.context-app-menu {
+  position: relative;
+}
+.context-app-menu > summary {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--dark);
+  box-shadow: var(--surface-shadow);
+}
+.context-app-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.context-alert-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.context-app-menu > div {
+  position: absolute;
+  inset: 50px 0 auto auto;
+  width: min(240px, calc(100vw - 32px));
+  display: grid;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+  color: var(--dark);
+  box-shadow: var(--surface-shadow);
+}
+.context-app-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  min-height: 44px;
+  text-align: start;
+}
+.context-app-menu [role='status'] {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.context-page .page-heading {
+  padding-inline-end: 52px;
+}
+.context-page .view-plan .location-map-controls {
+  inset-block-start: 66px;
+}
 .panel {
   background: var(--white);
 }
@@ -49,8 +122,10 @@ summary:focus-visible {
 .map-page:has(.map-experience[data-keyboard='true']) .mobile-nav {
   display: none;
 }
-.map-page main > .network-tabs {
-  margin: 0;
+.context-page main > .network-section-tabs {
+  margin: 0 0 10px;
+  padding: 10px 66px 10px 16px;
+  min-height: 64px;
 }
 .page-heading h1 {
   font-size: clamp(1.4rem, 3vw, 1.85rem);
@@ -67,7 +142,7 @@ summary:focus-visible {
   border-color: var(--line);
 }
 .home-plan-cta {
-  background: var(--app-primary);
+  background-color: var(--app-primary);
   color: var(--on-primary);
 }
 .home-plan-cta .soft-icon {
@@ -91,8 +166,8 @@ summary:focus-visible {
 @media (max-width: 760px) {
   .topbar {
     flex-wrap: nowrap;
-    min-block-size: calc(64px + var(--app-safe-top));
-    padding: calc(8px + var(--app-safe-top)) 16px 8px;
+    min-block-size: 60px;
+    padding: 6px 16px;
     gap: 8px;
   }
   .topbar .brand small {

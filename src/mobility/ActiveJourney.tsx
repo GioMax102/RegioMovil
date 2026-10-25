@@ -11,6 +11,8 @@ import {
   SignalLow,
 } from 'lucide-react';
 import LocationMap from './LocationMap';
+import TransferStationActions from './TransferStationActions';
+import { journeyTransfers } from './transferStations';
 import { watchLocation } from './location';
 import {
   advanceGuidance,
@@ -56,6 +58,9 @@ export default function ActiveJourney({
     typeof window.SpeechSynthesisUtterance === 'function';
   const instruction = describeGuidance(route, state);
   const leg = route.legs[state.stepIndex];
+  const transfer = journeyTransfers(journey.steps).find(
+    (point) => state.stepIndex >= point.afterStepIndex && state.stepIndex < point.beforeStepIndex,
+  );
   // Stable between GPS samples: fit the current leg when a step changes,
   // while the original route remains responsible for guidance and total progress.
   const mapJourney = useMemo(
@@ -271,8 +276,8 @@ export default function ActiveJourney({
       >
         <span className="active-journey-step">
           {state.completed
-            ? 'TRAYECTO COMPLETADO'
-            : `PASO ${state.stepIndex + 1} DE ${route.legs.length}`}
+            ? 'Trayecto completado'
+            : `Paso ${state.stepIndex + 1} de ${route.legs.length}`}
           {leg && !state.completed && (
             <span>
               {' · '}
@@ -300,6 +305,9 @@ export default function ActiveJourney({
               )}
             </span>
           </p>
+        )}
+        {transfer && !state.completed && (
+          <TransferStationActions transfer={transfer} network={network} />
         )}
         {positionHint && <p className="active-journey-position-hint">{positionHint}</p>}
         {!state.completed &&

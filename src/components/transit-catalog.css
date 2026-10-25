@@ -432,3 +432,16 @@
     height: min(45dvh, 380px);
   }
 }
+
+.service-pending-source {
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.service-pending-source a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--green);
+  font-weight: 650;
+}

@@ -1,6 +1,6 @@
-import { Bookmark, Clock3, Info, Accessibility } from 'lucide-react';
+import { Clock3, Info, Accessibility } from 'lucide-react';
 import { ArrivalCard, Forecast, LineBadge } from './Primitives';
-import StationStreetView from './StationStreetView';
+import StationActions from './StationActions';
 import {
   getMetroServiceWindow,
   getNextMetroOpening,
@@ -38,18 +38,13 @@ export default function MetroStationDetail({
             ))}
           </span>
         </div>
-        <div className="metro-station-actions">
-          <StationStreetView key={station.id} station={station} compact />
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Guardar esta estación"
-            aria-pressed={saved}
-            onClick={onSave}
-          >
-            <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" />
-          </button>
-        </div>
+        <StationActions
+          key={station.id}
+          station={{ ...station, kind: 'metro', stopId: `metro:${station.id}` }}
+          saved={saved}
+          onSave={onSave}
+          saveLabel="Guardar esta estación"
+        />
       </header>
       {!open && (
         <p className="metro-closed">

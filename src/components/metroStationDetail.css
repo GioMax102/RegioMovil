@@ -19,7 +19,7 @@
   position: sticky;
   top: 4.4rem;
   z-index: 3;
-  padding: 10px 8px;
+  padding: 14px 12px;
   border-bottom: 1px solid var(--line);
   background: var(--white);
 }
@@ -40,16 +40,7 @@
 .metro-station-title .line-badge {
   font-size: 0.7rem;
 }
-.metro-station-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: none;
-}
-.metro-station-actions .icon-button {
-  min-width: 44px;
-  min-height: 44px;
-}
+
 .metro-station-outlook {
   padding: 14px 12px 8px;
   min-width: 0;
@@ -158,21 +149,22 @@
 .metro-facilities p {
   margin: 0 0 8px;
 }
-.metro-arrivals {
-  padding: 14px 12px;
+.station-arrivals.metro-arrivals {
+  margin-top: 4px;
+  padding: 18px 16px 12px;
+}
+.metro-arrivals > .metro-section-title {
+  margin-bottom: 16px;
 }
 .metro-arrivals .arrival-card + .arrival-card {
   margin-top: 10px;
 }
 @media (max-width: 400px) {
   .metro-station-heading {
-    padding-inline: 0;
+    padding-inline: 8px;
     gap: 5px;
   }
   .metro-station-title h2 {
     font-size: 1.05rem;
-  }
-  .metro-station-actions {
-    gap: 0;
   }
 }

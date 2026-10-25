@@ -5,6 +5,7 @@
   display: grid;
   grid-template-rows: minmax(0, 1fr) 44px;
   isolation: isolate;
+  overflow: hidden;
 }
 .network-overview {
   min-width: 0;
@@ -231,46 +232,72 @@
   color: var(--dark);
 }
 .network-catalog-sheet {
-  grid-row: 2;
-  margin: 0;
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 64px);
   min-width: 0;
-  border-top: 1px solid var(--line);
-  background: var(--white);
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px 20px 0 0;
+  background: var(--surface);
   z-index: 5;
+  transform: translateY(calc(100% - 44px));
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 220ms;
 }
-.network-catalog-sheet > summary {
+.network-catalog-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 44px;
+  width: 100%;
   min-height: 44px;
   padding: 10px 18px;
-  list-style: none;
+  border: 0;
+  border-radius: inherit;
+  background: var(--surface);
+  color: var(--dark);
   cursor: pointer;
+  font: inherit;
   font-weight: 700;
   font-size: 0.85rem;
 }
-.network-catalog-sheet > summary::-webkit-details-marker {
-  display: none;
-}
-.network-catalog-sheet[open] {
-  position: absolute;
-  inset: auto 0 0;
-  max-height: calc(100% - 72px);
-  border-radius: 20px 20px 0 0;
-  border: 1px solid var(--line);
+.network-catalog-sheet[data-open='true'] {
+  transform: translateY(0);
   box-shadow: 0 -8px 30px #142d361c;
 }
-.network-catalog-sheet[open] > summary {
+.network-catalog-sheet[data-open='true'] > .network-catalog-toggle {
   border-bottom: 1px solid var(--line);
 }
-.network-catalog-sheet[open] > summary svg {
-  transform: rotate(90deg);
-}
-.network-catalog-sheet > .service-catalog {
+.network-catalog-content {
+  flex: 1;
+  min-height: 0;
   padding: 0 18px 18px;
-  max-height: calc(var(--map-workspace-height, 100dvh) - 118px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  visibility: visible;
+}
+.network-catalog-sheet[data-open='false'] > .network-catalog-content {
+  visibility: hidden;
+  transition: visibility 0s 220ms;
+}
+.network-catalog-toggle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+.network-search-results small,
+.network-selected-route small {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .network-catalog-sheet,
+  .network-catalog-sheet[data-open] > .network-catalog-content {
+    transition: none;
+  }
 }
 .network-explorer summary:focus-visible {
   outline: 3px solid var(--focus);

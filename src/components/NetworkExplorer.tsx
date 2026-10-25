@@ -1,10 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Info, Search, X } from 'lucide-react';
+import { loadTransitCatalog } from '../api';
+import type { TransitCatalogData } from '../types';
 import { loadMobilityNetwork } from '../mobility/api';
 import LocationMap from '../mobility/LocationMap';
 import type { MobilityNetwork } from '../mobility/types';
 import { Dialog } from './Primitives';
-import TransitCatalog from './TransitCatalog';
+import TransitCatalog, { serviceColors } from './TransitCatalog';
 import useMapWorkspaceHeight from '../useMapWorkspaceHeight';
 import './networkExplorer.css';
 
@@ -26,12 +28,27 @@ const normalize = (text: string) =>
 
 export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: string) => void }) {
   const [network, setNetwork] = useState<MobilityNetwork | null>(null);
+  const [catalog, setCatalog] = useState<TransitCatalogData | null>(null);
+  const [catalogOffline, setCatalogOffline] = useState(false);
+  const [catalogError, setCatalogError] = useState('');
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const catalogPanel = useRef<HTMLDivElement>(null);
+  const catalogToggle = useRef<HTMLButtonElement>(null);
+  const routeSearch = useRef<HTMLInputElement>(null);
+  const catalogId = useId();
   const [networkId, setNetworkId] = useState('all');
   const [routeId, setRouteId] = useState('');
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [activeResult, setActiveResult] = useState(-1);
   const [detailId, setDetailId] = useState('');
+  const previousDetailId = useRef('');
+  useEffect(() => {
+    if (previousDetailId.current && !detailId) routeSearch.current?.focus({ preventScroll: true });
+    previousDetailId.current = detailId;
+  }, [detailId]);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -59,6 +76,44 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
       window.removeEventListener('offline', update);
     };
   }, [attempt]);
+  useEffect(() => {
+    let active = true;
+    setCatalogError('');
+    loadTransitCatalog()
+      .then((result) => {
+        if (active) {
+          setCatalog(result.data);
+          setCatalogOffline(result.offline);
+        }
+      })
+      .catch((error: Error) => {
+        if (active) setCatalogError(error.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [catalogAttempt]);
+  useEffect(() => {
+    if (catalogOpen) {
+      catalogPanel.current
+        ?.querySelector<HTMLInputElement>('input[type="search"]')
+        ?.focus({ preventScroll: true });
+    }
+  }, [catalogOpen, catalog]);
+  function closeCatalog() {
+    catalogToggle.current?.focus({ preventScroll: true });
+    setCatalogOpen(false);
+  }
+  const catalogRoutes = useMemo(
+    () =>
+      (catalog?.routes ?? [])
+        .filter((route) => networkId === 'all' || route.networkId === networkId)
+        .slice()
+        .sort((a, b) =>
+          `${a.code} ${a.name}`.localeCompare(`${b.code} ${b.name}`, 'es', { numeric: true }),
+        ),
+    [catalog, networkId],
+  );
   const routes = useMemo(
     () =>
       (
@@ -72,6 +127,7 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
     [network, networkId],
   );
   const selectedRoute = routes.find((route) => route.id === routeId);
+  const selectedService = catalogRoutes.find((route) => route.id === routeId);
   const displayedRoutes = useMemo(
     () => (selectedRoute ? [selectedRoute] : routes),
     [selectedRoute, routes],
@@ -79,11 +135,15 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
   const matches = useMemo(() => {
     const terms = normalize(query).trim().split(/\s+/).filter(Boolean);
     return terms.length
-      ? routes.filter((route) =>
-          terms.every((term) => normalize(`${route.code} ${route.name}`).includes(term)),
+      ? catalogRoutes.filter((route) =>
+          terms.every((term) =>
+            normalize(
+              `${route.code} ${route.name} ${route.from ?? ''} ${route.to ?? ''} ${route.municipalities.join(' ')} ${route.via.join(' ')}`,
+            ).includes(term),
+          ),
         )
       : [];
-  }, [query, routes]);
+  }, [query, catalogRoutes]);
   const visibleMatches = matches.slice(0, 8);
   const searchOpen = searching && !!query.trim();
   useEffect(() => {
@@ -101,13 +161,19 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
     setActiveResult(-1);
   }
   function chooseRoute(id: string) {
-    const route = network?.routes.find((item) => item.id === id);
+    const route = catalog?.routes.find((item) => item.id === id);
     if (!route) return;
     setRouteId(id);
     setNetworkId(route.networkId);
     setQuery(`${route.code} · ${route.name}`);
     setSearching(false);
     setActiveResult(-1);
+    // Metro is present in the base network even if its larger public map is still loading.
+    if (
+      !network?.routes.some((item) => item.id === id) &&
+      !(route.mode === 'metro' && route.planningEligible)
+    )
+      setDetailId(id);
   }
   function clearSearch() {
     setQuery('');
@@ -169,6 +235,7 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
               <label className="network-route-search">
                 <Search size={19} aria-hidden="true" />
                 <input
+                  ref={routeSearch}
                   type="search"
                   aria-label="Buscar recorrido en el mapa"
                   placeholder="Buscar línea o ruta"
@@ -182,7 +249,7 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
                       : undefined
                   }
                   value={query}
-                  onFocus={() => setSearching(!selectedRoute)}
+                  onFocus={() => setSearching(!selectedService)}
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setSearching(true);
@@ -226,37 +293,60 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
                 </button>
               )}
               {searchOpen && (
-                <div
-                  id={resultId}
-                  className="network-search-results"
-                  role="listbox"
-                  aria-label="Recorridos encontrados"
-                >
-                  {visibleMatches.map((route, index) => (
+                <div className="network-search-results">
+                  <div id={resultId} role="listbox" aria-label="Recorridos encontrados">
+                    {visibleMatches.map((route, index) => (
+                      <button
+                        id={`${resultId}-${index}`}
+                        key={route.id}
+                        type="button"
+                        role="option"
+                        aria-selected={
+                          activeResult >= 0 ? index === activeResult : route.id === routeId
+                        }
+                        onClick={() => chooseRoute(route.id)}
+                      >
+                        <span
+                          className="network-route-dot"
+                          style={{
+                            background:
+                              network?.routes.find((item) => item.id === route.id)?.color ??
+                              serviceColors[route.networkId],
+                          }}
+                          aria-hidden="true"
+                        />
+                        <span>
+                          <strong>{route.code}</strong>
+                          <span>{route.name}</span>
+                          {!route.geometryPack &&
+                            !network?.routes.some((item) => item.id === route.id) && (
+                              <small>Trazo pendiente</small>
+                            )}
+                        </span>
+                        <ArrowRight size={17} aria-hidden="true" />
+                      </button>
+                    ))}
+                    {!matches.length && (
+                      <p role="status">
+                        {catalog
+                          ? 'No encontramos esa ruta. Prueba otro nombre o cambia de red.'
+                          : catalogError || 'Cargando rutas…'}
+                      </p>
+                    )}
+                  </div>
+                  {matches.length > visibleMatches.length && (
                     <button
-                      id={`${resultId}-${index}`}
-                      key={route.id}
                       type="button"
-                      role="option"
-                      aria-selected={
-                        activeResult >= 0 ? index === activeResult : route.id === routeId
-                      }
-                      onClick={() => chooseRoute(route.id)}
+                      className="network-all-matches"
+                      onClick={() => {
+                        setSearching(false);
+                        setCatalogQuery(query);
+                        setCatalogOpen(true);
+                      }}
                     >
-                      <span
-                        className="network-route-dot"
-                        style={{ background: route.color }}
-                        aria-hidden="true"
-                      />
-                      <span>
-                        <strong>{route.code}</strong>
-                        <span>{route.name}</span>
-                      </span>
-                      <ArrowRight size={17} aria-hidden="true" />
+                      Ver las {matches.length} coincidencias en el catálogo{' '}
+                      <ArrowRight size={16} aria-hidden="true" />
                     </button>
-                  ))}
-                  {!matches.length && (
-                    <p role="status">Sin coincidencias en el mapa. Consulta el catálogo.</p>
                   )}
                 </div>
               )}
@@ -273,21 +363,24 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
               ))}
             </div>
           </div>
-          {selectedRoute && (
+          {selectedService && (
             <button
               type="button"
               className="network-selected-route"
-              onClick={() => setDetailId(selectedRoute.id)}
-              aria-label={`Ver ficha de ${selectedRoute.code}: ${selectedRoute.name}`}
+              onClick={() => setDetailId(selectedService.id)}
+              aria-label={`Ver ficha de ${selectedService.code}: ${selectedService.name}`}
             >
               <span
                 className="network-route-dot"
-                style={{ background: selectedRoute.color }}
+                style={{
+                  background: selectedRoute?.color ?? serviceColors[selectedService.networkId],
+                }}
                 aria-hidden="true"
               />
               <span>
-                <strong>{selectedRoute.code}</strong>
-                <span>{selectedRoute.name}</span>
+                <strong>{selectedService.code}</strong>
+                <span>{selectedService.name}</span>
+                {!selectedRoute && !selectedService.geometryPack && <small>Trazo pendiente</small>}
               </span>
               <ArrowRight size={19} aria-hidden="true" />
             </button>
@@ -312,18 +405,70 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
           )}
         </div>
       </section>
-      <details className="network-catalog-sheet">
-        <summary>
-          Rutas y sistemas <ArrowRight size={18} aria-hidden="true" />
-        </summary>
+      <section
+        className="network-catalog-sheet"
+        data-open={catalogOpen}
+        aria-label="Catálogo de rutas y sistemas"
+        onKeyDown={(event) => {
+          if (
+            event.key === 'Escape' &&
+            catalogOpen &&
+            !(event.target as Element).closest('dialog')
+          ) {
+            event.preventDefault();
+            closeCatalog();
+          }
+        }}
+      >
+        <button
+          ref={catalogToggle}
+          className="network-catalog-toggle"
+          type="button"
+          aria-expanded={catalogOpen}
+          aria-controls={catalogId}
+          aria-label={catalogOpen ? 'Cerrar catálogo de rutas' : 'Rutas y sistemas'}
+          onClick={() => (catalogOpen ? closeCatalog() : setCatalogOpen(true))}
+        >
+          <span>Rutas y sistemas</span>
+          {catalogOpen ? (
+            <X size={19} aria-hidden="true" />
+          ) : (
+            <ArrowRight size={18} aria-hidden="true" />
+          )}
+        </button>
+        <div
+          id={catalogId}
+          ref={catalogPanel}
+          className="network-catalog-content"
+          inert={!catalogOpen}
+          aria-hidden={!catalogOpen}
+        >
+          {catalog && (
+            <TransitCatalog
+              catalogData={catalog}
+              catalogOffline={catalogOffline}
+              initialQuery={catalogQuery}
+              onPlanLine={onPlanLine}
+              networkFilter={networkId}
+              onNetworkFilterChange={chooseSystem}
+            />
+          )}
+          {!catalog && <p role="status">{catalogError || 'Cargando rutas…'}</p>}
+          {catalogError && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => setCatalogAttempt((value) => value + 1)}
+            >
+              Reintentar catálogo
+            </button>
+          )}
+        </div>
+      </section>
+      {detailId && catalog && (
         <TransitCatalog
-          onPlanLine={onPlanLine}
-          networkFilter={networkId}
-          onNetworkFilterChange={chooseSystem}
-        />
-      </details>
-      {detailId && (
-        <TransitCatalog
+          catalogData={catalog}
+          catalogOffline={catalogOffline}
           onPlanLine={onPlanLine}
           detailRouteId={detailId}
           onDetailClose={() => setDetailId('')}

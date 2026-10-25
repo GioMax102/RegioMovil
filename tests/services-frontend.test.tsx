@@ -181,8 +181,8 @@ async function mountCatalog() {
   await screen.findByText('214 rutas · 6 redes');
 }
 async function openCatalog() {
-  const summary = document.querySelector('.network-catalog-sheet:not([open]) > summary');
-  if (summary) await user.click(summary as HTMLElement);
+  const toggle = screen.queryByRole('button', { name: 'Rutas y sistemas', exact: true });
+  if (toggle) await user.click(toggle);
 }
 async function filterNetwork(id: string) {
   await openCatalog();
@@ -464,8 +464,8 @@ test('map route search opens a compact source-backed detail while the catalog st
   const search = await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
   await screen.findByRole('group', { name: /^Mapa interactivo/ });
   assert.equal(
-    (document.querySelector('.network-catalog-sheet') as HTMLDetailsElement).open,
-    false,
+    document.querySelector('.network-catalog-sheet')?.getAttribute('data-open'),
+    'false',
   );
   assert.equal(screen.queryByRole('listbox'), null);
   await user.type(search, 'linea 1');
@@ -482,8 +482,8 @@ test('map route search opens a compact source-backed detail while the catalog st
   await closeDetails();
   assert.equal(screen.queryByRole('dialog'), null);
   assert.equal(
-    (document.querySelector('.network-catalog-sheet') as HTMLDetailsElement).open,
-    false,
+    document.querySelector('.network-catalog-sheet')?.getAttribute('data-open'),
+    'false',
   );
 });
 
@@ -504,10 +504,91 @@ test('map route suggestions support keyboard selection without a dangling ARIA r
   assert.equal(search.getAttribute('aria-controls'), null);
   assert.equal(search.getAttribute('aria-activedescendant'), null);
   await openCatalog();
-  assert.equal((document.querySelector('.network-catalog-sheet') as HTMLDetailsElement).open, true);
+  assert.equal(document.querySelector('.network-catalog-sheet')?.getAttribute('data-open'), 'true');
   assert.equal(
     screen.getByRole('group', { name: /^Mapa interactivo/ }),
     map,
     'The catalog overlays the existing map instead of remounting it.',
   );
+});
+
+test('map search discovers a catalog service without geometry and opens its source instead of an empty map', async () => {
+  render(<NetworkExplorer onPlanLine={(id) => plannedLines.push(id)} />);
+  const searchInput = await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
+  const map = await screen.findByRole('group', { name: /^Mapa interactivo/ });
+  await screen.findByText('214 rutas · 6 redes');
+  await user.type(searchInput, '1 Pilares Andalucia');
+  await user.click(
+    await screen.findByRole('option', { name: /1.*Pilares Andalucia.*Trazo pendiente/ }),
+  );
+  const dialog = await screen.findByRole('dialog', { name: /1 ·/ });
+  assert.ok(within(dialog).getByText('Trazo pendiente'));
+  assert.ok(within(dialog).getByRole('link', { name: 'Consultar fuente oficial' }));
+  assert.equal(within(dialog).queryByRole('img', { name: /Mapa|Recorrido/ }), null);
+  assertNoTravelAction(dialog);
+  assert.equal(document.querySelectorAll('.location-map-canvas').length, 1);
+  assert.equal(screen.getByRole('group', { name: /^Mapa interactivo/, hidden: true }), map);
+  await closeDetails();
+  assert.equal(document.activeElement, searchInput);
+  assert.ok(screen.getByRole('button', { name: /Ver ficha de 1:/ }));
+  assert.ok(!requests.some((path) => path.startsWith('/route-packs/')));
+});
+
+test('catalog slides from its bar without trapping focus, closes with Escape and preserves filters and scroll', async () => {
+  render(<NetworkExplorer onPlanLine={() => {}} />);
+  await screen.findByText('214 rutas · 6 redes');
+  const toggle = screen.getByRole('button', { name: 'Rutas y sistemas', exact: true });
+  const panel = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+  const map = await screen.findByRole('group', { name: /^Mapa interactivo/ });
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.ok(panel.hasAttribute('inert'));
+  await user.click(toggle);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(panel.hasAttribute('inert'), false);
+  assert.equal(
+    document.activeElement,
+    screen.getByRole('searchbox', { name: 'Buscar ruta, ramal o municipio' }),
+  );
+  assert.equal(document.body.style.position, '', 'This is an in-page region, not a modal.');
+  await user.type(document.activeElement as HTMLInputElement, '223 juarez');
+  assert.ok(screen.getByText('3 rutas · 6 redes'));
+  panel.scrollTop = 210;
+  await user.keyboard('{Escape}');
+  assert.equal(document.activeElement, toggle);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.ok(panel.hasAttribute('inert'));
+  assert.equal(panel.getAttribute('aria-hidden'), 'true');
+  await user.click(toggle);
+  assert.equal(panel.scrollTop, 210);
+  assert.equal(
+    (screen.getByRole('searchbox', { name: 'Buscar ruta, ramal o municipio' }) as HTMLInputElement)
+      .value,
+    '223 juarez',
+  );
+  assert.equal(screen.getByRole('group', { name: /^Mapa interactivo/ }), map);
+  await user.click(screen.getByRole('button', { name: 'Cerrar catálogo de rutas' }));
+  assert.equal(document.activeElement, toggle);
+  assert.equal(
+    requests.filter((path) => path === '/transit-catalog.json').length,
+    1,
+    'The explorer and catalog share one public document.',
+  );
+});
+
+test('broad map searches stay short and hand their complete query to the paginated catalog', async () => {
+  render(<NetworkExplorer onPlanLine={() => {}} />);
+  await screen.findByText('214 rutas · 6 redes');
+  await user.type(screen.getByRole('combobox', { name: 'Buscar recorrido en el mapa' }), 'Ruta');
+  assert.equal(screen.getAllByRole('option').length, 8);
+  await user.click(screen.getByRole('button', { name: /Ver las .* coincidencias en el catálogo/ }));
+  const catalogSearch = screen.getByRole('searchbox', {
+    name: 'Buscar ruta, ramal o municipio',
+  }) as HTMLInputElement;
+  assert.equal(catalogSearch.value, 'Ruta');
+  assert.equal(document.activeElement, catalogSearch);
+  assert.equal(document.querySelectorAll('.service-card').length, 24);
+  await user.click(screen.getByRole('button', { name: /Mostrar más rutas/ }));
+  assert.equal(document.querySelectorAll('.service-card').length, 48);
+  assert.equal(screen.queryByRole('listbox', { name: 'Recorridos encontrados' }), null);
+  assert.ok(!requests.some((path) => path.startsWith('/route-packs/')));
 });

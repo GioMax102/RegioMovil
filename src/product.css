@@ -16,8 +16,13 @@
 .home-plan-cta {
   background-color: var(--app-primary);
   background-image:
-    radial-gradient(ellipse at 100% 110%, #ffffff12 0 24%, transparent 24.3%),
-    radial-gradient(ellipse at 100% 110%, transparent 0 37%, #ffffff0d 37.3% 38%, transparent 38.3%);
+    radial-gradient(ellipse at 110% 115%, #ffffff14 0 34%, transparent 34.3%),
+    repeating-radial-gradient(
+      ellipse at 110% 115%,
+      transparent 0 28px,
+      #ffffff18 29px 30px,
+      transparent 31px 55px
+    );
   border-color: var(--app-primary);
   border-radius: 20px;
   box-shadow: 0 7px 20px #103e3612;

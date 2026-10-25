@@ -34,6 +34,11 @@ for (const route of catalog.routes.filter(route => route.mode === 'bus')) {
     continue;
   }
   const pack = await read(`public/route-packs/${route.geometryPack}.json`);
+  // A viewable official map does not establish a usable boarding sequence.
+  if (pack.experimentalRouting === false) {
+    exclusions.push({ id: route.id, code: route.code, reason: 'visualization-only' });
+    continue;
+  }
   // Published segments remain separate. Never concatenate disconnected paths.
   const segments = (pack.segments?.length ? pack.segments : [pack.coordinates]).map((coordinates, index) =>
     ({ id: `${route.id}:${index}`, coordinates, records: [] }));

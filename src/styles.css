@@ -1786,52 +1786,6 @@ strong {
 .report-form > .subtle {
   font-size: max(0.7rem, 12px);
 }
-.arrival-dialog-hero {
-  padding: 18px 19px 20px;
-  background: #f1f5e9;
-  border-radius: 10px;
-  margin: 15px 0;
-}
-.arrival-dialog-hero h3 {
-  font-size: 1.14rem;
-  margin: 13px 0 18px;
-}
-.arrival-dialog-hero > strong {
-  font-family: 'Montserrat Variable', sans-serif;
-  font-size: 2.3rem;
-  font-weight: 600;
-  color: #446d3e;
-}
-.arrival-dialog-hero > strong > small {
-  font-family: 'Inter Variable', sans-serif;
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-weight: 400;
-}
-.arrival-dialog-hero p {
-  font-size: max(0.68rem, 12px);
-  color: var(--muted);
-  margin-top: 10px;
-}
-.unit-facts > div {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 17px 4px;
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
-}
-.unit-facts > div > span {
-  font-size: max(0.71rem, 12px);
-  color: var(--muted);
-}
-.unit-facts strong {
-  display: block;
-  font-size: 0.84rem;
-  color: var(--green);
-  margin-top: 7px;
-  font-weight: 500;
-}
 .notice {
   display: flex;
   align-items: flex-start;

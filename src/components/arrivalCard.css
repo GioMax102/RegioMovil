@@ -54,8 +54,8 @@
   flex-wrap: wrap;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--accent-blue-surface, var(--surface));
-  color: var(--accent-blue, var(--green));
+  background: var(--surface);
+  color: var(--green);
 }
 .arrival-estimate-label {
   display: inline-flex;

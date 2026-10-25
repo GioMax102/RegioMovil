@@ -1,0 +1,84 @@
+.arrival-detail-summary {
+  padding: 20px;
+  margin-block: 16px;
+  background-color: var(--surface);
+  background-image: var(--surface-grain);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.arrival-detail-summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.arrival-detail-simulation {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.arrival-detail-summary h3 {
+  margin-block: 16px 8px;
+  font-size: 1.1rem;
+}
+.arrival-detail-summary > p {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--green);
+}
+.arrival-detail-summary strong {
+  font-size: 2.5rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.arrival-detail-summary > p > span {
+  color: var(--dark);
+  font-size: 0.85rem;
+}
+.arrival-detail-facts {
+  margin: 0;
+}
+.arrival-detail-facts > div {
+  padding-block: 14px;
+  display: grid;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.arrival-detail-facts dt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.arrival-detail-facts dd {
+  margin: 0 0 0 28px;
+  color: var(--dark);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.arrival-detail-info {
+  margin-top: 12px;
+  font-size: 0.82rem;
+}
+.arrival-detail-info summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.arrival-detail-info p {
+  line-height: 1.6;
+  padding-block: 8px;
+  color: var(--muted);
+}
+.high-contrast .arrival-detail-summary {
+  background-image: none;
+}
+@media (forced-colors: active) {
+  .arrival-detail-summary {
+    background-image: none;
+  }
+}

@@ -68,10 +68,12 @@ const endpointPosition = (
 export default function MobilityPlanner({
   scenario,
   initialTrip,
+  initialOrigin,
   initialStationId = 'padre-mier',
 }: {
   scenario: Scenario;
   initialTrip?: MobilityTripEndpoints | null;
+  initialOrigin?: MobilityEndpoint;
   initialStationId?: string;
 }) {
   const [network, setNetwork] = useState<MobilityNetwork | null>(null);
@@ -149,7 +151,8 @@ export default function MobilityPlanner({
         planner.current = createMobilityPlanner(data);
         setFrom(
           (current) =>
-            current ?? {
+            current ??
+            initialOrigin ?? {
               id:
                 data.stops.find((stop) => stop.stationId === initialStationId)?.id ??
                 data.stops.find((stop) => stop.stationId === 'padre-mier')?.id ??

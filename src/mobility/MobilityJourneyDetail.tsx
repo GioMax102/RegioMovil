@@ -11,6 +11,8 @@ import {
 import MobilityMap from './MobilityMap';
 import { networkLabel } from './networks';
 import { presentJourneySteps } from './journeyPresentation';
+import { journeyTransfers } from './transferStations';
+import TransferStationActions from './TransferStationActions';
 import type { MobilityJourney, MobilityNetwork } from './types';
 import ServiceIdentity from '../components/ServiceIdentity';
 import './journeyDetail.css';
@@ -44,6 +46,7 @@ export default function MobilityJourneyDetail({
   const unverifiedBus = journey.steps.some(
     (step) => step.mode === 'bus' && (!step.stopOrderVerified || step.directionVerified !== true),
   );
+  const transfers = journeyTransfers(journey.steps);
   if (guiding)
     return (
       <Suspense fallback={<p role="status">Abriendo tu guía de viaje…</p>}>
@@ -103,6 +106,7 @@ export default function MobilityJourneyDetail({
       <ol className="journey-detail-steps" aria-label="Etapas del trayecto">
         {presentJourneySteps(journey.steps).map((entry) => {
           const { step, index } = entry;
+          const transfer = transfers.find((point) => point.afterStepIndex === index);
           if (entry.kind === 'transfer')
             return (
               <li
@@ -164,6 +168,7 @@ export default function MobilityJourneyDetail({
                     />
                   </details>
                 )}
+                {transfer && <TransferStationActions transfer={transfer} network={network} />}
               </div>
               <div className="journey-detail-step-meta">
                 <span>{step.minutes} min</span>

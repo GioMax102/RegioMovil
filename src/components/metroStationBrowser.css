@@ -18,12 +18,22 @@
 }
 .metro-line-control {
   min-width: 0;
+  position: relative;
+}
+.metro-line-control > svg {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--white);
 }
 .metro-line-control select {
+  appearance: none;
   width: 100%;
   min-height: 48px;
   border: 0;
-  padding: 8px;
+  padding: 10px 34px 10px 12px;
   border-radius: 10px;
   background: var(--dark);
   color: var(--white);

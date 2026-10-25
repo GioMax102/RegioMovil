@@ -31,7 +31,8 @@ const normalize = (text: string) =>
   text
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ');
 const statusLabels = {
   published: 'Servicio publicado',
   operational: 'Servicio publicado',
@@ -47,6 +48,9 @@ export default function TransitCatalog({
   detailRouteId,
   onDetailClose,
   detailsOnly = false,
+  catalogData,
+  catalogOffline = false,
+  initialQuery = '',
 }: {
   onPlanLine: (lineId: string) => void;
   networkFilter?: string;
@@ -54,13 +58,17 @@ export default function TransitCatalog({
   detailRouteId?: string;
   onDetailClose?: () => void;
   detailsOnly?: boolean;
+  catalogData?: TransitCatalogData;
+  catalogOffline?: boolean;
+  initialQuery?: string;
 }) {
   const [catalog, setCatalog] = useState<TransitCatalogData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [revision, setRevision] = useState(0);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
+  useEffect(() => setQuery(initialQuery), [initialQuery]);
   const [localNetworkId, setLocalNetworkId] = useState('all');
   const networkId = networkFilter ?? localNetworkId;
   const setNetworkId = (id: string) => {
@@ -71,6 +79,13 @@ export default function TransitCatalog({
   const [limit, setLimit] = useState(24);
   const [selected, setSelected] = useState<TransitRoute | null>(null);
   useEffect(() => {
+    if (catalogData) {
+      setCatalog(catalogData);
+      setOffline(catalogOffline);
+      setLoading(false);
+      setError('');
+      return;
+    }
     let active = true;
     setLoading(true);
     setError('');
@@ -90,7 +105,7 @@ export default function TransitCatalog({
     return () => {
       active = false;
     };
-  }, [revision]);
+  }, [revision, catalogData, catalogOffline]);
   const filtered = useMemo(
     () =>
       (catalog?.routes ?? []).filter(
@@ -390,13 +405,23 @@ function ServiceDetails({
           <ArrowRight size={17} />
         </button>
       )}
-      {!route.planningEligible && !route.geometryPack && (
+      {!metroLine && !route.geometryPack && (
         <p className="service-planning-limit">
           <Info size={18} aria-hidden="true" />
           {route.status === 'construction'
             ? 'En construcción · No disponible para viajar.'
-            : 'Recorrido aún no disponible para planear.'}
+            : 'Trazo pendiente'}
         </p>
+      )}
+      {!metroLine && !route.geometryPack && (
+        <div className="service-pending-source">
+          {route.via.length > 0 && <p>{route.via.join(' · ')}</p>}
+          {(route.officialUrl || sources[0]?.url) && (
+            <a href={route.officialUrl || sources[0].url} target="_blank" rel="noreferrer">
+              Consultar fuente oficial <ExternalLink size={15} aria-hidden="true" />
+            </a>
+          )}
+        </div>
       )}
       <details className="service-detail-disclosure">
         <summary>

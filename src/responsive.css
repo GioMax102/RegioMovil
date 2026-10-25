@@ -1103,25 +1103,6 @@
   .offline-card .text-button {
     font-size: max(0.71rem, 12px);
   }
-  .arrival-dialog-hero h3 {
-    font-size: 1.07rem;
-    line-height: 1.7;
-  }
-  .arrival-dialog-hero > strong {
-    font-size: 2rem;
-  }
-  .arrival-dialog-hero p {
-    font-size: max(0.65rem, 12px);
-  }
-  .unit-facts > div {
-    padding: 17px 4px;
-  }
-  .unit-facts strong {
-    font-size: 0.8rem;
-  }
-  .unit-facts > div > span {
-    font-size: max(0.67rem, 12px);
-  }
   .notice {
     font-size: max(0.67rem, 12px);
     padding: 13px;
