@@ -1,0 +1,116 @@
+.map-sheet {
+  position: absolute;
+  z-index: 5;
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 82px;
+  max-block-size: 94%;
+  block-size: 48%;
+  border-radius: 26px 26px 0 0;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--dark);
+  box-shadow: 0 -6px 30px #12252c18;
+}
+.map-sheet[data-size='peek'] {
+  block-size: 88px;
+}
+.map-sheet[data-size='full'] {
+  block-size: 88%;
+}
+.map-sheet-handle {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: none;
+  min-block-size: 44px;
+  inline-size: 100%;
+  border: 0;
+  border-radius: 26px 26px 0 0;
+  color: var(--muted);
+  background: transparent;
+  touch-action: none;
+  user-select: none;
+}
+.map-sheet-handle:focus-visible {
+  outline: 3px solid var(--app-primary);
+  outline-offset: -4px;
+}
+.map-sheet-handle > .map-sheet-grip {
+  inline-size: 36px;
+  block-size: 4px;
+  border-radius: 8px;
+  background: var(--line);
+}
+.map-sheet-handle > svg {
+  position: absolute;
+  inset-inline-end: 20px;
+}
+.map-sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 20px 10px;
+  flex: none;
+  min-block-size: 44px;
+}
+.map-sheet-heading h2 {
+  font-size: 1.13rem;
+  letter-spacing: -0.35px;
+}
+.map-sheet[data-size='peek'] .map-sheet-heading {
+  padding-block-end: 0;
+}
+.map-sheet-body {
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 20px 20px;
+}
+.map-sheet-body[hidden] {
+  display: none;
+}
+.map-sheet .icon-button {
+  inline-size: 44px;
+  block-size: 44px;
+  flex: none;
+}
+@media (min-width: 1000px) {
+  .map-sheet {
+    inset-inline: 18px auto;
+    inset-block: 18px;
+    inline-size: min(400px, 42%);
+    block-size: auto;
+    max-block-size: calc(100% - 36px);
+    border-radius: 22px;
+  }
+  .map-sheet[data-size='half'] {
+    block-size: min(540px, 70%);
+    inset-block-end: auto;
+  }
+  .map-sheet[data-size='full'] {
+    block-size: auto;
+  }
+  .map-sheet[data-size='peek'] {
+    block-size: 88px;
+    inset-block-end: auto;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion='reduced']) .map-sheet {
+    transition: block-size 180ms ease;
+  }
+}
+@media (max-height: 520px) {
+  .map-sheet[data-size='half'] {
+    block-size: 70%;
+  }
+  .map-sheet[data-size='full'] {
+    block-size: 100%;
+    max-block-size: 100%;
+  }
+}

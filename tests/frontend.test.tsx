@@ -143,7 +143,9 @@ before(async () => {
   };
 });
 
-beforeEach(() => {
+beforeEach((context) => {
+  // The UI clock and API board refer to the same operating-hour fixture.
+  context.mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-15T18:00:00Z') });
   requests.length = 0;
   completedRequests.length = 0;
   spoken.length = 0;
@@ -206,7 +208,9 @@ test('screen changes from home, sidebar and mobile consistently reset scroll and
   const scrolls: ScrollToOptions[] = [];
   window.scrollTo = ((options: ScrollToOptions) => scrolls.push(options)) as typeof window.scrollTo;
   try {
-    await user.click(screen.getByRole('button', { name: /Explorar la red Metro/ }));
+    await user.click(
+      mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
+    );
     const title = screen.getByRole('heading', { name: 'Rutas y redes.', exact: true });
     assert.equal(document.activeElement, title);
     assert.equal(screen.getByRole('main').getAttribute('aria-labelledby'), title.id);
@@ -253,7 +257,15 @@ test('initial board comes from the real API and unit details explain simulation 
   assert.ok(
     requests.some((request) => request.path === '/api/board?station=padre-mier&scenario=normal'),
   );
-  assert.ok(screen.getByText('Operación simulada.'));
+  const provenance = screen.getByText('Datos y fuentes').closest('details')!;
+  assert.equal(
+    provenance.open,
+    false,
+    'Provenance is available without cluttering the initial screen.',
+  );
+  await user.click(within(provenance).getByText('Datos y fuentes'));
+  assert.equal(provenance.open, true);
+  assert.ok(within(provenance).getByText(/Llegadas, afluencia y condiciones.*simulación/));
   await user.click(screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ })[0]);
   const dialog = screen.getByRole('dialog', { name: 'Conoce esta unidad' });
   assert.ok(within(dialog).getByText('Accesibilidad real'));
@@ -360,6 +372,10 @@ test('station search resolves the Fundidora alias to Arena Monterrey and refresh
 
 test('accessibility settings persist and the peak scenario refreshes prediction and advice', async () => {
   await mount();
+  const outlook = screen.getByText('Afluencia por hora').closest('details')!;
+  assert.equal(outlook.open, false);
+  await user.click(within(outlook).getByText('Afluencia por hora'));
+  assert.equal(outlook.open, true);
   const initialForecast = screen
     .getByRole('img', { name: /Afluencia simulada por hora/ })
     .getAttribute('aria-label');
@@ -408,14 +424,17 @@ test('appearance controls persist a dark theme and allow disabling navigation mo
   assert.equal(document.documentElement.dataset.motion, 'reduced');
 });
 
-test('Home offers direct saved and network access while Red opens the system map and catalog', async () => {
+test('Home keeps the planning action direct, and Red opens the map with searchable transport routes', async () => {
   await mount();
-  assert.ok(screen.getByRole('button', { name: /Tus rutas guardadas/ }));
-  assert.equal(screen.queryByRole('heading', { name: 'Encuentra tu ruta.' }), null);
-  await user.click(screen.getByRole('button', { name: /Explorar la red/ }));
-  await screen.findByRole('heading', { name: 'Una ciudad, más caminos.' });
-  await screen.findByRole('heading', { name: 'Encuentra tu ruta.' });
-  assert.equal(screen.queryByRole('heading', { name: 'Las próximas unidades' }), null);
+  assert.ok(screen.getByRole('button', { name: /¿A dónde vamos\?/ }));
+  assert.equal(screen.queryByRole('navigation', { name: 'Trayectos guardados' }), null);
+  assert.equal(screen.queryByRole('combobox', { name: 'Buscar recorrido en el mapa' }), null);
+  await user.click(
+    mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
+  );
+  await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
+  assert.ok(screen.getByRole('heading', { name: 'Rutas y redes.', exact: true }));
+  assert.equal(screen.queryByRole('heading', { name: 'Próximas llegadas' }), null);
   assert.equal(
     screen.getByRole('tab', { name: /Rutas y redes/ }).getAttribute('aria-selected'),
     'true',
@@ -424,7 +443,7 @@ test('Home offers direct saved and network access while Red opens the system map
 
 test('a report is submitted through the UI and persisted as unverified in SQLite', async () => {
   await mount();
-  await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
+  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   await user.selectOptions(
     within(dialog).getByRole('combobox', { name: '¿Qué observaste?' }),
@@ -452,7 +471,7 @@ test('a report is submitted through the UI and persisted as unverified in SQLite
 
 test('failed report submission preserves its text and does not claim success', async () => {
   await mount();
-  await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
+  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const description = 'La puerta no cerró durante la observación de este viaje.';
   const textarea = within(dialog).getByRole('textbox', {
@@ -480,7 +499,7 @@ test('kiosk allows station consultation and speech while hiding report/planning/
   assert.ok(screen.getByRole('heading', { name: 'Padre Mier', level: 1 }));
   assert.equal(screen.queryByRole('navigation', { name: 'Navegación principal' }), null);
   assert.equal(screen.queryByRole('navigation', { name: 'Navegación móvil' }), null);
-  assert.equal(screen.queryByRole('button', { name: /Compártelo/ }), null);
+  assert.equal(screen.queryByRole('button', { name: 'Reportar', exact: true }), null);
   assert.equal(screen.queryByRole('button', { name: 'Encontrar mi ruta' }), null);
   assert.ok(
     screen.getByRole('button', { name: 'Salir del modo parada' }),
@@ -512,7 +531,7 @@ test('kiosk allows station consultation and speech while hiding report/planning/
 
 test('a late response from a closed report cannot close or erase a new draft', async () => {
   await mount();
-  await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
+  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
   let dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const oldText = 'Observé saturación al abordar en esta estación durante la mañana.';
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), oldText);
@@ -520,7 +539,7 @@ test('a late response from a closed report cannot close or erase a new draft', a
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   await waitFor(() => assert.equal(heldRequests.length, 1));
   await closeDialog();
-  await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
+  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const newText = 'Este borrador nuevo describe una puerta y todavía no se ha enviado.';
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), newText);
@@ -560,12 +579,9 @@ test('opening the current station from home resets a previous line filter', asyn
   await mount();
   await navigate('Red de transporte');
   await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
-  const filters = within(screen.getByRole('group', { name: 'Filtrar por línea' }));
-  await user.click(filters.getByRole('button', { name: 'Línea 1', exact: true }));
-  assert.equal(
-    filters.getByRole('button', { name: 'Línea 1', exact: true }).getAttribute('aria-pressed'),
-    'true',
-  );
+  const line = screen.getByRole('combobox', { name: 'Línea de Metro' }) as HTMLSelectElement;
+  await user.selectOptions(line, 'L1');
+  assert.equal(line.value, 'L1');
   assert.equal(
     screen.queryByRole('button', { name: 'Padre Mier Monterrey Línea 2', exact: true }),
     null,
@@ -573,12 +589,11 @@ test('opening the current station from home resets a previous line filter', asyn
   await navigate('Mi camino');
   await user.click(screen.getByRole('button', { name: 'Ver estación', exact: true }));
   assert.equal(
-    within(screen.getByRole('group', { name: 'Filtrar por línea' }))
-      .getByRole('button', { name: 'Todas' })
-      .getAttribute('aria-pressed'),
-    'true',
+    (screen.getByRole('combobox', { name: 'Línea de Metro' }) as HTMLSelectElement).value,
+    'all',
   );
-  assert.ok(screen.getByRole('button', { name: 'Padre Mier Monterrey Línea 2', exact: true }));
+  assert.equal(screen.queryByRole('list', { name: 'Estaciones' }), null);
+  assert.ok(screen.getByRole('heading', { name: 'Padre Mier', exact: true }));
 });
 
 test('a locked public kiosk never reads personal station, journeys or favorites and has no exit control', async () => {
@@ -601,7 +616,7 @@ test('a locked public kiosk never reads personal station, journeys or favorites 
     assert.ok(screen.getByRole('heading', { name: 'Padre Mier', level: 1 }));
     assert.equal(screen.queryByRole('button', { name: 'Salir del modo parada' }), null);
     assert.equal(screen.queryByRole('navigation', { name: 'Navegación principal' }), null);
-    assert.equal(screen.queryByRole('button', { name: /Compártelo/ }), null);
+    assert.equal(screen.queryByRole('button', { name: 'Reportar', exact: true }), null);
     const favorite = screen.getByRole('button', {
       name: 'Guardar estación Padre Mier',
     }) as HTMLButtonElement;

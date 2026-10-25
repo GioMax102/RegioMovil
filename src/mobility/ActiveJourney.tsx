@@ -413,7 +413,6 @@ export default function ActiveJourney({
           <Check size={20} aria-hidden="true" /> Cerrar guía
         </button>
       )}
-      <p className="active-journey-scope">Sólo con la app visible · se pausa al salir.</p>
       {locationError && !state.completed && (
         <p className="active-journey-warning" role="status">
           {locationError}
@@ -421,6 +420,7 @@ export default function ActiveJourney({
       )}
       <details className="active-journey-about">
         <summary>Sobre la guía y tu ubicación</summary>
+        <p>Sólo con la app visible; se pausa al salir.</p>
         <p>Tu ubicación se procesa en este dispositivo y no se guarda como historial.</p>
         <p>
           La guía no emite avisos en segundo plano. Al volver, reanuda el GPS para obtener una

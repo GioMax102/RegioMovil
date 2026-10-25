@@ -35,7 +35,8 @@ import type { Arrival, Board, Page, Preference, Scenario, Station } from './type
 const loadNetworkExplorer = () => import('./components/NetworkExplorer');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
-import type { MobilityEndpoint } from './mobility/types';
+const SavedTripPreview = lazy(() => import('./mobility/SavedTripPreview'));
+import type { MobilityEndpoint, SavedMobilityTrip } from './mobility/types';
 import { ArrivalCard, Brand, Dialog, Forecast, LineBadge } from './components/Primitives';
 import HomeDashboard from './components/HomeDashboard';
 import { useAppearance } from './appearance';
@@ -45,8 +46,9 @@ import { DataPreferencesProvider } from './dataPreferences';
 import DeferredSection from './components/DeferredSection';
 import SectionLoading from './components/SectionLoading';
 import { usePageFocus } from './usePageFocus';
-import StationStreetView from './components/StationStreetView';
+import MetroStationDetail from './components/MetroStationDetail';
 import MetroStationBrowser from './components/MetroStationBrowser';
+import { getNextMetroOpening, isMetroOperating } from './components/metroServiceHours';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
@@ -54,7 +56,7 @@ const navItems: { id: Page; label: string; short: string; icon: typeof House }[]
   { id: 'home', label: 'Mi camino', short: 'Inicio', icon: House },
   { id: 'plan', label: 'Planear viaje', short: 'Planear', icon: Route },
   { id: 'stations', label: 'Red de transporte', short: 'Red', icon: TrainFront },
-  { id: 'mobility', label: 'Mi movilidad', short: 'Guardados', icon: Bookmark },
+  { id: 'mobility', label: 'Mi movilidad', short: 'Viajes', icon: Bookmark },
 ];
 const scenarioLabels: Record<Scenario, string> = {
   normal: 'Día habitual',
@@ -108,6 +110,7 @@ export default function App() {
   const [modal, setModal] = useState<Modal>(null);
   const [arrival, setArrival] = useState<Arrival | null>(null);
   const [toast, setToast] = useState('');
+  const [homeTrip, setHomeTrip] = useState<SavedMobilityTrip | null>(null);
   const [largeText, setLargeText] = useState(readStored('largeText', false));
   const [contrast, setContrast] = useState(readStored('contrast', false));
   const [lowData, setLowData] = useState(readStored('lowData', false));
@@ -249,9 +252,10 @@ export default function App() {
       return;
     }
     speechSynthesis.cancel();
-    const first = board?.arrivals[0];
+    const operating = isMetroOperating(now);
+    const first = operating ? board?.arrivals[0] : null;
     const utterance = new SpeechSynthesisUtterance(
-      `Regio Móvil. Estación ${currentStation.name}. Datos de demostración, no son arribos reales. ${first ? `Próxima unidad simulada de ${first.lineName}, hacia ${first.direction}, en aproximadamente ${first.etaRange[0]} a ${first.etaRange[1]} minutos. Afluencia ${first.occupancyLabel}.` : 'Sin información de unidades.'}`,
+      `Regio Móvil. Estación ${currentStation.name}. Datos de demostración, no son arribos reales. ${!operating ? `Fuera del horario general de Metro. Próxima apertura a las ${getNextMetroOpening(now)}.` : first ? `Próxima unidad simulada de ${first.lineName}, hacia ${first.direction}, en aproximadamente ${first.etaRange[0]} a ${first.etaRange[1]} minutos. Afluencia ${first.occupancyLabel}.` : 'Sin información de unidades.'}`,
     );
     utterance.lang = 'es-MX';
     utterance.rate = 0.9;
@@ -269,7 +273,7 @@ export default function App() {
         </span>
       </div>
       <p className="subtle">Afluencia estimada en {currentStation.name}</p>
-      <Forecast data={board.forecast} compact />
+      <Forecast data={board.forecast} compact serviceDate={board.generatedAt} />
       <div className="forecast-foot">
         <span>
           <i className="legend-dot" /> Menor afluencia
@@ -280,7 +284,9 @@ export default function App() {
   );
 
   const content = (
-    <div className={`app-shell ${kiosk ? 'kiosk' : ''}`}>
+    <div
+      className={`app-shell ${kiosk ? 'kiosk' : ''} ${!kiosk && (page === 'plan' || (page === 'stations' && networkTab === 'routes')) ? 'map-page' : ''}`}
+    >
       <a className="skip-link" href="#main-content">
         Saltar al contenido
       </a>
@@ -366,6 +372,16 @@ export default function App() {
             </>
           )}
           <div className="topbar-actions">
+            {!kiosk && (
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Datos y simulación"
+                onClick={() => setModal('sources')}
+              >
+                <Info size={19} aria-hidden="true" />
+              </button>
+            )}
             <span className="local-time">
               {new Intl.DateTimeFormat('es-MX', {
                 hour: '2-digit',
@@ -407,7 +423,7 @@ export default function App() {
           id="main-content"
           tabIndex={-1}
           key={page}
-          className="page-transition"
+          className={`page-transition view-${page}`}
           aria-labelledby="page-title"
         >
           <div className={`page-heading ${page === 'home' || kiosk ? '' : 'compact-heading'}`}>
@@ -430,13 +446,7 @@ export default function App() {
                           : 'Estaciones.'
                         : 'Tus guardados.'}
               </h1>
-              {(page === 'home' || kiosk) && (
-                <p>
-                  {kiosk
-                    ? 'Llegadas y afluencia simuladas.'
-                    : 'Lo que necesitas saber, antes de salir.'}
-                </p>
-              )}
+              {kiosk && <p>Llegadas y afluencia simuladas.</p>}
             </div>
             {!kiosk && page === 'home' && (
               <button
@@ -463,7 +473,7 @@ export default function App() {
               </button>
             )}
           </div>
-          {(page === 'home' || kiosk || page === 'stations') && (
+          {kiosk && (
             <div className="demo-banner compact-demo">
               <span className="demo-label">
                 <span className="status-dot" /> DEMOSTRACIÓN
@@ -486,19 +496,20 @@ export default function App() {
               </span>
               <span>
                 <strong>¿A dónde vamos?</strong>
-                <small>Lugares, metro y autobús</small>
               </span>
               <ArrowRight size={20} />
             </button>
           )}
           {page === 'home' && !kiosk && (
             <HomeDashboard
+              now={now}
               station={currentStation}
               board={board}
               loading={loading}
               favorite={favorites.includes(station)}
               onFavorite={() => toggleFavorite(station)}
               onArrival={setArrival}
+              onSavedTrip={setHomeTrip}
               onSaved={() => setPage('mobility')}
               onNetwork={() => {
                 setNetworkTab('routes');
@@ -619,7 +630,12 @@ export default function App() {
                     {board && <span>Calculada {dateTime(board.generatedAt)}</span>}
                   </div>
                   <div className="arrival-list" aria-busy={loading}>
-                    {board ? (
+                    {!isMetroOperating(now) ? (
+                      <p className="metro-closed" role="status">
+                        <strong>Fuera de horario</strong>
+                        <span>Abre {getNextMetroOpening(now)}</span>
+                      </p>
+                    ) : board ? (
                       board.arrivals
                         .slice(0, kiosk ? 4 : 3)
                         .map((item) => (
@@ -775,7 +791,7 @@ export default function App() {
           )}
           {page === 'stations' && networkTab === 'stations' && (
             <div
-              className="stations-layout"
+              className="stations-layout metro-stations-layout"
               id="network-stations-panel"
               role="tabpanel"
               aria-labelledby="network-stations-tab"
@@ -790,78 +806,14 @@ export default function App() {
                 onLineFilterChange={setLineFilter}
                 onSelect={setStation}
               />
-              <div className="station-detail">
-                <section className="station-detail-hero">
-                  <span className="eyebrow">TU PARADA, EN CONTEXTO</span>
-                  <div>
-                    <h2>{currentStation.name}</h2>
-                    <button
-                      className="icon-button"
-                      aria-label="Guardar esta estación"
-                      aria-pressed={favorites.includes(station)}
-                      onClick={() => toggleFavorite(station)}
-                    >
-                      <Bookmark
-                        size={23}
-                        fill={favorites.includes(station) ? 'currentColor' : 'none'}
-                      />
-                    </button>
-                  </div>
-                  <p>
-                    <MapPin size={16} />
-                    {currentStation.municipality}, Nuevo León
-                  </p>
-                  <div>
-                    {currentStation.lineIds.map((id) => (
-                      <LineBadge key={id} id={id} />
-                    ))}
-                  </div>
-                </section>
-                <details className="station-context-disclosure">
-                  <summary>Reconocer esta estación</summary>
-                  <StationStreetView key={currentStation.id} station={currentStation} />
-                </details>
-                <div className="station-detail-grid">
-                  {forecastPanel}
-                  <section className="panel facilities-panel">
-                    <h3>Antes de llegar</h3>
-                    <p>
-                      <Accessibility size={20} />
-                      <span>
-                        <strong>Accesibilidad sin verificar</strong>
-                        <small>No hay datos operativos de elevadores.</small>
-                      </span>
-                    </p>
-                    <p>
-                      <Snowflake size={20} />
-                      <span>
-                        <strong>Condiciones por unidad</strong>
-                        <small>Consulta cada arribo simulado.</small>
-                      </span>
-                    </p>
-                    <a
-                      className="text-button"
-                      href="https://www.metrorrey.mx/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Consultar Metrorrey
-                      <ExternalLink size={14} />
-                    </a>
-                  </section>
-                </div>
-                <section className="panel station-arrivals">
-                  <div className="panel-heading">
-                    <h2>Próximas unidades simuladas</h2>
-                    <span className="subtle">
-                      {board ? `Calculadas ${dateTime(board.generatedAt)}` : ''}
-                    </span>
-                  </div>
-                  {board?.arrivals.slice(0, 4).map((item) => (
-                    <ArrivalCard key={item.id} arrival={item} onDetails={() => setArrival(item)} />
-                  ))}
-                </section>
-              </div>
+              <MetroStationDetail
+                station={currentStation}
+                board={board}
+                saved={favorites.includes(station)}
+                onSave={() => toggleFavorite(station)}
+                onArrival={setArrival}
+                now={now}
+              />
             </div>
           )}
 
@@ -1063,6 +1015,17 @@ export default function App() {
         </nav>
       )}
       <ActionFeedback key={toast} message={toast} />
+      {homeTrip && (
+        <Suspense
+          fallback={
+            <span role="status" className="sr-only">
+              Abriendo trayecto…
+            </span>
+          }
+        >
+          <SavedTripPreview trip={homeTrip} onClose={() => setHomeTrip(null)} />
+        </Suspense>
+      )}
       {modal === 'station' && (
         <Dialog title="¿Desde dónde te mueves?" onClose={() => setModal(null)}>
           <p className="dialog-intro">Elige una estación de la red. No necesitamos tu ubicación.</p>
@@ -1105,7 +1068,6 @@ export default function App() {
       )}
       {modal === 'settings' && (
         <Dialog title="A tu manera" onClose={() => setModal(null)}>
-          <p className="dialog-intro">Pequeños ajustes para un camino más fácil.</p>
           {!lockedKiosk && <AppearanceSettings appearance={appearance} />}
           <div className="setting-row">
             <span>

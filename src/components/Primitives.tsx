@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X, Users, TrainFront, Snowflake, CircleHelp, ChevronRight, Clock3 } from 'lucide-react';
 import { network } from '../api';
 import type { Arrival } from '../types';
+import { filterMetroForecast } from './metroServiceHours';
 
 // A native modal blocks focus/clicks outside it, but mobile browsers can still scroll
 // its document. Keep one document lock until the final nested dialog has closed.
@@ -186,6 +187,10 @@ export function Dialog({
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Capture before committing children: a child's autoFocus can run before this effect.
+  const opener = useRef<HTMLElement | null>(
+    typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null),
+  );
   const titleId = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -208,8 +213,31 @@ export function Dialog({
     dialog.addEventListener('cancel', onCancel);
     return () => {
       dialog.removeEventListener('cancel', onCancel);
+      const doc = dialog.ownerDocument;
+      const focused = doc.activeElement;
+      const ownedFocus =
+        focused === doc.body || focused === doc.documentElement || dialog.contains(focused);
       dialog.close();
       unlockScroll();
+      const target = opener.current;
+      const active = doc.activeElement;
+      const focusReleased =
+        active === doc.body || active === doc.documentElement || dialog.contains(active);
+      const anotherModal = [...doc.querySelectorAll('dialog[open]')].some(
+        (other) => other !== dialog && !other.contains(target),
+      );
+      if (
+        ownedFocus &&
+        focusReleased &&
+        target?.isConnected &&
+        target !== doc.body &&
+        target !== doc.documentElement &&
+        !target.matches(':disabled') &&
+        !target.closest('[inert], [hidden], [aria-hidden="true"]') &&
+        !anotherModal
+      ) {
+        target.focus({ preventScroll: true });
+      }
     };
   }, []);
   return (
@@ -234,31 +262,39 @@ export function Dialog({
 export function Forecast({
   data,
   compact = false,
+  serviceDate,
 }: {
   data: { hour: string; occupancy: number }[];
   compact?: boolean;
+  serviceDate?: string | Date;
 }) {
-  const items = data.slice(0, compact ? 6 : 10);
+  const date = serviceDate ? new Date(serviceDate) : null;
+  const available =
+    date && Number.isFinite(date.getTime()) ? filterMetroForecast(data, date) : data;
+  const items = available.slice(0, compact ? 6 : 10);
   const lowestOccupancy = Math.min(...items.map((item) => item.occupancy));
   return (
-    <div
-      className={`forecast ${compact ? 'compact' : ''}`}
-      role="img"
-      aria-label={`Afluencia simulada por hora: ${items.map((v) => `${v.hour}, ${v.occupancy}%`).join('; ')}`}
-    >
-      <div className="forecast-bars">
-        {items.map((item, i) => (
-          <div className="forecast-column" key={`${item.hour}-${i}`}>
-            <span className="bar-value">{Math.round(item.occupancy)}%</span>
-            <div className="bar-track">
-              <div
-                className={`bar-fill ${item.occupancy >= 75 ? 'busy' : ''} ${item.occupancy === lowestOccupancy ? 'current least-crowded' : ''}`}
-                style={{ height: `${Math.max(item.occupancy, 4)}%` }}
-              />
+    <div className={`forecast ${compact ? 'compact' : ''}`}>
+      <div
+        className="forecast-scroll"
+        tabIndex={0}
+        role="img"
+        aria-label={`Afluencia simulada por hora: ${items.map((v) => `${v.hour}, ${v.occupancy}%`).join('; ')}`}
+      >
+        <div className="forecast-bars">
+          {items.map((item, i) => (
+            <div className="forecast-column" key={`${item.hour}-${i}`}>
+              <span className="bar-value">{Math.round(item.occupancy)}%</span>
+              <div className="bar-track">
+                <div
+                  className={`bar-fill ${item.occupancy >= 75 ? 'busy' : ''} ${item.occupancy === lowestOccupancy ? 'current least-crowded' : ''}`}
+                  style={{ height: `${Math.max(item.occupancy, 4)}%` }}
+                />
+              </div>
+              <span className="bar-hour">{item.hour}</span>
             </div>
-            <span className="bar-hour">{item.hour}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

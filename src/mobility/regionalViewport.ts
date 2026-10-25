@@ -22,15 +22,21 @@ export function worldPosition(x: number, y: number): MapPosition {
 }
 const northWest = worldPoint({ lng: ZMM_BOUNDS[0], lat: ZMM_BOUNDS[3] });
 const southEast = worldPoint({ lng: ZMM_BOUNDS[2], lat: ZMM_BOUNDS[1] });
-export function constrainRegionalView(view: RegionalView, size: MapSize): RegionalView {
+/** Zoom out as far as this viewport can go while every edge remains in the region. */
+export function minimumRegionalZoom(size: MapSize) {
   const width = Math.max(1, Number.isFinite(size.width) ? size.width : 720);
   const height = Math.max(1, Number.isFinite(size.height) ? size.height : 420);
-  const minimum = Math.max(
-    10,
+  return Math.max(
+    0,
     Math.log2(
       Math.max(width / (southEast.x - northWest.x), height / (southEast.y - northWest.y)) / 256,
     ),
   );
+}
+export function constrainRegionalView(view: RegionalView, size: MapSize): RegionalView {
+  const width = Math.max(1, Number.isFinite(size.width) ? size.width : 720);
+  const height = Math.max(1, Number.isFinite(size.height) ? size.height : 420);
+  const minimum = minimumRegionalZoom(size);
   const zoom = Math.max(
     minimum,
     Math.min(MAX_MAP_ZOOM, Number.isFinite(view.zoom) ? view.zoom : 13),

@@ -187,7 +187,12 @@ test('opening guidance does not request GPS, and start, pause, resume and unmoun
     document.activeElement,
     screen.getByRole('heading', { name: 'Camina hasta Talleres' }),
   );
-  assert.ok(screen.getByText('Sólo con la app visible · se pausa al salir.'));
+  const scope = screen.getByText('Sólo con la app visible; se pausa al salir.');
+  assert.equal(
+    scope.closest('details')?.open,
+    false,
+    'The foreground limitation remains available in collapsed information.',
+  );
   assert.ok(screen.getByText(/no emite avisos en segundo plano/));
   fireEvent.click(screen.getByRole('button', { name: 'Iniciar guía' }));
   await waitFor(() => assert.equal(watches.length, 1));

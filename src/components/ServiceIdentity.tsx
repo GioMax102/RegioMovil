@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   BusFront,
-  ChevronRight,
   CreditCard,
   ExternalLink,
   HelpCircle,
@@ -52,22 +51,25 @@ export default function ServiceIdentity({
           <VehicleIcon size={18} aria-hidden="true" />
           <strong>{input.code}</strong>
         </span>
-        {!compact && <span>{access.networkName}</span>}
         {!compact && (
           <button
             className="service-vehicle-reference"
             type="button"
             onClick={() => setInformation('vehicle')}
+            aria-label={`Cómo reconocer la unidad de ${input.code}: ${access.vehicle.label}`}
+            aria-haspopup="dialog"
+            title={access.vehicle.label}
           >
-            {!access.isRail && (
+            {!access.isRail && access.vehicle.color && (
               <span
-                className={`service-vehicle-swatch${access.vehicle.color ? '' : ' unknown'}`}
-                style={access.vehicle.color ? { backgroundColor: access.vehicle.color } : undefined}
+                className="service-vehicle-swatch"
+                style={{ backgroundColor: access.vehicle.color }}
                 aria-hidden="true"
               />
             )}
-            <span>{access.vehicle.label}</span>
-            <Info size={15} aria-hidden="true" />
+            {access.isRail && <TrainFront size={18} aria-hidden="true" />}
+            {!access.isRail && !access.vehicle.color && <BusFront size={18} aria-hidden="true" />}
+            <Info size={13} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -89,7 +91,6 @@ export default function ServiceIdentity({
             >
               <MethodIcon size={16} aria-hidden="true" />
               {paymentMethods[id].label}
-              <ChevronRight size={14} aria-hidden="true" />
             </button>
           );
         })}
@@ -102,12 +103,13 @@ export default function ServiceIdentity({
             aria-haspopup="dialog"
           >
             <HelpCircle size={16} aria-hidden="true" />
-            Confirmar con operador
-            <ChevronRight size={14} aria-hidden="true" />
+            Pago por confirmar
           </button>
         )}
         {access.paymentStatus === 'unavailable' && (
-          <span className="service-access-unavailable">Servicio sin apertura confirmada</span>
+          <span className="service-access-unavailable">
+            <HelpCircle size={16} aria-hidden="true" /> Sin apertura confirmada
+          </span>
         )}
       </div>
       {information && (

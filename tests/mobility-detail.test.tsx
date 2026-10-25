@@ -108,12 +108,15 @@ test('journey detail retains travel facts, uncertainty and relevant provenance i
   assert.match(boarding.textContent!, /confirma el sentido al abordar/);
   assert.equal(boarding.closest('details'), null);
   assert.ok(boarding.compareDocumentPosition(start) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
-  assert.match(
-    doc.querySelector('.journey-guide-scope')!.textContent!,
-    /app abierta.*GPS en tu dispositivo/,
-  );
-  assert.match(doc.querySelector('.journey-detail-note')!.textContent!, /Tiempo simulado/);
-  assert.equal((doc.querySelector('details') as HTMLDetailsElement).open, false);
+  const information = doc.querySelector<HTMLDetailsElement>('.journey-detail-sources')!;
+  assert.equal(information.querySelector('summary')!.textContent, 'Información del trayecto');
+  assert.match(information.textContent!, /Tiempo y afluencia simulados.*Caminatas aproximadas/);
+  assert.match(information.textContent!, /app abierta.*GPS en tu dispositivo; se pausa al salir/);
+  assert.equal(information.open, false, 'Simulation and GPS scope are disclosed on demand.');
+  assert.equal(doc.querySelector('.journey-guide-scope'), null);
+  assert.equal(doc.querySelector('.journey-detail-note'), null);
+  assert.equal(doc.querySelector('.journey-detail-section-title'), null);
+  assert.equal((doc.querySelector('.journey-service-details') as HTMLDetailsElement).open, false);
   dom.window.close();
 });
 

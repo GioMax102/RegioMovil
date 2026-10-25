@@ -167,6 +167,40 @@ test('local station suggestions remain selectable while an automatic Internet se
   assert.equal(calls, 1);
 });
 
+test('an offline picker waits for text or an explicit search before reporting missing stations', async () => {
+  globalThis.fetch = async () => assert.fail('An offline search must not call the Internet');
+  const input = mount(false);
+  assert.equal(screen.queryByRole('region', { name: 'Paradas y estaciones' }), null);
+  assert.equal(screen.queryByText(/No hay paradas oficiales/), null);
+  await user.click(screen.getByRole('button', { name: 'Buscar lugares y estaciones' }));
+  assert.ok(screen.getByRole('button', { name: /Padre Mier/ }));
+  assert.equal(screen.queryByText(/No hay paradas oficiales/), null);
+  await user.type(input, 'Nombre sin coincidencias');
+  assert.ok(screen.getByText(/No hay paradas oficiales ni lugares guardados que coincidan/));
+});
+
+test('editing a query clears its old map preview even when the new query has no results', async () => {
+  const previews: Array<{ name: string } | null> = [];
+  globalThis.fetch = async (input) => {
+    const query = new URL(String(input), location.origin).searchParams.get('q');
+    return query === 'Fundidora'
+      ? response('Parque Fundidora')
+      : new Response(JSON.stringify({ places: [] }));
+  };
+  const input = mount(true, {
+    onPreview: (point: { name: string } | null) => previews.push(point),
+  });
+  await user.type(input, 'Fundidora');
+  await screen.findByRole('button', { name: /Parque Fundidora Monterrey/ });
+  assert.equal(previews.at(-1)?.name, 'Parque Fundidora');
+  await user.clear(input);
+  assert.equal(previews.at(-1), null, 'Clearing the input also clears its unconfirmed map pin.');
+  await user.type(input, 'Lugar inexistente');
+  assert.equal(previews.at(-1), null, 'A new query must not keep the previous place visible.');
+  await screen.findByText(/No encontramos «Lugar inexistente»/);
+  assert.equal(previews.at(-1), null);
+});
+
 test('a street result requests map confirmation while an approximate place remains selectable', async () => {
   globalThis.fetch = async () =>
     new Response(
@@ -380,4 +414,22 @@ test('offline saved places open the existing trip and never become arbitrary end
   assert.equal(opened?.id, trip.id);
   assert.equal(selections, 0);
   await pause(700);
+});
+
+test('an exact official station is shown and previewed before a loosely matching Internet place', async () => {
+  const previews: Array<{ name: string } | null> = [];
+  globalThis.fetch = async () => response('Padre Mier Centro');
+  const input = mount(true, {
+    onPreview: (point: { name: string } | null) => previews.push(point),
+  });
+  await user.type(input, 'Padre Mier');
+  const places = await screen.findByRole('region', { name: 'Lugares y direcciones' });
+  const stops = screen.getByRole('region', { name: 'Paradas y estaciones' });
+  assert.ok(stops.compareDocumentPosition(places) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
+  assert.equal(previews.at(-1)?.name, 'Padre Mier');
+  await user.type(input, '{ArrowDown}');
+  assert.ok(
+    document.activeElement === within(stops).getByRole('button', { name: /^Padre Mier/ }),
+    'Keyboard selection follows the visual result order.',
+  );
 });

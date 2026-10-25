@@ -1,0 +1,539 @@
+/* One workspace, one map, one changing sheet. No second map behind a dialog. */
+.map-experience.mobility-planner {
+  --panel-size: 48%;
+  position: relative;
+  isolation: isolate;
+  block-size: var(--map-workspace-height, calc(100dvh - 150px));
+  min-block-size: 0;
+  overflow: hidden;
+  background: var(--cream);
+}
+.map-experience[data-sheet='peek'] {
+  --panel-size: 88px;
+}
+.map-experience[data-sheet='full'] {
+  --panel-size: 88%;
+}
+.map-experience:is([data-mode='results'], [data-mode='detail'])[data-sheet='half'] {
+  --panel-size: 56%;
+}
+.map-experience:is([data-mode='results'], [data-mode='detail']) .map-sheet[data-size='half'] {
+  block-size: 56%;
+}
+.map-experience[data-mode='map'] {
+  --panel-size: 190px;
+}
+.map-experience[data-mode='map'] .map-sheet:not([data-size='peek']) {
+  block-size: 190px;
+}
+.map-experience[data-keyboard='true'] {
+  --panel-size: 82%;
+  min-block-size: 0;
+}
+.map-experience[data-keyboard='true'] .map-sheet {
+  block-size: 82%;
+  max-block-size: 90%;
+}
+.map-experience[data-keyboard='true'] .location-map-controls {
+  display: none;
+}
+.map-experience[data-keyboard='true'] .map-sheet-handle {
+  display: none;
+}
+.mobility-map-stage {
+  position: absolute;
+  inset: 0 0 calc(var(--panel-size) - 24px);
+  min-block-size: 60px;
+}
+.mobility-map-stage > .location-map,
+.mobility-map-stage .location-map-canvas {
+  block-size: 100%;
+}
+.mobility-map-stage .location-map-canvas {
+  border: 0;
+  border-radius: 0;
+}
+.map-offline-indicator {
+  position: absolute;
+  inset-block-start: 16px;
+  inset-inline-start: 70px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  background: var(--white);
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
+  font-size: 0.8rem;
+}
+.map-experience .mobility-form {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.map-experience .mobility-fields {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  border: 1.5px solid var(--dark);
+  border-radius: 17px;
+  margin: 0 0 12px;
+}
+.map-experience .mobility-endpoint-entry {
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  min-inline-size: 0;
+}
+.map-experience .mobility-endpoint-entry + .mobility-endpoint-entry {
+  border-block-start: 1px solid var(--line);
+}
+.map-experience .mobility-endpoint {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: 62px;
+  padding: 9px 48px 9px 12px;
+  gap: 10px;
+  background: none;
+  border: 0;
+  text-align: start;
+}
+.map-experience .mobility-endpoint > span:nth-child(2) {
+  min-inline-size: 0;
+}
+.map-experience .mobility-endpoint small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.map-experience .mobility-endpoint strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+.map-experience .mobility-point {
+  inline-size: 26px;
+  block-size: 26px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  flex: none;
+  color: var(--on-primary);
+  background: var(--app-primary);
+  font-size: 0.75rem;
+}
+.map-experience .mobility-point.destination {
+  background: var(--dark);
+  color: var(--white);
+  border-radius: 7px;
+}
+.map-experience .mobility-point-map-action {
+  display: grid;
+  place-items: center;
+  min-inline-size: 44px;
+  min-block-size: 48px;
+  margin-inline-end: 4px;
+  border: 0;
+  background: none;
+  color: var(--dark);
+}
+.map-experience .mobility-swap {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: calc(50% - 22px);
+  inset-inline-end: 48px;
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  min-block-size: 44px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--dark);
+  background: var(--white);
+  box-shadow: 0 2px 8px #12252c12;
+}
+.mobility-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mobility-form-actions > .primary-button {
+  flex: 1;
+  min-inline-size: 0;
+  justify-content: center;
+  min-block-size: 48px;
+}
+.mobility-use-location {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-block-size: 48px;
+  padding: 10px 8px;
+  color: var(--dark);
+  background: none;
+  border: 0;
+  font-size: 0.82rem;
+}
+.planner-information {
+  margin-block-start: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.planner-information > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-block-size: 44px;
+  cursor: pointer;
+  color: var(--dark);
+}
+.planner-information > p,
+.planner-information > a {
+  display: block;
+  margin-block: 8px;
+  line-height: 1.6;
+}
+.planner-saved-shortcuts {
+  display: flex;
+  overflow: auto;
+  gap: 8px;
+  margin-block: 12px 4px;
+}
+.planner-saved-shortcuts > button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-block-size: 44px;
+  padding: 8px 12px;
+  flex: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+}
+.map-experience .mobility-pin-confirm {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.map-experience .mobility-results {
+  margin: 0;
+}
+.mobility-priority-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-block: 4px 10px;
+  scrollbar-width: none;
+}
+.mobility-priority-row::-webkit-scrollbar,
+.map-experience .mobility-result-filters::-webkit-scrollbar {
+  display: none;
+}
+.mobility-priority-row > button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-block-size: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  background: var(--white);
+  color: var(--dark);
+}
+.mobility-priority-row > button[aria-pressed='true'] {
+  background: var(--dark);
+  color: var(--white);
+  border-color: var(--dark);
+}
+.map-experience .mobility-result-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow: auto;
+  gap: 7px;
+  padding: 0 0 10px;
+  scrollbar-width: none;
+}
+.map-experience .mobility-result-filters button {
+  flex: none;
+  display: flex;
+  gap: 5px;
+  min-block-size: 44px;
+  padding: 8px 10px;
+  background: var(--white);
+  color: var(--dark);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
+  font-size: 0.8rem;
+}
+.map-experience .mobility-result-filters button[aria-pressed='true'] {
+  border-color: var(--green);
+  font-weight: 700;
+}
+.map-experience .mobility-result {
+  position: relative;
+  display: grid;
+  inline-size: 100%;
+  gap: 9px;
+  margin: 0;
+  padding: 15px 30px 15px 0;
+  border: 0;
+  border-block-end: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: start;
+}
+.map-experience .mobility-result-time {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 1.6rem;
+  color: var(--dark);
+}
+.map-experience .mobility-result-time small {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.map-experience .mobility-result-time > span {
+  background: none;
+  color: var(--accent-blue);
+  padding: 0;
+  font-size: 0.72rem;
+}
+.map-experience .mobility-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.map-experience .mobility-mode {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 4px 7px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--dark);
+  font-size: 0.8rem;
+}
+.map-experience .mobility-mode span {
+  max-inline-size: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.map-experience .mobility-result-metrics {
+  display: flex;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.map-experience .mobility-result-metrics > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mobility-result-chevron {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: 50%;
+}
+.mobility-trip-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding-block-end: 7px;
+}
+.mobility-trip-caption > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobility-trip-caption > button {
+  min-inline-size: 0;
+  min-block-size: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  color: var(--dark);
+  padding: 4px 0;
+  text-align: start;
+  font-size: inherit;
+}
+.journey-save-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  inline-size: 100%;
+  min-block-size: 48px;
+  margin-block: 8px;
+  background: var(--white);
+  color: var(--dark);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.map-experience .journey-detail-summary {
+  background: none;
+  color: var(--dark);
+  border: 0;
+  padding: 0 0 10px;
+  margin: 0;
+  gap: 7px 12px;
+}
+.map-experience .journey-start {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  margin-block: 0 10px;
+  min-block-size: 48px;
+}
+.map-experience .journey-detail-steps {
+  margin-block-start: 4px;
+}
+.endpoint-inline {
+  display: block;
+  min-inline-size: 0;
+}
+.endpoint-inline .endpoint-picker-search {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--white);
+}
+.endpoint-inline .endpoint-search-field {
+  margin: 0;
+  min-block-size: 50px;
+  border-color: var(--dark);
+  border-radius: 14px;
+}
+.endpoint-inline .endpoint-search-field input {
+  font-size: 1rem;
+  inline-size: 100%;
+}
+.endpoint-inline .endpoint-search-field:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.endpoint-inline .endpoint-search-field input:focus-visible {
+  outline: none;
+}
+.endpoint-inline .endpoint-submit {
+  inline-size: 44px;
+  min-inline-size: 44px;
+}
+.endpoint-inline .endpoint-picker-actions {
+  display: flex;
+  gap: 8px;
+  padding-block: 8px;
+  margin: 0;
+}
+.endpoint-inline .endpoint-picker-actions > button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+  min-block-size: 44px;
+  flex: 1;
+  padding: 8px;
+  font-size: 0.8rem;
+  color: var(--dark);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.endpoint-inline .endpoint-picker-results {
+  padding: 0;
+  overflow: visible;
+}
+.endpoint-inline .endpoint-search-status {
+  min-block-size: 0;
+  padding: 0;
+  margin: 0;
+}
+.endpoint-inline .endpoint-suggestions {
+  margin-block: 4px;
+}
+.endpoint-inline .endpoint-suggestions h3 {
+  font-size: 0.75rem;
+  margin: 10px 0 3px;
+}
+.endpoint-inline .endpoint-suggestion-icon {
+  background: none;
+  color: var(--dark);
+  border: 0;
+  border-radius: 0;
+  inline-size: 28px;
+}
+.endpoint-inline :is(.mobility-place-list, .mobility-stop-list) > button {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  padding: 12px 0;
+  box-shadow: none;
+}
+.endpoint-inline .endpoint-search-privacy > summary {
+  min-block-size: 44px;
+}
+@media (max-width: 360px) {
+  .map-sheet-body {
+    padding-inline: 12px;
+  }
+  .mobility-form-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+  .mobility-form-actions > button {
+    padding-inline: 4px;
+  }
+}
+@media (min-width: 1000px) {
+  .map-experience:is([data-mode='results'], [data-mode='detail']) .map-sheet[data-size='half'] {
+    block-size: 70%;
+  }
+  .mobility-map-stage {
+    inset: 0 0 0 calc(min(400px, 42%) + 36px);
+  }
+  .mobility-map-stage .location-map-controls {
+    inset-inline-end: 18px;
+  }
+  .mobility-map-stage .location-map-info {
+    inset-inline-start: auto;
+    inset-inline-end: 76px;
+  }
+  .map-experience[data-mode='map'] .map-sheet:not([data-size='peek']) {
+    block-size: 190px;
+    inset-block-start: auto;
+    inset-block-end: 18px;
+  }
+}
+@media (max-height: 520px) {
+  .map-experience {
+    --panel-size: 70%;
+  }
+}

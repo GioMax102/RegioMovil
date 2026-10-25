@@ -1,0 +1,178 @@
+.stations-layout.metro-stations-layout {
+  display: block;
+  max-width: 70rem;
+  margin-inline: auto;
+}
+.metro-stations-layout .metro-station-browser {
+  margin-bottom: 10px;
+}
+.metro-station-detail {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.metro-station-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  position: sticky;
+  top: 4.4rem;
+  z-index: 3;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+}
+.metro-station-title {
+  min-width: 0;
+}
+.metro-station-title h2 {
+  margin: 0 0 3px;
+  font-size: clamp(1.05rem, 2.4vw, 1.3rem);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.metro-station-title > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.metro-station-title .line-badge {
+  font-size: 0.7rem;
+}
+.metro-station-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.metro-station-actions .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.metro-station-outlook {
+  padding: 14px 12px 8px;
+  min-width: 0;
+}
+.metro-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.metro-section-title h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--dark);
+}
+.metro-data-disclosure summary {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--dark);
+}
+.metro-data-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+.metro-data-disclosure[open] {
+  flex: 1;
+}
+.metro-data-disclosure[open] summary {
+  margin-left: auto;
+  width: 44px;
+}
+.metro-data-disclosure > div {
+  padding: 10px;
+  color: var(--dark);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  border-top: 1px solid var(--line);
+}
+.metro-data-disclosure p {
+  margin: 0 0 8px;
+}
+.metro-data-disclosure a,
+.metro-facilities a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.metro-station-outlook .forecast {
+  margin: 0;
+}
+.metro-station-outlook .forecast .bar-track {
+  height: 88px;
+}
+.metro-closed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 0;
+  color: var(--dark);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.metro-closed span {
+  margin-left: auto;
+}
+.metro-station-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+.metro-station-meta > span {
+  text-align: right;
+}
+.metro-facilities {
+  color: var(--dark);
+}
+.metro-facilities summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.metro-facilities summary::-webkit-details-marker {
+  display: none;
+}
+.metro-facilities > div {
+  padding: 8px;
+  max-width: 28rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--white);
+}
+.metro-facilities p {
+  margin: 0 0 8px;
+}
+.metro-arrivals {
+  padding: 14px 12px;
+}
+.metro-arrivals .arrival-card + .arrival-card {
+  margin-top: 10px;
+}
+@media (max-width: 400px) {
+  .metro-station-heading {
+    padding-inline: 0;
+    gap: 5px;
+  }
+  .metro-station-title h2 {
+    font-size: 1.05rem;
+  }
+  .metro-station-actions {
+    gap: 0;
+  }
+}

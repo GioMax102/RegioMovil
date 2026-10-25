@@ -1,116 +1,100 @@
+@import './forecastScroll.css';
+
 .metro-station-browser {
-  display: flex;
-  flex-direction: column;
-  min-inline-size: 0;
-  max-block-size: min(45rem, calc(100svh - 2rem));
-  overflow: hidden;
-  background: var(--white);
-}
-.metro-browser-header {
   position: sticky;
-  inset-block-start: 0;
-  z-index: 1;
-  flex: none;
-  padding: 1.1rem 1rem 0.9rem;
-  border-block-end: 1px solid var(--line);
+  top: 0;
+  z-index: 5;
+  min-width: 0;
+  overflow: visible;
+  border-radius: 15px;
   background: var(--white);
+  padding: 6px;
 }
-.metro-browser-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-block-end: 0.85rem;
-  color: var(--green);
-}
-.metro-browser-heading h2 {
-  margin: 0;
-  color: var(--dark);
-  font-size: 1rem;
-  line-height: 1.4;
-}
-.metro-browser-heading > svg {
-  flex: none;
-}
-.metro-browser-filters {
+.metro-browser-controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.4rem;
-}
-.metro-browser-filters button {
-  display: flex;
+  grid-template-columns: minmax(88px, 0.34fr) minmax(0, 1fr) 44px;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  min-block-size: 44px;
-  padding: 0.55rem 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 0.8rem;
-  color: var(--dark);
-  background: var(--surface);
+  gap: 6px;
+}
+.metro-line-control {
+  min-width: 0;
+}
+.metro-line-control select {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--dark);
+  color: var(--white);
+  font: inherit;
   font-size: 0.85rem;
-  line-height: 1.4;
-}
-.metro-browser-filters button.active {
-  border-color: var(--green);
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px var(--green);
 }
-.metro-browser-filters button i {
-  flex: none;
-  inline-size: 0.5rem;
-  block-size: 0.5rem;
-  border-radius: 50%;
-  background: var(--green);
-}
-.metro-browser-content {
-  min-block-size: 0;
-  overflow-y: auto;
-  padding: 0.85rem 0.65rem 0.65rem;
-  scrollbar-width: thin;
-  scroll-padding-block: 0.5rem;
+.metro-line-control option {
+  background: var(--white);
+  color: var(--dark);
 }
 .metro-browser-search {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin-inline: 0.35rem;
-  padding-inline: 0.7rem 0.2rem;
-  border: 1px solid var(--line);
-  border-radius: 0.7rem;
-  color: var(--green);
-  background: var(--surface);
+  gap: 8px;
+  min-width: 0;
+  padding-inline: 8px 0;
+  color: var(--dark);
+}
+.metro-browser-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--dark);
+  font: inherit;
+  font-size: 0.95rem;
+}
+.metro-browser-search input::placeholder {
+  color: var(--dark);
+  opacity: 1;
 }
 .metro-browser-search > svg {
   flex: none;
 }
-.metro-browser-search input {
-  inline-size: 100%;
-  min-inline-size: 0;
-  min-block-size: 46px;
-  border: 0;
-  background: transparent;
-  color: var(--dark);
-  font: inherit;
-  font-size: 0.9rem;
-}
-.metro-browser-search input::placeholder {
-  color: var(--muted);
-  opacity: 1;
-}
-.metro-browser-search button {
+.metro-browser-search button,
+.metro-location-button,
+.metro-results-heading button {
   display: grid;
   place-items: center;
   flex: none;
-  min-inline-size: 44px;
-  min-block-size: 44px;
-  color: var(--dark);
-  border-radius: 0.5rem;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  color: var(--green);
 }
-.metro-browser-count {
-  margin: 0.7rem 0.45rem 0.3rem;
-  color: var(--muted);
-  font-size: 0.8rem;
+.metro-location-button:disabled {
+  opacity: 0.5;
+}
+.metro-browser-content {
+  position: absolute;
+  top: calc(100% + 5px);
+  inset-inline: 0;
+  max-height: min(22rem, 48svh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0 8px 6px;
+  background: var(--white);
+  box-shadow: 0 14px 35px #0002;
+}
+.metro-results-heading {
+  display: flex;
+  justify-content: flex-end;
+  height: 36px;
+}
+.metro-results-heading button {
+  min-height: 36px;
 }
 .metro-browser-list {
   margin: 0;
@@ -118,39 +102,26 @@
   list-style: none;
 }
 .metro-browser-list li + li {
-  border-block-start: 1px solid var(--line);
+  border-top: 1px solid var(--line);
 }
 .metro-browser-station {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  inline-size: 100%;
-  min-block-size: 72px;
-  padding: 0.8rem 0.45rem;
-  border-radius: 0.7rem;
+  gap: 10px;
+  width: 100%;
+  min-height: 60px;
+  padding: 9px 7px;
+  border-radius: 8px;
   color: var(--dark);
-  text-align: start;
+  text-align: left;
 }
 .metro-browser-station:hover,
 .metro-browser-station[aria-pressed='true'] {
   background: var(--surface);
 }
-.metro-browser-station[aria-pressed='true'] {
-  box-shadow: inset 3px 0 var(--green);
-}
-.metro-browser-station-icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  inline-size: 2rem;
-  block-size: 2rem;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--green);
-}
 .metro-browser-station-name {
   flex: 1;
-  min-inline-size: 0;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 .metro-browser-station-name strong,
@@ -159,42 +130,46 @@
   line-height: 1.4;
 }
 .metro-browser-station-name strong {
-  font-size: 0.95rem;
-  font-weight: 650;
+  font-size: 0.92rem;
 }
 .metro-browser-station-name small {
-  margin-block: 0.2rem;
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 .metro-browser-station-lines {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.45rem;
-  color: var(--green);
-  font-size: 0.75rem;
+  justify-content: flex-end;
+  gap: 3px;
+  max-width: 88px;
+  font-size: 0.72rem;
+}
+.metro-browser-station-lines span {
+  white-space: nowrap;
 }
 .metro-browser-station > svg {
   flex: none;
   color: var(--green);
 }
-.metro-browser-empty {
-  padding: 0.8rem;
+.metro-browser-empty,
+.metro-location-status {
+  padding: 8px;
+  margin: 0;
   color: var(--dark);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.8rem;
 }
-.metro-station-browser :is(input, button):focus-visible {
+.metro-station-browser :is(input, select, button):focus-visible {
   outline: 3px solid var(--green);
   outline-offset: 2px;
 }
-@media (min-width: 45rem) and (max-width: 70rem) {
-  .metro-browser-filters {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+@media (max-width: 360px) {
+  .metro-browser-controls {
+    grid-template-columns: 88px minmax(0, 1fr) 44px;
+    gap: 1px;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .metro-browser-content {
-    scroll-behavior: auto;
+  .metro-browser-search {
+    gap: 4px;
+    padding-left: 4px;
   }
 }

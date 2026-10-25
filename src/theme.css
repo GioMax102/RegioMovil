@@ -1,16 +1,16 @@
 /* Sierra green, warm limestone and sky blue. Text colors are independent of
    transport line colors: a route's paint color is never its only identifier. */
 :root {
-  --green: #00745b;
-  --dark: #173c35;
-  --muted: #526860;
-  --line: #d5e3dd;
-  --cream: #f4f7f4;
-  --soft: #e4f3ea;
+  --green: #006b57;
+  --dark: #142d36;
+  --muted: #52616c;
+  --line: #d9e0e6;
+  --cream: #f4f5f7;
+  --soft: #edf0f3;
   --white: #ffffff;
-  --surface: #f8faf7;
+  --surface: #f8f9fb;
   --yellow: #f2bd51;
-  --app-primary: #006c54;
+  --app-primary: #006b57;
   --on-primary: #ffffff;
   --focus: #235d85;
   --accent-blue: #235d85;
@@ -21,18 +21,18 @@
   --app-warning-surface: #fff2d7;
   --app-danger-text: #9a3e31;
   --app-danger-surface: #fff1e9;
-  --surface-grain: linear-gradient(135deg, #00745b05, transparent 60%);
-  --surface-shadow: 0 4px 16px #173c350b;
+  --surface-grain: linear-gradient(135deg, #006b5705, transparent 60%);
+  --surface-shadow: 0 4px 16px #142d360b;
 }
 :root[data-theme='dark'] {
-  --green: #80dfb7;
-  --dark: #e7f5ed;
-  --muted: #adc6bc;
-  --line: #405d52;
-  --cream: #101f1d;
-  --soft: #27483b;
-  --white: #192e28;
-  --surface: #203630;
+  --green: #68e3b5;
+  --dark: #edf4fa;
+  --muted: #adbdcb;
+  --line: #415362;
+  --cream: #111b23;
+  --soft: #263743;
+  --white: #19252e;
+  --surface: #202e39;
   --app-primary: #096d54;
   --focus: #a8d4ff;
   --accent-blue: #a8d4ff;
@@ -43,6 +43,6 @@
   --app-warning-surface: #3b301c;
   --app-danger-text: #ffb8a7;
   --app-danger-surface: #422c25;
-  --surface-grain: linear-gradient(135deg, #80dfb706, transparent 60%);
+  --surface-grain: linear-gradient(135deg, #68e3b506, transparent 60%);
   --surface-shadow: 0 4px 16px #00000020;
 }

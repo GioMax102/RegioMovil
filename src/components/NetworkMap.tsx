@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Minus, Plus, LocateFixed } from 'lucide-react';
+import { Info, Minus, Plus, LocateFixed } from 'lucide-react';
 import geography from '../data/monterrey-map.json';
 import type { Journey, Network, Station, RoutePack, TransitRoute } from '../types';
 
@@ -206,26 +206,48 @@ export default function NetworkMap({
               })}
             </g>
             {network.lines.map((line) => (
-              <polyline
-                key={line.id}
-                points={points(
-                  line.stationIds.map((id) => stationById.get(id)).filter((s): s is Station => !!s),
-                )}
-                stroke={line.color}
-                strokeWidth={journey ? 3 : 5}
-                opacity={
-                  service
-                    ? 0.18
-                    : journey
-                      ? 0.2
+              <g key={line.id}>
+                <polyline
+                  points={points(
+                    line.stationIds
+                      .map((id) => stationById.get(id))
+                      .filter((station): station is Station => !!station),
+                  )}
+                  stroke="#fff"
+                  strokeWidth={journey ? 6 : 8}
+                  opacity={
+                    service || journey
+                      ? 0.25
                       : highlighted.length && !highlighted.includes(line.id)
                         ? 0.3
                         : 1
-                }
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+                  }
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <polyline
+                  points={points(
+                    line.stationIds
+                      .map((id) => stationById.get(id))
+                      .filter((s): s is Station => !!s),
+                  )}
+                  stroke={line.color}
+                  strokeWidth={journey ? 3 : 5}
+                  opacity={
+                    service
+                      ? 0.18
+                      : journey
+                        ? 0.2
+                        : highlighted.length && !highlighted.includes(line.id)
+                          ? 0.3
+                          : 1
+                  }
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </g>
             ))}
             {segments.map((segment, index) => (
               <g key={`${segment.line.id}-${index}`}>
@@ -364,23 +386,28 @@ export default function NetworkMap({
           <LocateFixed size={17} />
         </button>
       </div>
-      <div
-        className="map-key"
-        style={{ bottom: 27, maxWidth: 'calc(100% - 32px)', flexWrap: 'wrap' }}
-      >
-        {service && (
-          <span>
-            <i style={{ background: '#256f4d' }} />
-            {service.route.code} · Trazo publicado
-          </span>
-        )}
-        {visibleLines.map((line) => (
-          <span key={line.id}>
-            <i style={{ background: line.color }} />
-            {line.name}
-          </span>
-        ))}
-      </div>
+      <details className="network-map-information">
+        <summary aria-label="Leyenda del mapa">
+          <Info size={18} aria-hidden="true" />
+        </summary>
+        <div
+          className="map-key"
+          style={{ bottom: 27, maxWidth: 'calc(100% - 32px)', flexWrap: 'wrap' }}
+        >
+          {service && (
+            <span>
+              <i style={{ background: '#256f4d' }} />
+              {service.route.code} · Trazo publicado
+            </span>
+          )}
+          {visibleLines.map((line) => (
+            <span key={line.id}>
+              <i style={{ background: line.color }} />
+              {line.name}
+            </span>
+          ))}
+        </div>
+      </details>
       <a
         className="map-caption"
         href={geography.copyrightUrl}
