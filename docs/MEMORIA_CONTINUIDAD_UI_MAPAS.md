@@ -48,12 +48,12 @@ Fuentes de verdad: `data/route-coverage-inventory.json`, `docs/inventario-rutas-
 - APK: `output/android/regiomovil-debug.apk`; commit, fecha, SHA-256 y huella del bundle en `build-info.json` y `regiomovil-debug.json`. Android comprueba copia exacta de `dist`. `--skip-web` sólo si producto/dist están congelados e idénticos.
 - Navegador: Inicio/textura, Metro/espaciado, unidad oscuro+texto grande, catálogo/foco/Escape, mapa nuevo/ficha sin trazo, guardados horizontales, transbordos y pausa/guardar/avance manual/terminar guía. Responsive 320/390/1440 px. Viewport reducido no equivale a teclado Android real. Favoritos creados en QA retirados y guía terminada; preferencias de prueba restauradas a claro/texto normal/animaciones.
 - Revisión React: carga diferida, limpieza de efectos/listeners, IDs estables, persistencia mínima y foco. Revisión concreta de privacidad: sólo metadatos públicos al guardar; sin nuevos SDKs/dependencias/permisos. No es auditoría completa de infraestructura/dependencias.
-- **ADB sin dispositivo conectado en este cierre.** El último APK instalado/abierto físicamente era `14afba3`; el nuevo no está instalado. No desinstalar ni borrar datos para resolver firma distinta.
+- **Instalación física actualizada el 26 de octubre:** Xiaomi M2103K19G conectado por USB; `adb install -r` devolvió `Success`, `am start -W` devolvió `Status: ok` y `dumpsys` confirmó `mx.regiomovil.app/.MainActivity` en `RESUMED`. Versión instalada: 1.1.0/code2, APK del commit `d1a7891`. La captura muestra Inicio, textura y parada guardada «San Bernabé»: `output/qa/pulido-cobertura-20261025/instalado-xiaomi-2026-10-26.png`. Se conservaron datos al actualizar. Aún pendientes teclado físico, rotación, TalkBack y pruebas de GPS en movimiento.
 
 ## Pendientes al retomar
 
 1. Comprobar rama/remoto; preservar commits del usuario. Commit/push normal a `fixes` autorizado, sin force push.
-2. Conectar Xiaomi, actualizar APK vigente con `adb install -r`, abrir y medir barra del sistema/zona segura, teclado, rotación, fuente grande, TalkBack y contraste alto.
+2. El APK actual ya está instalado/abierto en el Xiaomi; continuar con medición de zona segura en uso, teclado físico, rotación, fuente del sistema, TalkBack y contraste alto.
 3. Validar GPS en movimiento/baja precisión/pérdida de señal, negar/revocar permisos, pausa/reanudación de Activity, voz y ahorro de batería. No aceptar permisos por inferencia ni prometer segundo plano.
 4. Importaciones por lotes desde inventario, sin activar planificación por booleano ni fusionar ramales por número; mantener fichas aun sin mapa.
 5. Publicación futura: autorización concreta, flujo release, firma privada y verificación de web/API/APK. Riesgos previos de reportes/persistencia/cuotas siguen en `docs/seguridad-calidad.md`.
