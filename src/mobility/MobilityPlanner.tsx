@@ -149,16 +149,26 @@ export default function MobilityPlanner({
         if (!active) return;
         setNetwork(data);
         planner.current = createMobilityPlanner(data);
-        setFrom(
-          (current) =>
-            current ??
-            initialOrigin ?? {
+        const origin = initialOrigin;
+        const requestedStop =
+          origin && 'id' in origin
+            ? data.stops.find((stop) => stop.id === origin.id || stop.stationId === origin.id)
+            : undefined;
+        const initialPoint = origin
+          ? 'id' in origin
+            ? requestedStop
+              ? stopEndpoint(requestedStop)
+              : null
+            : origin
+          : {
               id:
                 data.stops.find((stop) => stop.stationId === initialStationId)?.id ??
                 data.stops.find((stop) => stop.stationId === 'padre-mier')?.id ??
                 data.stops[0].id,
-            },
-        );
+            };
+        if (origin && 'id' in origin && !requestedStop && !initialTrip)
+          setNotice('Esta parada guardada ya no está en la red disponible. Elige otro origen.');
+        setFrom((current) => current ?? initialPoint);
       })
       .catch((cause) => {
         if (active) setLoadError(cause.message);

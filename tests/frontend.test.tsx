@@ -733,3 +733,82 @@ test('a saved bus stop opens as the planning origin without an invented destinat
     true,
   );
 });
+
+for (const retired of [false, true]) {
+  test(`a saved bus stop ${retired ? 'removed from the current network asks for another origin' : 'keeps its official origin'} offline`, async () => {
+    const data = JSON.parse(
+      await readFile(new URL('../public/mobility-network.json', import.meta.url), 'utf8'),
+    );
+    const currentStop = data.stops.find((item: { mode: string }) => item.mode === 'bus');
+    const stop = retired
+      ? { ...currentStop, id: 'retired:bus-stop', name: 'Parada retirada' }
+      : currentStop;
+    localStorage.setItem('regiomovil:favorites', JSON.stringify([stop.id]));
+    localStorage.setItem(
+      'regiomovil:favoriteStops',
+      JSON.stringify([
+        {
+          id: stop.id,
+          stopId: stop.id,
+          name: stop.name,
+          lat: stop.lat,
+          lng: stop.lng,
+          kind: 'bus',
+        },
+      ]),
+    );
+    await mount();
+    const previousOnline = Object.getOwnPropertyDescriptor(navigator, 'onLine');
+    const previousCaches = Object.getOwnPropertyDescriptor(globalThis, 'caches');
+    const cachedNetwork = new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    Object.defineProperty(globalThis, 'caches', {
+      configurable: true,
+      value: {
+        open: async () => ({
+          match: async (path: string) =>
+            path === '/mobility-network.json' ? cachedNetwork.clone() : undefined,
+        }),
+      },
+    });
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    failRequests = () => true;
+    try {
+      await act(async () => window.dispatchEvent(new dom.window.Event('offline')));
+      await user.click(mainNavigation().getByRole('button', { name: 'Mi movilidad', exact: true }));
+      await user.click(await screen.findByRole('button', { name: stop.name, exact: true }));
+      const originName = retired ? 'Elige un punto' : currentStop.name;
+      await screen.findByRole('button', { name: `Origen: ${originName}`, exact: true });
+      await act(async () => window.dispatchEvent(new dom.window.Event('offline')));
+      assert.ok(screen.getByRole('button', { name: `Origen: ${originName}`, exact: true }));
+      assert.ok(screen.getByRole('button', { name: 'Destino: Elige un punto', exact: true }));
+      assert.equal(
+        screen.getByRole('button', { name: 'Buscar rutas', exact: true }).hasAttribute('disabled'),
+        true,
+      );
+      if (retired)
+        assert.ok(
+          screen.getByText(
+            'Esta parada guardada ya no está en la red disponible. Elige otro origen.',
+          ),
+        );
+      else
+        assert.equal(
+          screen.queryByText(
+            'Sin conexión, elige estaciones o paradas oficiales para ambos extremos.',
+          ),
+          null,
+        );
+      assert.equal(
+        requests.some((request) => request.path.startsWith('/api/places/')),
+        false,
+      );
+    } finally {
+      if (previousOnline) Object.defineProperty(navigator, 'onLine', previousOnline);
+      else Reflect.deleteProperty(navigator, 'onLine');
+      if (previousCaches) Object.defineProperty(globalThis, 'caches', previousCaches);
+      else Reflect.deleteProperty(globalThis, 'caches');
+    }
+  });
+}

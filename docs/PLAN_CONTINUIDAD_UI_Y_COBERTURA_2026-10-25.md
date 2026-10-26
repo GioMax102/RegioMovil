@@ -2,9 +2,22 @@
 
 Fecha: 25 de octubre de 2026. Rama: `fixes`. Base comprobada: `14afba358145f2026e17c6959e6cc73e4310b96d`.
 
-## Acuerdo de esta interacción
+## Estado de la entrega — 26 de octubre de 2026
 
-Sólo preparar el plan y la memoria. **Los cambios de código empiezan en la siguiente interacción.** No modificar ahora componentes, estilos, catálogos, configuración Android ni artefactos. No hacer push, merge ni despliegue.
+El plan se preparó el 25 de octubre y el usuario autorizó después su implementación, así como **commit y push en `fixes` al cerrar cada interacción**. Las fases de producto descritas abajo están implementadas. El commit del usuario `b142460` conserva el trabajo principal; el cierre añade la corrección de paradas guardadas offline, cuatro regresiones y esta documentación. No rehacer la entrega ni descartar ese commit. La autorización no incluye merge a `main`, despliegue web/API ni publicación de APK release.
+
+| Fase | Resultado comprobado | Pendiente real |
+| --- | --- | --- |
+| 1 · espacio y jerarquía | Marca superior sólo en Inicio, inset aplicado una vez, pestañas con margen, selector «Línea», espaciado de estación/unidades, textos y guardados horizontales | Medir áreas seguras y teclado en el Xiaomi con este APK |
+| 2 · identidad y catálogo | CTA texturizado, nueva ficha de unidad diferida, estimación verde, catálogo no modal con transición de 220 ms, Escape/foco y movimiento reducido | Validación física de accesibilidad |
+| 3 · transbordos | Acciones compartidas por ID, bajada/abordaje distintos, foto documentada, Maps explícito y favoritos sincronizados; parada guardada utilizable offline | GPS y guía en movimiento real |
+| 4 · cobertura | Los 214 servicios son buscables; 59 mapas de ficha, 54 del mapa general/grafo, inventario completo por ID y explicación de los 155 pendientes | Revisar/importar fuentes restantes por lotes; no se declara cobertura completa de la ZMM |
+
+Validación de cierre: **313/313 pruebas, 43 archivos, sin fallos**, TypeScript/build web y APK debug correctos. Recursos iniciales: **613135 bytes** (<600 KiB), CSS inicial gzip **16375 bytes** (<16 KiB). Evidencia y límites: [informe del 26 de octubre](validacion-pulido-cobertura-2026-10-26.md). La memoria operativa está en [MEMORIA_CONTINUIDAD_UI_MAPAS.md](MEMORIA_CONTINUIDAD_UI_MAPAS.md).
+
+## Acuerdo original de planificación (histórico)
+
+En la interacción inicial se pidió preparar sólo el plan y empezar el código en la siguiente. Esa restricción fue sustituida por la autorización posterior indicada arriba. El diagnóstico y las fases siguientes conservan el contexto de partida; sus cifras iniciales no sustituyen el inventario actual.
 
 La entrega anterior pasó 295 pruebas en 41 archivos y se compiló para web/Android. El APK de este commit ya se instaló mediante `adb install -r` y se abrió en el Xiaomi conectado: `am start -W` devolvió `Status: ok`; la actividad quedó `RESUMED` y visible. Esto confirma instalación/apertura, no GPS en movimiento, TalkBack ni todos los flujos físicos.
 
@@ -64,7 +77,7 @@ Archivos: `StationStreetView.tsx`, `MetroStationDetail.tsx`, `MobilityJourneyDet
 
 ### Fase 4 — cobertura y acceso a rutas faltantes
 
-**Inventario local comprobado (catálogo con fecha de consulta 2026-10-16; no auditoría nueva de vigencia):**
+**Inventario de partida, anterior a los cinco mapas añadidos (catálogo con fecha de consulta 2026-10-16; no auditoría nueva de vigencia):**
 
 | Red | Servicios catalogados | Con trazo importado para mapa | Sin trazo importado |
 | --- | ---: | ---: | ---: |
@@ -130,12 +143,12 @@ Las dos consideraciones adicionales quedan cubiertas por el encabezado sólo en 
 
 ## Reanudación práctica
 
-1. Leer este archivo y la memoria principal; `git status`/diff y confirmar `fixes`. Los cambios de esta interacción deben ser únicamente documentos.
-2. Comenzar por la fase1, midiendo encabezado y áreas seguras. Después textura/tarjetas/catálogo, transferencias y cobertura. La auditoría de fuentes puede avanzar como trabajo independiente de UI sin pisar archivos.
-3. Registrar resultados y pendientes por fase en esta sección, con evidencia; no sustituir un pendiente por una afirmación de cobertura completa.
-4. Al finalizar cada entrega, actualizar memoria e informe y conservar commits locales. Publicación sólo tras petición para la versión concreta.
+1. Leer el estado de entrega al principio de este documento y la memoria; comprobar `git status`, `git log` y `fixes`. No empezar de nuevo las fases realizadas.
+2. Si el teléfono está conectado, actualizar el APK debug con `adb install -r`, abrirlo y comprobar inset, teclado, rotación, TalkBack y GPS. El último APK instalado físicamente era `14afba3`; el nuevo todavía requiere instalación en dispositivo.
+3. Para ampliar cobertura, partir de `data/route-coverage-inventory.json`: 114 enlaces My Maps aún sin revisar individualmente, 39 autobuses con metadatos sin enlace individual y dos líneas ferroviarias sin mapa importado. Mantener las fechas originales de fuentes y los límites de operación/sentido.
+4. Actualizar memoria e informe al cerrar cada entrega. Commit y push normales a `fixes` están autorizados; no hacer force push, merge ni despliegue por inferencia.
 
-Estado inicial de todas las fases: **pendiente de implementación**. No se ejecutaron pruebas, builds ni modificaciones de producto durante la preparación de este plan.
+Los cinco mapas incorporados son los ramales exactos 13 Soriana Sendero Lincoln, 39 Directa San Bernabé Centro, 109 Aeropuerto–Y Griega, 124 Quinta Colonial–Ruiz Cortines por Anillo y 310 Portal de Lincoln–Estación San Bernabé. Sus 723 marcadores y 3024 vértices se cargan por ficha. `experimentalRouting:false` impide que entren al grafo: importar un mapa no verifica el orden de abordaje. [Auditoría y razones de pendientes](catalogo-autobuses.md).
 
 Referencias visuales proporcionadas:
 

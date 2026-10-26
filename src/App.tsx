@@ -960,9 +960,7 @@ export default function App() {
                                 } else {
                                   setInitialMobilityTrip(undefined);
                                   setInitialMobilityOrigin({
-                                    kind: 'place',
-                                    lat: entry.lat,
-                                    lng: entry.lng,
+                                    id: entry.stopId,
                                     name: entry.name,
                                   });
                                   setPage('plan');

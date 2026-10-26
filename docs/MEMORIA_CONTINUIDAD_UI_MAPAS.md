@@ -1,97 +1,82 @@
-# Continuidad de RegioMóvil — mapas y paneles
+# Continuidad de RegioMóvil — UI, mapas y cobertura
 
-Actualizado: **25 de octubre de 2026**, America/Monterrey.
+Actualizado: **26 de octubre de 2026**, America/Monterrey.
 
-## Nueva etapa solicitada: leer primero
+## Leer primero
 
-El usuario pidió **sólo un plan en esta interacción**, y comenzar el código en la siguiente. El plan activo es [UI, encabezado, textura y cobertura](PLAN_CONTINUIDAD_UI_Y_COBERTURA_2026-10-25.md). Contiene las 12 anotaciones nuevas, archivos implicados, diagnóstico, fases y criterios de aceptación. Todas esas fases están pendientes; no confundirlas con la entrega anterior terminada.
+El usuario autorizó implementar el [plan de UI y cobertura](PLAN_CONTINUIDAD_UI_Y_COBERTURA_2026-10-25.md), además de **commit y push en `fixes` al cerrar cada interacción**. Las 12 anotaciones y los ajustes adicionales ya están implementados. No reiniciar el plan, descartar trabajo ni pedir otra autorización para commit/push normales a esa rama. Merge a `main`, despliegue web/API y publicación release requieren una petición para esa versión.
 
-Base actual: `fixes`, commit `14afba3`. El APK de esta entrega **ya se instaló y abrió en el Xiaomi** en la interacción posterior al informe original: instalación `Success`, lanzamiento `Status: ok`, actividad principal visible y `RESUMED`. Sigue pendiente validar los flujos físicos, GPS y accesibilidad. El catálogo local incluye214 servicios; 54 trazos en el mapa y158 autobuses sin geometría importada, además de dos líneas ferroviarias sin mapa operativo en esta versión. La fase4 explica esa diferencia y evita prometer trazos inventados.
+El usuario guardó la implementación principal en **`b142460` («Cambios diseño interfaz»)**, posterior a `14afba3`. El cierre conserva ese commit y añade la corrección offline de paradas guardadas, cuatro regresiones y documentación. Consultar `git status`, `git log -5` y `output/android/build-info.json` para identificar el cierre; no copiar hashes antiguos del APK.
 
-## Estado al retomar
-
-La implementación del rediseño solicitado está realizada en **`fixes`**. No reiniciar ni descartar los cambios. La base anterior era `2dab6cfdf827e1e933eccdb65cc5276955c9619e`; comprobar el estado actual con `git status` y `git log`.
-
-**Esta entrega se mantiene local.** No se hizo push, merge ni despliegue de esta UI. La web pública, API y APK público conservan su despliegue anterior. La autorización histórica de publicación no autoriza publicar automáticamente esta tanda.
-
-El usuario solicita una UI limpia y directa, con mapas como contenido principal y búsqueda/resultados/detalle sobrepuestos. Deben conservarse las fuentes, simulaciones, permisos y límites en información plegada; los errores o advertencias relevantes a una acción permanecen visibles.
-
-La evidencia y el estado de validación están en `docs/validacion-ui-mapas-2026-10-25.md` y `output/qa/mapas-paneles-20261025/`. Las capturas de `usabilidad-20261024/` son anteriores al rediseño.
+Informe vigente: [validacion-pulido-cobertura-2026-10-26.md](validacion-pulido-cobertura-2026-10-26.md). Evidencia: `output/qa/pulido-cobertura-20261025/` (conserva la fecha inicial). Las 295 pruebas y cifras del informe anterior de mapas/paneles son históricas.
 
 ## Implementación consolidada
 
-- **Planear:** un solo `LocationMap` y un `MapSheet` no modal. Formulario, búsqueda, selección del pin, alternativas y detalle cambian dentro del mismo panel. En escritorio es lateral; en móvil se desliza por la manija. También se puede ajustar por botón y teclado.
-- **Búsqueda:** sin todas las estaciones al abrir; aparecen tras escribir o buscar explícitamente. Conserva GPS puntual, pin, direcciones, cruces y lugares del servicio existente. Estación exacta antes que coincidencia remota amplia, orden visual y de teclado iguales, sin preview anterior tras editar. Debounce, cancelación, IME y protección contra respuestas tardías preservados.
-- **Teclado/viewport:** `useMapWorkspaceHeight` mide encabezado, navegación, áreas seguras y `visualViewport`. Con teclado se oculta navegación inferior y manija; se conserva una franja del mapa y el panel usa el 82% disponible. Corregidos mínimos que desbordaban en horizontal y desbordamientos a 320 px con texto grande.
-- **Resultados:** prioridades recalculan sin repetir Buscar; filtros de transporte, tarjetas compactas con nombres de servicios y detalle dentro del panel. Origen/destino editables desde resultados. Guardado explícito y regreso de foco al encabezado tras cerrar su diálogo.
-- **Guía:** mapa y siguiente acción, controles manuales «Ya bajé» / «Ya llegué», detener/pausar disponibles; se inicia sólo por acción explícita. Condiciones GPS y ámbito de primer plano conservados; no promete avisos en segundo plano. Al terminar vuelve al botón de inicio.
-- **Red:** mapa ocupa el espacio disponible, buscador textual accesible, filtros horizontales, catálogo inicialmente cerrado; tocar el mapa o Enter lo amplía. Sólo un mapa montado. Fichas con datos de unidad/pagos/fuentes plegados.
-- **Mapas estandarizados:** `MobilityMap` delega en `LocationMap`, también en guardados. Geometrías completas y segmentos separados, sin unir coordenadas inválidas; zoom mínimo regional adaptable a pantallas estrechas; reencuadre al cambiar tamaño sin deshacer cada desplazamiento manual. Snapshots v1 sin `route.segments` siguen abriendo con la geometría de sus etapas.
-- **Metro:** línea a la izquierda, estación a la derecha, sugerencias tras interacción y GPS automático únicamente con permiso previamente concedido. Header pequeño con ojo sólo si existe fotografía documentada, enlace Maps y guardar. Accesibilidad de equipos sin verificar no se presenta como confirmada.
-- **Horarios:** Inicio, detalle y kiosco ocultan llegadas simuladas durante cierre; pronóstico horizontal filtra horas cerradas. Horario general publicado de Metrorrey y excepciones en `metroServiceHours.ts`, fuente oficial consultada el 24 de octubre. No equivale a estado operativo en vivo.
-- **Inicio:** accesos icono+título de trayectos guardados reales, conectados a `SavedTripPreview`. En la navegación móvil la etiqueta corta es «Viajes».
-- **Identidad y accesibilidad:** superficies opacas/neutrales, acentos contrastantes, modo oscuro y movimiento reducido; utilidad `.sr-only` global y foco visible en desplegables. `Dialog` restaura el foco al abrir/cerrar sin interferir con navegación ni otros modales. No se añadieron SDKs, imágenes pesadas, fuentes remotas ni dependencias.
+- **Espacio superior:** marca en cabecera sólo en Inicio; altura móvil 60 px, zona segura aplicada una vez por `app-shell`. Otras pantallas usan el control compacto «Información y avisos», con cierre y retorno de foco. Barra lateral de escritorio conservada. Sin cambios nativos ni nuevos permisos.
+- **Metro:** margen con el selector real `.network-section-tabs`; select nativo «Línea», chevron independiente/padding; título, acciones y «Próximas unidades» con espacio propio.
+- **Identidad:** textura estática ligera en CTA, desactivada en contraste alto/forced colors; estimación verde; `ArrivalDetails` diferido, simulación visible e Info cerrado. Textos de navegación/guía en estilo oración.
+- **Guardados:** origen → destino horizontal y nombres completos accesibles. Parada de autobús abre por ID oficial, funciona offline y conserva destino vacío. ID retirado pide elegir otro origen; no sustituye silenciosamente por coordenadas.
+- **Transbordos:** `StationActions` compartido con Metro en detalle y guía; resolución por ID y bajada/abordaje distintos. Foto sólo documentada (actualmente Talleres); Maps sólo con coordenadas públicas y apertura explícita. Guardar conserva progreso/pausa/GPS. Favoritos sincronizados entre vistas/pestañas; kiosco desactiva persistencia.
+- **Catálogo:** busca los 214 servicios independientemente de los 54 del mapa general. Sugerencias limitadas y paginación; ramales con identidad exacta. Sin geometría abre «Trazo pendiente» y fuente, sin mapa vacío ni planificación ficticia.
+- **Panel de rutas:** región no modal, transición de 220 ms desde la franja inferior, inmediata al reducir movimiento. Foco al buscador y retorno al botón al cerrar/Escape. Cerrado `inert`/`aria-hidden`; filtros/búsqueda/scroll preservados; un solo mapa.
 
-## Archivos de referencia
+Se mantiene la arquitectura anterior: mapa y `MapSheet` en Planear, búsqueda cancelable IME/debounce y alternativas manuales, prioridades/filtros, snapshots v1 compatibles, guía sólo en primer plano y controles manuales. Horario publicado filtra simulaciones cerradas; no confirma operación en vivo. No rehacer el planeador.
 
-- `src/mobility/MobilityPlanner.tsx`, `JourneyOptions.tsx`, `MapSheet.tsx`, `mapPlanner.css`, `mapSheet.css`.
-- `src/mobility/EndpointPicker.tsx`, `LocationMap.tsx`, `MobilityMap.tsx`, `regionalViewport.ts`.
-- `src/components/NetworkExplorer.tsx`, `NetworkMap.tsx`, `TransitCatalog.tsx`.
-- `src/components/MetroStationBrowser.tsx`, `MetroStationDetail.tsx`, `metroServiceHours.ts`.
-- `src/components/HomeDashboard.tsx`, `StationStreetView.tsx`, `ServiceIdentity.tsx`, `Primitives.tsx`.
-- `src/useMapWorkspaceHeight.ts`, `src/mapLayout.css`, `src/theme.css`, `src/App.tsx`.
+## Cobertura exacta
 
-CSS de componentes antiguos sin uso en el arranque se movió de estilos globales a `route-planning.css`, ahora importado por el componente opcional `StationPicker`. Mantiene su apariencia si se usa y evita exceder el presupuesto inicial. **No volver a importar ese CSS globalmente sin medir tamaño.** No se aumentaron los límites de rendimiento.
+| Concepto | Cantidad |
+| --- | ---: |
+| Servicios documentados buscables | 214 |
+| Fichas con mapa | 59 |
+| Recorridos de mapa general/grafo experimental | 54 |
+| Puntos del grafo | 3417 |
+| Nuevos mapas sólo de consulta | 5 |
+| Servicios sin mapa importado | 155 |
 
-## Validación y artefactos
+Nuevos ramales: 13 Soriana Sendero Lincoln, 39 Directa San Bernabé Centro, 109 Aeropuerto–Y Griega, 124 Quinta Colonial–Ruiz Cortines por Anillo y 310 Portal de Lincoln–Estación San Bernabé. Cinco segmentos, 3024 vértices, 723 marcadores y 342564 bytes sin compresión, diferidos por ficha. **`experimentalRouting:false`**: el generador excluye sus marcadores con motivo `visualization-only`. La regresión ejecuta el generador real en `/tmp` con un control permitido.
 
-- Suite completa definitiva: **295/295**, 41 archivos, sin fallos ni archivos sin resultados. Incluye cinco regresiones nuevas de foco y una de snapshot antiguo; consultar el informe de validación y `regresiones.json`.
-- Recursos iniciales: **606087 bytes** (<600 KiB); CSS inicial comprimido **16239 bytes** (<16 KiB). Margen de CSS reducido: medir al añadir estilos globales.
-- Build web/TypeScript y APK debug con API HTTPS pública realizados. `output/android/build-info.json` es la fuente de verdad del commit, fecha, tamaño, hash y huella de assets. No copiar hashes antiguos de esta memoria.
-- APK local: `output/android/regiomovil-debug.apk`; Android sincronizado con el mismo `dist`. No es una publicación release.
-- QA navegador: Planear, búsqueda, prioridades, filtros, detalle, iniciar/avanzar/terminar guía sin GPS, guardar y reabrir desde Inicio; Red/Metro/fichas; 390×844, 320×740 oscuro+texto grande, 667×375 y 1440×900. Teclado representado reduciendo viewport: **no teclado físico Android**.
-- En 320×740, después de corregir: ancho documento320, panel sin scroll horizontal, borde inferior del workspace igual al superior de navegación (670 px).
-- **Instalación posterior confirmada en el Xiaomi:** APK de `14afba3`, sin borrar datos, abierto correctamente. No equivale a validación completa de teclado, GPS, lectores de pantalla ni guía en movimiento.
+Pendientes: **114 autobuses con enlace My Maps aún sin descarga/revisión individual en este lote; 39 con metadatos sin enlace individual; dos líneas ferroviarias sin mapa importado**. No afirmar que no existen otras fuentes, cobertura completa de ZMM o vigencia actual de L4/L6 a partir de estados históricos.
 
-## Pendientes reales
+Fuentes revisadas el **25 de octubre**; cierre de software el 26. Mantener esas fechas. Dataset SETME declara ODC; no se identificó licencia individual en KML. Conservar atribución, URLs, hashes y límites. Marcadores publicados no equivalen a infraestructura ni sentido verificados.
 
-1. Para la próxima compilación, comprobar conexión con `adb devices -l`, actualizar con `adb install -r` y abrir. La instalación de `14afba3` ya se completó. No desinstalar ni borrar datos para resolver una firma distinta.
-2. Validar teclado virtual real, TalkBack, tamaño de fuente del sistema, rotación, áreas seguras y contraste alto. La inspección DOM/contraste de tokens no certifica toda la accesibilidad.
-3. Validar GPS en movimiento, precisión baja/pérdida de señal, negar/revocar permiso, pausa/reanudación de Activity, voz y ahorro de batería. No prometer seguimiento en segundo plano.
-4. Antes de publicación: revisión del diff/commit y autorización explícita para esta versión; ejecutar flujo release del proyecto, conservar firma privada y verificar web/API/APK publicados. No sustituir un APK release por debug.
-5. Riesgos anteriores siguen documentados en `docs/seguridad-calidad.md`: reportes públicos sin moderación, persistencia efímera del piloto, cuotas del proveedor y límites por IP detrás del proxy. Esta tanda no es una auditoría nueva de infraestructura ni de vulnerabilidades de dependencias.
+Fuentes de verdad: `data/route-coverage-inventory.json`, `docs/inventario-rutas-2026-10-25.csv`, `data/coverage-source-audit-20261025.json`, `docs/catalogo-autobuses.md`. Pipelines: `scripts/import-ima-view-maps.py`, `scripts/prepare-coverage-inventory.mjs`, `scripts/prepare-mobility.mjs`.
 
-Las sugerencias dependen de cobertura y proveedor: no afirmar que resuelven cualquier expresión ni equivalencia completa con Google Maps. Conservar alternativas manuales por pin/estación y errores claros.
+## Verificación y artefactos
 
-## Entorno y comandos
+- **313/313 pruebas, 43 archivos**, sin fallos ni archivos sin resultados. Runner, `regresiones.json` y TAP por archivo en la carpeta QA indicada. Incluye paradas presentes/retiradas offline y exclusión de los cinco mapas al planear.
+- TypeScript, build web y APK debug con API HTTPS correctos. Iniciales **613135 bytes** (<614400), CSS inicial gzip **16375 bytes** (<16384). Sólo **9 bytes** de margen CSS: quitar reglas sin uso/mover estilos opcionales a componentes diferidos. No aumentar presupuestos para ocultar regresiones.
+- APK: `output/android/regiomovil-debug.apk`; commit, fecha, SHA-256 y huella del bundle en `build-info.json` y `regiomovil-debug.json`. Android comprueba copia exacta de `dist`. `--skip-web` sólo si producto/dist están congelados e idénticos.
+- Navegador: Inicio/textura, Metro/espaciado, unidad oscuro+texto grande, catálogo/foco/Escape, mapa nuevo/ficha sin trazo, guardados horizontales, transbordos y pausa/guardar/avance manual/terminar guía. Responsive 320/390/1440 px. Viewport reducido no equivale a teclado Android real. Favoritos creados en QA retirados y guía terminada; preferencias de prueba restauradas a claro/texto normal/animaciones.
+- Revisión React: carga diferida, limpieza de efectos/listeners, IDs estables, persistencia mínima y foco. Revisión concreta de privacidad: sólo metadatos públicos al guardar; sin nuevos SDKs/dependencias/permisos. No es auditoría completa de infraestructura/dependencias.
+- **ADB sin dispositivo conectado en este cierre.** El último APK instalado/abierto físicamente era `14afba3`; el nuevo no está instalado. No desinstalar ni borrar datos para resolver firma distinta.
 
-Repositorio: `/home/magio/giovanni/proyectos/RegioMovil`. Node del sistema12 no sirve; utilizar Node24:
+## Pendientes al retomar
+
+1. Comprobar rama/remoto; preservar commits del usuario. Commit/push normal a `fixes` autorizado, sin force push.
+2. Conectar Xiaomi, actualizar APK vigente con `adb install -r`, abrir y medir barra del sistema/zona segura, teclado, rotación, fuente grande, TalkBack y contraste alto.
+3. Validar GPS en movimiento/baja precisión/pérdida de señal, negar/revocar permisos, pausa/reanudación de Activity, voz y ahorro de batería. No aceptar permisos por inferencia ni prometer segundo plano.
+4. Importaciones por lotes desde inventario, sin activar planificación por booleano ni fusionar ramales por número; mantener fichas aun sin mapa.
+5. Publicación futura: autorización concreta, flujo release, firma privada y verificación de web/API/APK. Riesgos previos de reportes/persistencia/cuotas siguen en `docs/seguridad-calidad.md`.
+
+## Entorno reproducible
+
+Repo `/home/magio/giovanni/proyectos/RegioMovil`. Node del sistema12 no sirve; usar Node24:
 
 ```bash
 export PATH=/home/magio/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH
-node node_modules/typescript/bin/tsc -b
-node --import tsx --test --test-isolation=none --test-reporter=tap tests/map-sheet.test.tsx
-```
-
-Ejecutar un archivo JSDOM por proceso con `--test-isolation=none`; los fixtures alteran globals. El runner guardado en `output/qa/mapas-paneles-20261025/ejecutar-regresiones.mjs` ejecuta todos los archivos con tres procesos separados, registra TAP y detecta archivos sin resultados. Algunas pruebas HTTP requieren autorización del sandbox para abrir servidores locales. Evitar wrappers pnpm que intenten reinstalar otra versión automáticamente.
-
-Servidor de desarrollo dejado activo: `http://localhost:5173/`, API3001; al cierre la dirección LAN era `http://192.168.1.3:5173/`. Revisar que siga vivo antes de iniciar otro:
-
-```bash
-VITE_API_BASE_URL='' DATABASE_PATH=:memory: node scripts/dev.mjs
-```
-
-La IP LAN puede cambiar; HTTP de LAN no garantiza permisos GPS del navegador. Preferir APK o HTTPS para probar ubicación.
-
-```bash
+node output/qa/pulido-cobertura-20261025/ejecutar-regresiones.mjs
+node scripts/prepare-coverage-inventory.mjs --check
 VITE_API_BASE_URL=https://regiomovil-api.onrender.com node scripts/android-build.mjs --offline
+```
+
+Runner: un archivo JSDOM por proceso con `--test-isolation=none`, tres procesos y TAP con conteos/salida reales. HTTP local puede necesitar escalación de sandbox. Teardown frontend espera trabajo pendiente de React antes de restaurar globals. No usar «una prueba por archivo» del runner Node predeterminado como conteo definitivo.
+
+Desarrollo: `VITE_API_BASE_URL='' DATABASE_PATH=:memory: node scripts/dev.mjs`; web5173/API3001. Comprobar listeners antes de duplicar servidor; las sesiones pueden terminar entre interacciones. IP LAN variable; HTTP LAN no garantiza GPS, preferir APK/HTTPS.
+
+```bash
 /home/magio/Android/Sdk/platform-tools/adb devices -l
 /home/magio/Android/Sdk/platform-tools/adb install -r output/android/regiomovil-debug.apk
 /home/magio/Android/Sdk/platform-tools/adb shell am start -W -n mx.regiomovil.app/.MainActivity
 ```
 
-`--offline` se refiere a resolución Gradle, no a funcionamiento de la app sin internet. `--skip-web` sólo si `dist` corresponde exactamente al código actual. SDK36/JDK21, appId `mx.regiomovil.app`, versión1.1.0/code2. No imprimir secretos/archivos de firma.
-
-## Reglas para seguir
-
-Mantener `fixes`; leer estado y diff antes de editar; no descartar trabajo. Skills de revisión React y verificación ya aplicadas. Delegar por archivos para evitar pisar CSS/App compartidos. Los agentes anteriores no son necesarios para recuperar la implementación: todo está en archivos. Si el usuario señala nuevos problemas, partir de esta entrega comprobada, sin rehacer el planeador.
+`--offline` es resolución Gradle. SDK36/JDK21, appId `mx.regiomovil.app`, versión1.1.0/code2. No imprimir secretos/firma. Skills React y verificación aplicadas. Delegar por archivos; la implementación está en el repo y no requiere recuperar agentes anteriores.
