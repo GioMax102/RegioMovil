@@ -60,9 +60,16 @@ export async function loadPlan(
   }
 }
 export async function sendReport(
-  stationId: string,
-  category: string,
-  detail: string,
+  report: {
+    stationId: string;
+    category: string;
+    title: string;
+    detail: string;
+    targetType: 'station' | 'unit';
+    unitReference?: string;
+    photo?: string;
+    publicationConsent: boolean;
+  },
 ): Promise<void> {
   let result: { ok: boolean; payload: { error?: { message?: string } } | null };
   try {
@@ -70,7 +77,7 @@ export async function sendReport(
       const response = await fetch(`${apiBase}/api/reports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stationId, category, detail }),
+        body: JSON.stringify(report),
         signal,
       });
       return {
@@ -89,6 +96,23 @@ export async function sendReport(
     );
   }
 }
+
+export type PublicReport = {
+  id: string;
+  title: string;
+  detail: string;
+  category: string;
+  targetType: 'station' | 'unit';
+  unitReference: string | null;
+  createdAt: string;
+  photoMime: string | null;
+};
+export async function loadPublicReports(target: { stationId?: string; routeId?: string }): Promise<PublicReport[]> {
+  const query = target.routeId ? `route=${encodeURIComponent(target.routeId)}` : `station=${encodeURIComponent(target.stationId || '')}`;
+  const result = await get<{ reports: PublicReport[] }>(`/reports?${query}`);
+  return result.reports;
+}
+export const publicReportPhotoUrl = (id: string) => `${apiBase}/api/reports/${encodeURIComponent(id)}/photo`;
 export function readStored<T>(key: string, fallback: T): T {
   try {
     const value = localStorage.getItem(`regiomovil:${key}`);

@@ -42,6 +42,7 @@ import { useAppearance } from './appearance';
 import { AppearanceSettings } from './components/AppearanceSettings';
 import { ActionFeedback } from './components/ActionFeedback';
 import { DataPreferencesProvider } from './dataPreferences';
+import PublicReports from './components/PublicReports';
 import DeferredSection from './components/DeferredSection';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
@@ -422,9 +423,7 @@ export default function App() {
                     : page === 'plan'
                       ? 'Planea tu viaje.'
                       : page === 'stations'
-                        ? networkTab === 'routes'
-                          ? 'Rutas y redes.'
-                          : 'Estaciones.'
+                        ? 'Red de transporte.'
                         : 'Tus guardados.'}
               </h1>
               {(page === 'home' || kiosk) && (
@@ -721,7 +720,7 @@ export default function App() {
                 onClick={() => setNetworkTab('stations')}
               >
                 <TrainFront size={17} />
-                Estaciones de Metro
+                Metro
               </button>
               <button
                 id="network-routes-tab"
@@ -732,7 +731,7 @@ export default function App() {
                 onClick={() => setNetworkTab('routes')}
               >
                 <Route size={17} />
-                Rutas y redes<span className="network-new-label">NUEVO</span>
+                Rutas y redes
               </button>
             </div>
           )}
@@ -873,6 +872,7 @@ export default function App() {
                     ))}
                   </div>
                 </section>
+                <PublicReports stationId={currentStation.id} />
                 <div className="station-detail-grid">
                   {forecastPanel}
                   <section className="panel facilities-panel">
@@ -1450,7 +1450,12 @@ function ReportDialog({
   onSent: () => void;
 }) {
   const [category, setCategory] = useState('crowding');
+  const [targetType, setTargetType] = useState<'station' | 'unit'>('station');
+  const [title, setTitle] = useState('');
   const [detail, setDetail] = useState('');
+  const [unitReference, setUnitReference] = useState('');
+  const [publicationConsent, setPublicationConsent] = useState(false);
+  const [photo, setPhoto] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const mounted = useRef(false);
@@ -1466,7 +1471,7 @@ function ReportDialog({
     setError('');
     setBusy(true);
     try {
-      await sendReport(station.id, category, detail.trim());
+      await sendReport({ stationId: station.id, category, title: title.trim(), detail: detail.trim(), targetType, unitReference: unitReference.trim(), photo: photo || undefined, publicationConsent });
       if (!mounted.current) return;
       onSent();
     } catch (error) {
@@ -1488,6 +1493,19 @@ function ReportDialog({
       </p>
       <form className="report-form" onSubmit={submit}>
         <label>
+          ¿Dónde ocurrió?
+          <select value={targetType} onChange={(e) => setTargetType(e.target.value as 'station' | 'unit')}>
+            <option value="station">En la estación</option>
+            <option value="unit">En una unidad</option>
+          </select>
+        </label>
+        {targetType === 'unit' && (
+          <label>
+            Ruta o referencia de unidad (opcional)
+            <input value={unitReference} onChange={(e) => setUnitReference(e.target.value)} maxLength={80} placeholder="Ej. ruta o número económico" />
+          </label>
+        )}
+        <label>
           ¿Qué observaste?
           <select value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="crowding">Saturación de personas</option>
@@ -1495,6 +1513,10 @@ function ReportDialog({
             <option value="accessibility">Accesibilidad</option>
             <option value="condition">Condición de la unidad</option>
           </select>
+        </label>
+        <label>
+          Título
+          <input value={title} onChange={(e) => setTitle(e.target.value)} minLength={3} maxLength={100} required placeholder="Ej. Falta una banca en el andén" />
         </label>
         <label>
           Cuéntanos un poco
@@ -1509,10 +1531,33 @@ function ReportDialog({
           />
           <span className="character-count">{detail.length}/500 · Mínimo 10 caracteres</span>
         </label>
+        <label>
+          Foto (opcional)
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={async (event) => {
+            const file = event.currentTarget.files?.[0];
+            if (!file) { setPhoto(''); return; }
+            if (file.size > 8_000_000) { setError('La imagen original debe pesar menos de 8 MB.'); event.currentTarget.value = ''; return; }
+            try {
+              const bitmap = await createImageBitmap(file);
+              const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+              canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
+              const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('No pudimos procesar la foto.')), 'image/webp', 0.78));
+              if (blob.size > 400_000) throw new Error('La foto comprimida debe pesar menos de 400 KB.');
+              const reader = new FileReader(); reader.onload = () => setPhoto(String(reader.result)); reader.onerror = () => setError('No pudimos leer la foto.'); reader.readAsDataURL(blob);
+            } catch (cause) { setPhoto(''); setError(cause instanceof Error ? cause.message : 'No pudimos procesar la foto.'); }
+          }} />
+          {photo && <img className="report-photo-preview" src={photo} alt="Vista previa de la foto adjunta" />}
+        </label>
         <p className="subtle">
-          No compartas nombres, teléfonos o datos de pago. Los reportes se almacenan en el servidor
-          del piloto.
+          El reporte queda privado hasta que una persona lo revise. No compartas rostros, placas ni
+          datos personales. No se envía a autoridades ni cambia predicciones.
         </p>
+        <label className="report-consent">
+          <input type="checkbox" checked={publicationConsent} onChange={(e) => setPublicationConsent(e.target.checked)} />
+          Acepto que, si se aprueba, el reporte y su foto puedan mostrarse públicamente en esta estación.
+        </label>
         {error && (
           <p className="inline-error" role="alert">
             {error}
@@ -1521,7 +1566,7 @@ function ReportDialog({
         <button
           className="primary-button full-width"
           type="submit"
-          disabled={busy || detail.trim().length < 10}
+          disabled={busy || title.trim().length < 3 || detail.trim().length < 10}
         >
           {busy ? 'Enviando…' : 'Enviar reporte al piloto'}
           <ArrowRight size={17} />

@@ -11,6 +11,12 @@ import { createPlaceSuggestions } from './place-suggestions.mjs';
 import { planMobility } from './mobility.mjs';
 
 const REPORT_CATEGORIES = ['crowding', 'climate', 'accessibility', 'condition'];
+function validImageSignature(mime, data) {
+  if (mime === 'image/jpeg') return data.length > 3 && data[0] === 0xff && data[1] === 0xd8 && data[data.length - 2] === 0xff && data[data.length - 1] === 0xd9;
+  if (mime === 'image/png') return data.length > 8 && data.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  if (mime === 'image/webp') return data.length > 12 && data.toString('ascii', 0, 4) === 'RIFF' && data.toString('ascii', 8, 12) === 'WEBP';
+  return false;
+}
 export const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost', 'https://localhost', 'capacitor://localhost'];
 const MIME = { '.txt': 'text/plain; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 const TEXT_EXTENSIONS = new Set(['.html','.js','.mjs','.css','.json','.svg','.webmanifest']);
@@ -38,15 +44,15 @@ class HttpError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
 }
 
-async function readJson(request, context = 'el reporte') {
+async function readJson(request, context = 'el reporte', maxBytes = 4096) {
   if (request.headers['content-type']?.split(';')[0].trim() !== 'application/json') throw new HttpError(415, 'UNSUPPORTED_MEDIA_TYPE', `Envía ${context} como application/json.`);
-  if (Number(request.headers['content-length']) > 4096) throw new HttpError(413, 'BODY_TOO_LARGE', 'La solicitud supera el tamaño permitido.');
+  if (Number(request.headers['content-length']) > maxBytes) throw new HttpError(413, 'BODY_TOO_LARGE', 'La solicitud supera el tamaño permitido.');
   let length = 0;
   const chunks = [];
   // Keep the response socket alive when rejecting a chunked body; drain its remainder.
   for await (const chunk of request.iterator({ destroyOnReturn: false })) {
     length += chunk.length;
-    if (length > 4096) {
+    if (length > maxBytes) {
       request.resume();
       throw new HttpError(413, 'BODY_TOO_LARGE', 'La solicitud supera el tamaño permitido.');
     }
@@ -175,6 +181,14 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
       }
       limit(request, 'api', 180, date);
       if (request.method === 'GET') {
+        const photoMatch = url.pathname.match(/^\/api\/reports\/([0-9a-f-]{36})\/photo$/i);
+        if (photoMatch) {
+          const report = store.get(photoMatch[1]);
+          if (!report || report.status !== 'published' || !report.photo_data) throw new HttpError(404, 'PHOTO_NOT_FOUND', 'No encontramos una foto pública para ese reporte.');
+          response.writeHead(200, { 'Content-Type': report.photo_mime, 'Content-Length': report.photo_data.length, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' });
+          response.end(report.photo_data);
+          return;
+        }
         if (url.pathname === '/api/health') return send(response, 200, { status: 'ok', service: 'RegioMovil', version: '1.1.0', mode: 'simulation', generatedAt: date.toISOString() });
         if (url.pathname === '/api/network') {
           if (request.headers['if-none-match'] === networkETag) { response.writeHead(304, { ETag: networkETag, 'Cache-Control': 'public, max-age=86400' }); response.end(); return; }
@@ -229,9 +243,16 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
           return send(response, 200, planJourney(network, from.id, to.id, preference, scenario, date));
         }
         if (url.pathname === '/api/reports') {
+          const routeId = url.searchParams.get('route');
+          if (routeId) {
+            const route = catalog?.routes.find(item => item.id === routeId);
+            if (!route) throw new HttpError(404, 'ROUTE_NOT_FOUND', 'No encontramos ese recorrido en el catálogo.');
+            return send(response, 200, { reports: store.listByRoute(routeId, 20, date), routeId,
+              source: 'community', verification: 'moderated', notice: 'Reportes comunitarios revisados; no son avisos oficiales.' });
+          }
           const station = validStation(url.searchParams.get('station') || 'padre-mier');
           return send(response, 200, { reports: store.list(station.id, 20, date), stationId: station.id,
-            source: 'community', verification: 'unverified', notice: 'Reportes de personas sin verificación. No son avisos oficiales ni alimentan el modelo.' });
+            source: 'community', verification: 'moderated', notice: 'Reportes comunitarios revisados. No son avisos oficiales ni alimentan el modelo.' });
         }
       }
       if (request.method === 'POST' && url.pathname === '/api/mobility/plan') {
@@ -259,16 +280,32 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
       }
       if (request.method === 'POST' && url.pathname === '/api/reports') {
         limit(request, 'report', reportLimit, date);
-        const body = await readJson(request);
+        const body = await readJson(request, 'el reporte', 600_000);
         if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'INVALID_REPORT', 'El reporte debe ser un objeto JSON.');
+        if (Object.keys(body).some(key => !['stationId', 'category', 'detail', 'title', 'targetType', 'unitReference', 'photo', 'publicationConsent'].includes(key))) throw new HttpError(400, 'INVALID_REPORT', 'El reporte contiene campos no permitidos.');
         if (typeof body.stationId !== 'string' || !body.stationId.trim()) throw new HttpError(400, 'INVALID_STATION', 'Indica una estación válida.');
         const station = validStation(body.stationId);
         if (!REPORT_CATEGORIES.includes(body.category)) throw new HttpError(400, 'INVALID_CATEGORY', 'Elige una categoría válida para el reporte.');
         if (typeof body.detail !== 'string') throw new HttpError(400, 'INVALID_DETAIL', 'Agrega una descripción de 3 a 500 caracteres.');
         const detail = body.detail.trim().normalize('NFC');
         if ([...detail].length < 3 || [...detail].length > 500 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(detail)) throw new HttpError(400, 'INVALID_DETAIL', 'Agrega una descripción de 3 a 500 caracteres, sin caracteres de control.');
-        const report = store.add({ stationId: station.id, category: body.category, detail }, date);
-        return send(response, 201, { report, notice: 'Reporte guardado sin verificación. No se envió a una autoridad ni a un servicio de emergencia.' }, { Location: `/api/reports?station=${encodeURIComponent(station.id)}` });
+        const title = typeof body.title === 'string' ? body.title.trim().normalize('NFC') : '';
+        if ([...title].length < 3 || [...title].length > 100 || /[\u0000-\u001f\u007f]/.test(title)) throw new HttpError(400, 'INVALID_TITLE', 'Agrega un título de 3 a 100 caracteres.');
+        const targetType = body.targetType === 'unit' ? 'unit' : body.targetType === 'station' ? 'station' : null;
+        if (!targetType) throw new HttpError(400, 'INVALID_TARGET', 'Elige si el reporte es sobre una estación o una unidad.');
+        const unitReference = typeof body.unitReference === 'string' ? body.unitReference.trim().slice(0, 80) : '';
+        const matchedRoute = targetType === 'unit' && unitReference ? catalog?.routes.find(item => item.id === unitReference || item.code.toLowerCase() === unitReference.toLowerCase()) : null;
+        let photoMime = null, photoData = null;
+        if (body.photo !== undefined) {
+          const match = typeof body.photo === 'string' && body.photo.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/);
+          if (!match) throw new HttpError(400, 'INVALID_PHOTO', 'Usa una foto JPEG, PNG o WebP válida.');
+          photoMime = `image/${match[1]}`;
+          photoData = Buffer.from(match[2], 'base64');
+          if (!photoData.length || photoData.length > 400_000 || !validImageSignature(photoMime, photoData)) throw new HttpError(400, 'INVALID_PHOTO', 'La foto debe pesar hasta 400 KB y tener un formato válido.');
+        }
+        if (body.publicationConsent !== true && body.publicationConsent !== false) throw new HttpError(400, 'INVALID_CONSENT', 'Indica si autorizas que el reporte pueda publicarse después de su revisión.');
+        const report = store.add({ stationId: station.id, category: body.category, detail, title, targetType, unitReference, routeId: matchedRoute?.id, photoMime, photoData, publicationConsent: body.publicationConsent }, date);
+        return send(response, 201, { report, notice: 'Reporte guardado como privado y pendiente de revisión. Sólo se publicará si lo aprueba una persona revisora y diste tu consentimiento.' }, { Location: `/api/reports?station=${encodeURIComponent(station.id)}` });
       }
       if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports', '/api/services', '/api/places', '/api/places/suggest', '/api/mobility/network', '/api/mobility/plan'].includes(url.pathname) || /^\/api\/services\/[^/]+$/.test(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
       throw new HttpError(404, 'NOT_FOUND', 'No encontramos ese recurso.');

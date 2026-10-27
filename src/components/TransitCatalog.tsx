@@ -17,6 +17,7 @@ import { loadRoutePack, loadTransitCatalog, network } from '../api';
 import type { RoutePack, TransitCatalogData, TransitRoute } from '../types';
 import { Dialog } from './Primitives';
 import NetworkMap from './NetworkMap';
+import PublicReports from './PublicReports';
 import './transit-catalog.css';
 
 export const serviceColors: Record<string, string> = {
@@ -144,6 +145,9 @@ export default function TransitCatalog({
       )}
       {catalog && (
         <>
+          <p className="service-catalog-notice" role="note">
+            El catálogo registra {catalog.routes.length} recorridos; {catalog.routes.filter((route) => route.geometryPack).length} cuentan con un trazo publicado y {catalog.routes.filter((route) => !route.geometryPack).length} siguen sin geometría verificable. Los recorridos sin trazo no se usan para proponer trayectorias.
+          </p>
           <div className="service-toolbar">
             <label className="search-field">
               <Search size={18} />
@@ -407,6 +411,7 @@ function ServiceDetails({
           <p>{route.via.join(' · ')}</p>
         </div>
       )}
+      <PublicReports routeId={route.id} />
       {stations.length > 0 && (
         <div className="service-reference-stations">
           <h4>Referencias del mapa oficial</h4>

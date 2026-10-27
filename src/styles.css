@@ -2159,6 +2159,57 @@ strong {
 .report-form textarea::placeholder {
   color: var(--muted);
 }
+.report-form input:not([type='checkbox']) {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 10px 12px;
+  color: var(--text);
+  font: inherit;
+}
+.report-form input[type='file'] {
+  padding: 8px;
+}
+.report-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.report-photo-preview {
+  display: block;
+  width: min(100%, 360px);
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--soft);
+}
+.public-reports {
+  margin: 16px 0;
+}
+.public-reports > p,
+.public-reports article > p {
+  color: var(--muted);
+  margin: 6px 0;
+}
+.public-reports article {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.public-reports article small {
+  display: block;
+  color: var(--muted);
+}
+.public-reports article img {
+  display: block;
+  max-width: min(100%, 360px);
+  max-height: 240px;
+  object-fit: contain;
+  margin-top: 10px;
+  border-radius: 8px;
+}
 .character-count {
   text-align: right;
   font-size: max(0.62rem, 12px);
@@ -2473,12 +2524,13 @@ strong {
   margin: 0 0 23px;
   border-bottom: 1px solid var(--line);
   padding-bottom: 13px;
-  flex-wrap: wrap;
 }
 .network-section-tabs button {
+  flex: 1 1 0;
   min-height: 44px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 16px;
   border-radius: 7px;
@@ -2489,12 +2541,4 @@ strong {
   background: var(--soft);
   color: var(--green);
   font-weight: 600;
-}
-.network-new-label {
-  font-size: 10px;
-  letter-spacing: 0.6px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: var(--soft);
-  color: var(--green);
 }
