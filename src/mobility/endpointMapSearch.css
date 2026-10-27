@@ -1,0 +1,166 @@
+.endpoint-picker-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+  min-block-size: 0;
+}
+.dialog.endpoint-picker-dialog.endpoint-picker-map-dialog {
+  inline-size: min(1080px, calc(100% - 24px));
+  max-inline-size: calc(100% - 24px);
+  block-size: min(
+    820px,
+    calc(
+      var(--endpoint-viewport-height, 100dvh) - var(--app-safe-top) - var(--app-safe-bottom) - 24px
+    )
+  );
+  padding: 14px;
+}
+.endpoint-picker-map-dialog .endpoint-picker {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.95fr) minmax(0, 1.3fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 14px;
+}
+.endpoint-picker-map-dialog .endpoint-picker-panel {
+  grid-column: 1;
+  grid-row: 1;
+  overflow: auto;
+}
+.endpoint-context-map {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  grid-column: 2;
+  grid-row: 1;
+  min-inline-size: 0;
+  min-block-size: 0;
+}
+.endpoint-context-map > .location-map {
+  display: flex;
+  flex: 1 1 auto;
+  min-block-size: 0;
+  flex-direction: column;
+}
+.endpoint-context-map .location-map-canvas {
+  flex: 1 1 auto;
+  block-size: 100%;
+  min-block-size: 0;
+  border-radius: 14px;
+}
+.endpoint-context-map
+  :is(.location-map-legend, .location-map-caption, .location-stop-picker, .location-station-card) {
+  display: none;
+}
+.endpoint-context-map > p {
+  flex: 0 0 auto;
+  margin: 5px 2px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+.endpoint-picker-map-dialog .endpoint-search-field {
+  margin-inline: 0;
+}
+.endpoint-picker-map-dialog .endpoint-picker-actions {
+  margin-block-start: 8px;
+}
+.endpoint-picker-map-dialog .endpoint-picker-actions > button > span {
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+.endpoint-picker-map-dialog .endpoint-location-status {
+  color: var(--muted);
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.mobility-plan-workspace .mobility-origin-location-action {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-block-size: 44px;
+  padding: 10px 12px;
+  border-block-start: 1px solid var(--line);
+  color: var(--green);
+  background: var(--white);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: start;
+}
+.mobility-origin-location-action svg {
+  flex: none;
+}
+@media (max-width: 800px) {
+  .dialog.endpoint-picker-dialog.endpoint-picker-map-dialog {
+    padding: 10px;
+    gap: 8px;
+  }
+  .endpoint-picker-map-dialog .endpoint-picker {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: clamp(
+        72px,
+        calc(var(--endpoint-viewport-height, 100dvh) * 0.24),
+        180px
+      ) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .endpoint-picker-map-dialog .endpoint-context-map {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .endpoint-picker-map-dialog .endpoint-picker-panel {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .endpoint-context-map > p {
+    position: absolute;
+    inset-block-start: 7px;
+    inset-inline-start: 7px;
+    max-inline-size: calc(100% - 158px);
+    max-block-size: calc(100% - 35px);
+    overflow: auto;
+    margin: 0;
+    padding: 4px 6px;
+    border-radius: 6px;
+    color: var(--dark);
+    background: var(--white);
+    font-size: 0.65rem;
+  }
+  .endpoint-context-map .location-map-area {
+    display: none;
+  }
+  .endpoint-context-map .location-map-controls {
+    display: flex;
+    inset-block-start: 6px;
+    inset-inline-end: 6px;
+    border-radius: 10px;
+  }
+  .endpoint-context-map .location-map-controls button {
+    inline-size: 44px;
+    block-size: 44px;
+  }
+  .endpoint-context-map .location-map-controls button + button {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--line);
+  }
+  .endpoint-context-map .location-map-credit {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  .endpoint-picker-map-dialog .endpoint-picker-actions > button {
+    padding: 7px;
+  }
+  .endpoint-picker-map-dialog .endpoint-picker-results {
+    min-block-size: 72px;
+  }
+}
+@media (max-width: 760px) {
+  .mobility-plan-workspace .mobility-swap {
+    position: static;
+    justify-self: center;
+    margin-block: -5px;
+  }
+}

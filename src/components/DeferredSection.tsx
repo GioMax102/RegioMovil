@@ -1,4 +1,5 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import SectionLoading from './SectionLoading';
 
 /** A failed optional download must leave the application's navigation usable. */
 export default function DeferredSection<P extends object>({
@@ -34,12 +35,7 @@ export default function DeferredSection<P extends object>({
       active = false;
     };
   }, [load]);
-  if (!result)
-    return (
-      <p role="status" className="panel empty-small">
-        {loadingLabel}
-      </p>
-    );
+  if (!result) return <SectionLoading label={loadingLabel} />;
   if ('component' in result) {
     const Section = result.component;
     return <Section {...componentProps} />;

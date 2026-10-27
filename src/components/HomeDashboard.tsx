@@ -1,6 +1,33 @@
-import { ArrowRight, Bookmark, ChevronDown, Flag, Leaf, Map, MapPin } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  ArrowRight,
+  Bookmark,
+  BriefcaseBusiness,
+  ChevronDown,
+  Clock3,
+  Flag,
+  GraduationCap,
+  House,
+  Info,
+  MapPin,
+  Users,
+} from 'lucide-react';
+import { network } from '../api';
 import type { Arrival, Board, Station } from '../types';
+import {
+  readSavedMobilityTrips,
+  savedMobilityEvent,
+  savedMobilityKey,
+} from '../mobility/savedTrips';
+import type { SavedMobilityTrip } from '../mobility/types';
 import { ArrivalCard, Forecast, LineBadge } from './Primitives';
+import {
+  filterMetroForecast,
+  getMetroServiceWindow,
+  getNextMetroOpening,
+  isMetroOperating,
+  metroHoursSource,
+} from './metroServiceHours';
 import './homeDashboard.css';
 
 export default function HomeDashboard({
@@ -10,10 +37,10 @@ export default function HomeDashboard({
   favorite,
   onFavorite,
   onArrival,
-  onNetwork,
-  onSaved,
+  onSavedTrip,
   onStationDetails,
   onReport,
+  now = new Date(),
 }: {
   station: Station;
   board: Board | null;
@@ -21,44 +48,70 @@ export default function HomeDashboard({
   favorite: boolean;
   onFavorite: () => void;
   onArrival: (arrival: Arrival) => void;
-  onNetwork: () => void;
-  onSaved: () => void;
+  onNetwork?: () => void;
+  onSaved?: () => void;
+  onSavedTrip?: (trip: SavedMobilityTrip) => void;
   onStationDetails: () => void;
   onReport: () => void;
+  now?: Date;
 }) {
-  const quietestHour = board?.forecast
+  const [savedTrips, setSavedTrips] = useState(readSavedMobilityTrips);
+  useEffect(() => {
+    const refresh = () => setSavedTrips(readSavedMobilityTrips());
+    const storage = (event: StorageEvent) => {
+      if (event.key === savedMobilityKey || event.key === null) refresh();
+    };
+    window.addEventListener(savedMobilityEvent, refresh);
+    window.addEventListener('storage', storage);
+    return () => {
+      window.removeEventListener(savedMobilityEvent, refresh);
+      window.removeEventListener('storage', storage);
+    };
+  }, []);
+  const quietestHour = (
+    board ? filterMetroForecast(board.forecast, new Date(board.generatedAt)) : []
+  )
     .slice(0, 6)
     .reduce<Board['forecast'][number] | null>(
       (quietest, hour) => (!quietest || hour.occupancy < quietest.occupancy ? hour : quietest),
       null,
     );
+  const open = isMetroOperating(now);
+  const hours = getMetroServiceWindow(now);
   return (
     <div className="home-dashboard">
-      <div className="home-shortcuts" aria-label="Accesos rápidos">
-        <button type="button" onClick={onSaved}>
-          <span className="home-shortcut-icon" aria-hidden="true">
-            <Bookmark size={20} />
-          </span>
-          <span>
-            Tus rutas guardadas<small>También sin internet</small>
-          </span>
-          <ArrowRight size={17} aria-hidden="true" />
-        </button>
-        <button type="button" onClick={onNetwork}>
-          <span className="home-shortcut-icon" aria-hidden="true">
-            <Map size={20} />
-          </span>
-          <span>
-            Explorar la red<small>Metro, autobús y conexiones</small>
-          </span>
-          <ArrowRight size={17} aria-hidden="true" />
-        </button>
-      </div>
+      {onSavedTrip && savedTrips.length > 0 && (
+        <nav className="home-shortcuts" aria-label="Trayectos guardados">
+          {savedTrips.map((trip) => {
+            const label = trip.label
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .toLowerCase();
+            const Icon = /casa|hogar/.test(label)
+              ? House
+              : /escuela|universidad|tec|estudio/.test(label)
+                ? GraduationCap
+                : /trabajo|oficina/.test(label)
+                  ? BriefcaseBusiness
+                  : Bookmark;
+            return (
+              <button
+                key={trip.id}
+                type="button"
+                onClick={() => onSavedTrip(trip)}
+                aria-label={`Abrir trayecto ${trip.label}`}
+              >
+                <Icon size={19} aria-hidden="true" />
+                <span>{trip.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
       <section className="panel home-departure" aria-labelledby="home-departure-title">
         <div className="panel-heading">
           <div>
-            <span className="eyebrow">ANTES DE SALIR</span>
-            <h2 id="home-departure-title">Las próximas unidades</h2>
+            <h2 id="home-departure-title">{open ? 'Próximas llegadas' : 'Tu estación'}</h2>
           </div>
           <button
             type="button"
@@ -78,7 +131,13 @@ export default function HomeDashboard({
           ))}
         </p>
         <div className="arrival-list" aria-busy={loading}>
-          {board ? (
+          {!open ? (
+            <p className="home-service-closed" role="status">
+              <Clock3 size={18} aria-hidden="true" />
+              <strong>Fuera de horario</strong>
+              <span>Abre {getNextMetroOpening(now)}</span>
+            </p>
+          ) : board ? (
             board.arrivals
               .slice(0, 2)
               .map((arrival) => (
@@ -93,38 +152,23 @@ export default function HomeDashboard({
           )}
         </div>
         <button type="button" className="all-arrivals" onClick={onStationDetails}>
-          Ver estación y pronóstico
+          Ver estación
           <ArrowRight size={16} aria-hidden="true" />
         </button>
       </section>
-      <section className="panel home-outlook" aria-labelledby="home-outlook-title">
-        <svg
-          className="home-mountain-lines"
-          viewBox="0 0 320 130"
-          aria-hidden="true"
-          focusable="false"
-          fill="none"
-        >
-          <path d="M-20 110 42 44l35 32 51-62 41 48 27-22 66 70h78" />
-          <path d="M-20 126 42 60l35 32 51-62 41 48 27-22 66 70h78" />
-          <path d="M-20 142 42 76l35 32 51-62 41 48 27-22 66 70h78" />
-        </svg>
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">AFLUENCIA SIMULADA</span>
-            <h2 id="home-outlook-title">Elige cuándo salir</h2>
-          </div>
-          <span className="home-outlook-icon" aria-hidden="true">
-            <Leaf size={21} />
-          </span>
-        </div>
+      <details className="panel home-outlook">
+        <summary>
+          <Users size={19} aria-hidden="true" />
+          <span>Afluencia por hora</span>
+          <ChevronDown size={17} aria-hidden="true" />
+        </summary>
         {quietestHour && (
           <p className="home-quiet-hour">
             <span>Menor afluencia prevista</span>
             <strong>{quietestHour.hour}</strong>
           </p>
         )}
-        {board && <Forecast data={board.forecast} compact />}
+        {board && <Forecast data={board.forecast} compact serviceDate={board.generatedAt} />}
         <details className="home-advice">
           <summary>
             <span>{board?.advice.title || 'Compara antes de salir'}</span>
@@ -135,12 +179,32 @@ export default function HomeDashboard({
               'Compara las siguientes unidades para elegir el viaje que te acomode.'}
           </p>
         </details>
-        <small>Pronóstico de demostración; la afluencia real puede cambiar.</small>
-      </section>
+      </details>
+      <details className="home-data-info">
+        <summary>
+          <Info size={17} aria-hidden="true" />
+          <span>Datos y fuentes</span>
+        </summary>
+        <p>
+          Llegadas, afluencia y condiciones de las unidades son una simulación. El pronóstico de
+          demostración puede diferir del servicio real.
+        </p>
+        <p>
+          Horario general de Metro: {hours.opens}–{hours.closes}. No confirma el servicio de esta
+          estación.
+        </p>
+        <a href={metroHoursSource} target="_blank" rel="noopener noreferrer">
+          Horarios: Metrorrey · consulta 24 oct 2026
+        </a>
+        {network.sources.map((source) => (
+          <a key={source.id} href={source.url} target="_blank" rel="noopener noreferrer">
+            {source.title}
+          </a>
+        ))}
+      </details>
       <button type="button" className="report-link home-report" onClick={onReport}>
         <Flag size={15} aria-hidden="true" />
-        ¿Algo no está bien? Compártelo
-        <ArrowRight size={15} aria-hidden="true" />
+        Reportar
       </button>
     </div>
   );

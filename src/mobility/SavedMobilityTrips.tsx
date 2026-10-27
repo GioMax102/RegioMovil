@@ -131,7 +131,9 @@ export default function SavedMobilityTrips({
               </button>
             </div>
             <p className="saved-mobility-endpoints">
-              {endpointName(trip.from)} <ArrowRight size={13} /> {endpointName(trip.to)}
+              <span title={endpointName(trip.from)}>{endpointName(trip.from)}</span>
+              <ArrowRight size={15} aria-label="hasta" />
+              <span title={endpointName(trip.to)}>{endpointName(trip.to)}</span>
             </p>
             <small className="saved-mobility-meta">
               {trip.journeys.length} {trip.journeys.length === 1 ? 'ruta' : 'rutas'} ·{' '}

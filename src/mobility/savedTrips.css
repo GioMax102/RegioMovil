@@ -83,11 +83,20 @@
   overflow-wrap: anywhere;
 }
 .saved-mobility-endpoints {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   line-height: 1.6;
   margin: 4px 0 7px;
   color: var(--dark);
   overflow-wrap: anywhere;
+}
+.saved-mobility-endpoints > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .saved-mobility-endpoints svg {
   vertical-align: middle;

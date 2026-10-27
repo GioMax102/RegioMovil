@@ -10,6 +10,7 @@ import { ZMM_BOUNDS, simplifyOverviewGeometry } from '../src/mobility/mapGeograp
 import {
   CITY_CENTER,
   constrainRegionalView,
+  minimumRegionalZoom,
   fitRegionalPositions,
   visibleRegionalBounds,
   worldPoint,
@@ -194,7 +195,7 @@ test('Mercator conserva coordenadas y toda la pantalla queda dentro de ZMM ante 
           const view = constrainRegionalView({ lng, lat, zoom }, size),
             bounds = visibleRegionalBounds(view, size);
           assert.ok(Object.values(view).every(Number.isFinite));
-          assert.ok(view.zoom >= 10 && view.zoom <= 17);
+          assert.ok(view.zoom >= minimumRegionalZoom(size) && view.zoom <= 17);
           assert.ok(
             bounds.northWest.lng >= ZMM_BOUNDS[0] - 1e-8 &&
               bounds.northWest.lat <= ZMM_BOUNDS[3] + 1e-8,
@@ -385,7 +386,11 @@ test('network context draws only selected services and keeps exploration across 
   assert.ok(svg.querySelector('[data-line="test-bus"]'));
   assert.equal(svg.querySelector('[data-line="test-metro"]'), null);
   const trace = svg.querySelector('[data-line="test-bus"]')!;
-  assert.ok(trace.getAttribute('points')!.split(' ').length <= 200);
+  assert.equal(
+    trace.getAttribute('points')!.split(' ').length,
+    dense.length,
+    'A selected service retains every published vertex.',
+  );
   assert.match(container.textContent!, /trazos publicados/);
   await act(async () => key(svg, 'ArrowRight'));
   const moved = trace.getAttribute('points');
@@ -716,4 +721,74 @@ test('el modo compacto no altera el trazo ni la exploración del mapa y las otra
   assert.ok(container.querySelector('.location-map > .location-map-legend'));
   assert.ok(container.querySelector('.location-map > .location-map-caption'));
   assert.ok(container.querySelector('.location-map-area'));
+});
+
+test('a compact map expands on tap or Enter, without confusing a drag or cancellation with a tap', async () => {
+  let expanded = 0;
+  const { svg, container } = await mount({
+    field: null,
+    compact: true,
+    onExpand: () => expanded++,
+  });
+  await act(async () => {
+    key(svg, 'Enter');
+  });
+  assert.equal(expanded, 1);
+  await act(async () => {
+    pointer(svg, 'pointerdown', 200, 180);
+    pointer(svg, 'pointerup', 200, 180);
+  });
+  assert.equal(expanded, 2);
+  await act(async () => {
+    pointer(svg, 'pointerdown', 200, 180);
+    pointer(svg, 'pointermove', 260, 200);
+    pointer(svg, 'pointerup', 260, 200);
+    pointer(svg, 'pointerdown', 200, 180);
+    pointer(svg, 'pointercancel', 200, 180);
+  });
+  assert.equal(expanded, 2);
+  assert.equal(container.querySelector('.location-map > .location-map-legend'), null);
+  assert.equal(container.querySelector('.location-map-info')?.hasAttribute('open'), false);
+});
+
+test('journey geometry gaps stay disconnected and resizing a sheet refits a route into the visible map', async () => {
+  const journey = {
+    id: 'resize-gaps',
+    stationIds: [],
+    steps: [
+      {
+        mode: 'bus',
+        lineId: 'bus',
+        geometry: [
+          [-100.4, 25.7],
+          [-100.38, 25.71],
+          [NaN, 25.7],
+          [-100.31, 25.69],
+          [-100.3, 25.68],
+        ],
+      },
+    ],
+  } as unknown as import('../src/mobility/types').MobilityJourney;
+  const { svg } = await mount({ field: null, journey, compact: true });
+  const traces = () => [...svg.querySelectorAll('[data-line="bus"]')];
+  assert.equal(traces().length, 2, 'A missing vertex must not create a connection across the gap.');
+  for (const trace of traces()) assert.equal(trace.getAttribute('points')!.split(' ').length, 2);
+  const before = traces()[0].getAttribute('points');
+  try {
+    rect.height = 220;
+    rect.bottom = 220;
+    await act(async () => {
+      window.dispatchEvent(new dom.window.Event('resize'));
+    });
+    assert.notEqual(traces()[0].getAttribute('points'), before);
+    for (const trace of traces())
+      for (const pair of trace.getAttribute('points')!.split(' ')) {
+        const [x, y] = pair.split(',').map(Number);
+        assert.ok(Number.isFinite(x) && x >= 20 && x <= rect.width - 20);
+        assert.ok(Number.isFinite(y) && y >= 20 && y <= rect.height - 20);
+      }
+  } finally {
+    rect.height = 420;
+    rect.bottom = 420;
+  }
 });

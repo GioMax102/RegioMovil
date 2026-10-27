@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowRight,
   Bookmark,
@@ -25,6 +25,8 @@ import {
   stopEndpoint,
 } from './search';
 import type { MobilityEndpoint, MobilityNetwork, Place, SavedMobilityTrip } from './types';
+import type { MapPosition } from './regionalViewport';
+import './endpointMapSearch.css';
 
 const searchable = (text: string) =>
   text
@@ -69,6 +71,13 @@ export default function EndpointPicker({
   onChooseMap,
   onOpenSavedTrip,
   onRefinePlace,
+  map,
+  onPreview,
+  locating = false,
+  locationError = '',
+  inline = false,
+  onQueryChange,
+  onSearchRequest,
 }: {
   field: 'from' | 'to';
   network: MobilityNetwork;
@@ -79,6 +88,13 @@ export default function EndpointPicker({
   onChooseMap?: () => void;
   onOpenSavedTrip?: (trip: SavedMobilityTrip) => void;
   onRefinePlace?: (place: Place) => void;
+  map?: ReactNode;
+  onPreview?: (point: (MapPosition & { name: string }) | null) => void;
+  locating?: boolean;
+  locationError?: string;
+  inline?: boolean;
+  onQueryChange?: (query: string) => void;
+  onSearchRequest?: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(8);
@@ -89,16 +105,22 @@ export default function EndpointPicker({
   const [searched, setSearched] = useState('');
   const [composing, setComposing] = useState(false);
   const controller = useRef<AbortController | null>(null);
+  const preview = useRef(onPreview);
+  preview.current = onPreview;
   const generation = useRef(0);
   const input = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLDivElement>(null);
   const results = useRef<HTMLDivElement>(null);
   const id = useId();
   const index = useMemo(() => indexMobilityStops(network), [network]);
-  const matches = useMemo(() => searchMobilityStops(index, query, !online), [index, query, online]);
+  const [exploring, setExploring] = useState(false);
+  const matches = useMemo(
+    () => (query.trim() || exploring ? searchMobilityStops(index, query, !online) : []),
+    [index, query, online, exploring],
+  );
   const saved = useMemo(() => readSavedMobilityTrips(), []);
   useEffect(() => {
-    const dialog = picker.current?.closest<HTMLDialogElement>('dialog');
+    const dialog = picker.current?.closest<HTMLElement>(inline ? '.mobility-planner' : 'dialog');
     const viewport = dialog?.ownerDocument.defaultView?.visualViewport;
     if (!dialog || !viewport) return;
     // The keyboard can resize the visual viewport without resizing the layout
@@ -120,7 +142,10 @@ export default function EndpointPicker({
         else dialog.style.removeProperty(name);
       }
     };
-  }, []);
+  }, [inline]);
+  useEffect(() => {
+    if (inline) input.current?.focus({ preventScroll: true });
+  }, [inline]);
   useEffect(() => {
     setSlowSearch(false);
     if (!busy) return;
@@ -155,6 +180,10 @@ export default function EndpointPicker({
     controller.current = active;
     let retry: ReturnType<typeof setTimeout> | undefined;
     setPlaces([]);
+    const exactStop = text
+      ? matches.find(({ stop }) => searchable(stop.name).trim() === searchable(text).trim())?.stop
+      : undefined;
+    preview.current?.(exactStop ?? null);
     setSearched('');
     setError('');
     setBusy(false);
@@ -165,7 +194,9 @@ export default function EndpointPicker({
       try {
         const found = await searchPlaces(text, active.signal);
         if (!active.signal.aborted && generation.current === current) {
-          setPlaces(distinctPlaceSuggestions(found));
+          const suggestions = distinctPlaceSuggestions(found);
+          setPlaces(suggestions);
+          if (exactStop || suggestions[0]) preview.current?.(exactStop ?? suggestions[0]);
           setSearched(text);
           setBusy(false);
         }
@@ -192,7 +223,7 @@ export default function EndpointPicker({
       clearTimeout(debounce);
       clearTimeout(retry);
     };
-  }, [query, online, composing]);
+  }, [query, online, composing, matches]);
 
   function changeQuery(value: string) {
     controller.current?.abort();
@@ -202,6 +233,7 @@ export default function EndpointPicker({
     setSearched('');
     setError('');
     setQuery(value);
+    onQueryChange?.(value);
     setLimit(8);
     results.current?.parentElement?.scrollTo?.({ top: 0 });
   }
@@ -223,22 +255,81 @@ export default function EndpointPicker({
       address: place.displayName,
     });
   }
-  return (
-    <Dialog
-      title={field === 'from' ? '¿Desde dónde sales?' : '¿A dónde vas?'}
-      onClose={onClose}
-      className="endpoint-picker-dialog"
-    >
-      <div ref={picker} className="endpoint-picker">
+  // An exact station name should outrank a loosely matching neighborhood.
+  const stopsFirst =
+    !!query.trim() &&
+    matches.some(({ stop }) => searchable(stop.name).trim() === searchable(query).trim());
+  const stopSuggestions = (
+    <>
+      {!!matches.length && (
+        <section className="endpoint-suggestions" aria-label="Paradas y estaciones">
+          <h3>{query.trim() ? 'Paradas y estaciones' : 'Explora la red'}</h3>
+          <div className="mobility-stop-list">
+            {matches.slice(0, limit).map(({ stop, label }) => (
+              <button
+                key={stop.id}
+                type="button"
+                onClick={() => onSelect(stopEndpoint(stop))}
+                onFocus={() => onPreview?.(stop)}
+                onPointerEnter={() => onPreview?.(stop)}
+              >
+                <span className={`endpoint-suggestion-icon ${stop.mode}`}>
+                  {stop.mode === 'metro' ? (
+                    <TrainFront size={20} aria-hidden="true" />
+                  ) : (
+                    <BusFront size={20} aria-hidden="true" />
+                  )}
+                </span>
+                <span>
+                  <strong>{stop.name}</strong>
+                  <small>
+                    {label}
+                    {!stop.official ? ' · referencia cartográfica' : ''}
+                  </small>
+                </span>
+                <ArrowRight size={17} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+          {matches.length > limit && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => setLimit((value) => value + 30)}
+            >
+              Ver más paradas
+              <ChevronDown size={16} />
+            </button>
+          )}
+        </section>
+      )}
+    </>
+  );
+  const content = (
+    <div ref={picker} className={`endpoint-picker${inline ? ' endpoint-inline' : ''}`}>
+      {map && (
+        <div className="endpoint-context-map" role="region" aria-label="Mapa de la búsqueda">
+          {map}
+        </div>
+      )}
+      <div className="endpoint-picker-panel">
         <div className="endpoint-picker-search">
           <form
             onSubmit={(event) => {
               event.preventDefault();
+              setExploring(true);
+              onSearchRequest?.();
               if (!online && matches.length === 1) onSelect(stopEndpoint(matches[0].stop));
             }}
           >
             <label className="search-field endpoint-search-field">
-              <Search size={20} aria-hidden="true" />
+              <button
+                type="submit"
+                className="endpoint-submit icon-button"
+                aria-label="Buscar lugares y estaciones"
+              >
+                <Search size={20} aria-hidden="true" />
+              </button>
               <input
                 ref={input}
                 data-autofocus
@@ -250,7 +341,7 @@ export default function EndpointPicker({
                 autoComplete="off"
                 enterKeyHint="search"
                 aria-controls={`${id}-results`}
-                aria-describedby={`${id}-hint`}
+                aria-describedby={online ? undefined : `${id}-hint`}
                 onChange={(event) => changeQuery(event.target.value)}
                 onCompositionStart={() => {
                   controller.current?.abort();
@@ -283,19 +374,21 @@ export default function EndpointPicker({
                 </button>
               )}
             </label>
-            <p
-              id={`${id}-hint`}
-              className={`endpoint-offline-note ${online && query.trim().length >= 3 ? 'endpoint-visually-hidden' : ''}`}
-            >
-              {online ? (
-                'Lugares, calles y paradas · sugerencias desde 3 letras'
-              ) : (
-                <>
-                  <WifiOff size={16} />
-                  Sin conexión: busca una estación o parada oficial.
-                </>
-              )}
-            </p>
+            {!online && (
+              <p
+                id={`${id}-hint`}
+                className={`endpoint-offline-note ${online && (map || query.trim().length >= 3) ? 'endpoint-visually-hidden' : ''}`}
+              >
+                {online ? (
+                  'Lugares, calles y paradas · sugerencias desde 3 letras'
+                ) : (
+                  <>
+                    <WifiOff size={16} />
+                    Sin conexión: busca una estación o parada oficial.
+                  </>
+                )}
+              </p>
+            )}
           </form>
           {(onChooseMap || (field === 'from' && online && onUseLocation)) && (
             <div className="endpoint-picker-actions" aria-label="Otras formas de elegir el punto">
@@ -306,15 +399,31 @@ export default function EndpointPicker({
                 </button>
               )}
               {field === 'from' && online && onUseLocation && (
-                <button type="button" className="endpoint-current-location" onClick={onUseLocation}>
+                <button
+                  type="button"
+                  className="endpoint-current-location"
+                  aria-label={locating ? 'Obteniendo ubicación…' : 'Usar mi ubicación actual'}
+                  disabled={locating}
+                  onClick={onUseLocation}
+                >
                   <LocateFixed size={18} aria-hidden="true" />
-                  <span>Usar mi ubicación</span>
+                  <span>{locating ? 'Localizando…' : 'Mi ubicación'}</span>
                 </button>
               )}
             </div>
           )}
         </div>
         <div className="endpoint-picker-results" aria-label="Sugerencias de ubicación">
+          {locationError && (
+            <p className="mobility-error" role="alert">
+              {locationError}
+            </p>
+          )}
+          {locating && (
+            <p className="endpoint-location-status" role="status">
+              Obteniendo ubicación. Puedes elegir otro punto o cerrar la búsqueda.
+            </p>
+          )}
           {error && (
             <p className="mobility-error" role="alert">
               {error} Puedes ajustar la búsqueda o elegir una parada.
@@ -356,15 +465,19 @@ export default function EndpointPicker({
                 ]?.focus();
             }}
           >
+            {stopsFirst && stopSuggestions}
             {!!places.length && (
               <section className="endpoint-suggestions" aria-label="Lugares y direcciones">
-                <h3>
-                  Lugares y direcciones{' '}
-                  <span className="endpoint-results-count">{places.length}</span>
-                </h3>
+                <h3>Lugares y direcciones</h3>
                 <div className="mobility-place-list">
                   {places.map((place) => (
-                    <button key={place.id} type="button" onClick={() => selectPlace(place)}>
+                    <button
+                      key={place.id}
+                      type="button"
+                      onClick={() => selectPlace(place)}
+                      onFocus={() => onPreview?.(place)}
+                      onPointerEnter={() => onPreview?.(place)}
+                    >
                       <span className={`endpoint-suggestion-icon ${place.resultType || 'place'}`}>
                         <SuggestionIcon type={place.resultType} />
                       </span>
@@ -393,6 +506,8 @@ export default function EndpointPicker({
                       key={`${point.lat},${point.lng}`}
                       type="button"
                       disabled={!online && !onOpenSavedTrip}
+                      onFocus={() => onPreview?.(point)}
+                      onPointerEnter={() => onPreview?.(point)}
                       onClick={() => (online ? onSelect(point) : onOpenSavedTrip?.(trip))}
                     >
                       <span className="endpoint-suggestion-icon saved">
@@ -411,58 +526,21 @@ export default function EndpointPicker({
                 </div>
               </section>
             )}
-            {!!matches.length && (
-              <section className="endpoint-suggestions" aria-label="Paradas y estaciones">
-                <h3>
-                  {query.trim() ? 'Paradas y estaciones' : 'Explora la red'}
-                  <span className="endpoint-results-count">{matches.length}</span>
-                </h3>
-                <div className="mobility-stop-list">
-                  {matches.slice(0, limit).map(({ stop, label }) => (
-                    <button
-                      key={stop.id}
-                      type="button"
-                      onClick={() => onSelect(stopEndpoint(stop))}
-                    >
-                      <span className={`endpoint-suggestion-icon ${stop.mode}`}>
-                        {stop.mode === 'metro' ? (
-                          <TrainFront size={20} aria-hidden="true" />
-                        ) : (
-                          <BusFront size={20} aria-hidden="true" />
-                        )}
-                      </span>
-                      <span>
-                        <strong>{stop.name}</strong>
-                        <small>
-                          {label}
-                          {!stop.official ? ' · referencia cartográfica' : ''}
-                        </small>
-                      </span>
-                      <ArrowRight size={17} aria-hidden="true" />
-                    </button>
-                  ))}
-                </div>
-                {matches.length > limit && (
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => setLimit((value) => value + 30)}
-                  >
-                    Ver más paradas ({matches.length - limit})
-                    <ChevronDown size={16} />
-                  </button>
-                )}
-              </section>
-            )}
+            {!stopsFirst && stopSuggestions}
           </div>
-          {!matches.length && !searched && !busy && !online && !savedPlaces.length && (
-            <p className="mobility-feedback">
-              No hay paradas oficiales ni lugares guardados que coincidan. Prueba otro nombre.
-            </p>
-          )}
+          {(query.trim() || exploring) &&
+            !matches.length &&
+            !searched &&
+            !busy &&
+            !online &&
+            !savedPlaces.length && (
+              <p className="mobility-feedback">
+                No hay paradas oficiales ni lugares guardados que coincidan. Prueba otro nombre.
+              </p>
+            )}
           {online && (
             <details className="endpoint-search-privacy">
-              <summary>Privacidad y datos del buscador</summary>
+              <summary>Información del buscador</summary>
               <p>
                 Se consulta el texto que escribes. Tu GPS no se envía al buscador. ©{' '}
                 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">
@@ -473,6 +551,17 @@ export default function EndpointPicker({
           )}
         </div>
       </div>
+    </div>
+  );
+  return inline ? (
+    content
+  ) : (
+    <Dialog
+      title={field === 'from' ? '¿Desde dónde sales?' : '¿A dónde vas?'}
+      onClose={onClose}
+      className={`endpoint-picker-dialog${map ? ' endpoint-picker-map-dialog' : ''}`}
+    >
+      {content}
     </Dialog>
   );
 }

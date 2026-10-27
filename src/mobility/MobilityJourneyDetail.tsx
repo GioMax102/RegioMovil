@@ -11,7 +11,10 @@ import {
 import MobilityMap from './MobilityMap';
 import { networkLabel } from './networks';
 import { presentJourneySteps } from './journeyPresentation';
+import { journeyTransfers } from './transferStations';
+import TransferStationActions from './TransferStationActions';
 import type { MobilityJourney, MobilityNetwork } from './types';
+import ServiceIdentity from '../components/ServiceIdentity';
 import './journeyDetail.css';
 
 const ActiveJourney = lazy(() => import('./ActiveJourney'));
@@ -20,10 +23,14 @@ export default function MobilityJourneyDetail({
   journey,
   network,
   onGuidanceChange,
+  embedded = false,
+  onStartJourney,
 }: {
   journey: MobilityJourney;
   network: MobilityNetwork;
   onGuidanceChange?: (guiding: boolean) => void;
+  embedded?: boolean;
+  onStartJourney?: () => void;
 }) {
   const [guiding, setGuiding] = useState(false);
   const startButton = useRef<HTMLButtonElement>(null);
@@ -39,6 +46,7 @@ export default function MobilityJourneyDetail({
   const unverifiedBus = journey.steps.some(
     (step) => step.mode === 'bus' && (!step.stopOrderVerified || step.directionVerified !== true),
   );
+  const transfers = journeyTransfers(journey.steps);
   if (guiding)
     return (
       <Suspense fallback={<p role="status">Abriendo tu guía de viaje…</p>}>
@@ -74,7 +82,6 @@ export default function MobilityJourneyDetail({
           {Math.round(journey.walkingMeters)} m a pie
         </span>
       </div>
-      <p className="journey-detail-note">Tiempo simulado · Caminatas aproximadas</p>
       {unverifiedBus && (
         <p className="journey-detail-caution journey-detail-boarding">
           Autobús: confirma el sentido al abordar.
@@ -85,20 +92,21 @@ export default function MobilityJourneyDetail({
         type="button"
         className="primary-button full-width journey-start"
         onClick={() => {
+          if (onStartJourney) {
+            onStartJourney();
+            return;
+          }
           setGuiding(true);
           onGuidanceChange?.(true);
         }}
       >
         <Navigation size={18} aria-hidden="true" /> Iniciar trayecto
       </button>
-      <p className="journey-detail-note journey-guide-scope">
-        Guía con la app abierta · GPS en tu dispositivo
-      </p>
-      <MobilityMap key={journey.id} journey={journey} network={network} />
-      <h3 className="journey-detail-section-title">Tu recorrido</h3>
+      {!embedded && <MobilityMap key={journey.id} journey={journey} network={network} />}
       <ol className="journey-detail-steps" aria-label="Etapas del trayecto">
         {presentJourneySteps(journey.steps).map((entry) => {
           const { step, index } = entry;
+          const transfer = transfers.find((point) => point.afterStepIndex === index);
           if (entry.kind === 'transfer')
             return (
               <li
@@ -140,6 +148,27 @@ export default function MobilityJourneyDetail({
                 {step.mode === 'bus' && step.directionVerified !== true && (
                   <span className="journey-detail-caution">Sentido por confirmar</span>
                 )}
+                {step.mode !== 'walk' && (
+                  <details className="journey-service-details">
+                    <summary>Unidad y pago</summary>
+                    <ServiceIdentity
+                      key={step.lineId}
+                      networkId={
+                        step.networkId ??
+                        network.routes.find((route) => route.id === step.lineId)?.networkId ??
+                        (step.mode === 'metro' ? 'metrorrey' : 'unknown')
+                      }
+                      routeId={step.lineId}
+                      code={
+                        step.code ??
+                        network.routes.find((route) => route.id === step.lineId)?.code ??
+                        step.lineName
+                      }
+                      mode={step.mode}
+                    />
+                  </details>
+                )}
+                {transfer && <TransferStationActions transfer={transfer} network={network} />}
               </div>
               <div className="journey-detail-step-meta">
                 <span>{step.minutes} min</span>
@@ -154,7 +183,11 @@ export default function MobilityJourneyDetail({
         })}
       </ol>
       <details className="journey-detail-sources">
-        <summary>Antes de viajar · fuentes y límites</summary>
+        <summary>Información del trayecto</summary>
+        <p>
+          Tiempo y afluencia simulados. Caminatas aproximadas. La guía funciona con la app abierta y
+          el GPS en tu dispositivo; se pausa al salir.
+        </p>
         <p>
           Red experimental con trazos y puntos publicados. Las caminatas punteadas son enlaces
           aproximados: verifica accesos y cruces. No son indicaciones por calles. La accesibilidad

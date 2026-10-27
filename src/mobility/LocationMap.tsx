@@ -1,11 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { LocateFixed, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
+import { Info, LocateFixed, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import geography from '../data/monterrey-map.json';
 import { isRegionalCoordinate, simplifyOverviewGeometry } from './mapGeography';
 import {
   CITY_CENTER,
   constrainRegionalView,
   fitRegionalPositions,
+  minimumRegionalZoom,
   worldPoint,
   worldPosition,
   type MapPosition,
@@ -15,6 +16,7 @@ import {
 import type { MobilityJourney, MobilityNetwork, MobilityRoute, MobilityStop } from './types';
 import { networkLabel } from './networks';
 import { useDataSaver } from '../dataPreferences';
+import StationStreetView from '../components/StationStreetView';
 import './locationMap.css';
 
 const localMapUrl = new URL('../assets/monterrey-map.svg', import.meta.url).href;
@@ -24,11 +26,15 @@ export default function LocationMap({
   origin,
   destination,
   currentPosition,
+  preview,
   field,
   focus,
   journey,
   contextRoutes,
   navigationMode = false,
+  inspectStops = true,
+  compact = false,
+  onExpand,
   onPick,
   onStopSelect,
 }: {
@@ -37,11 +43,15 @@ export default function LocationMap({
   origin?: MapPosition | null;
   destination?: MapPosition | null;
   currentPosition?: (MapPosition & { accuracy?: number }) | null;
+  preview?: (MapPosition & { name: string }) | null;
   field?: 'from' | 'to' | null;
   focus?: MapPosition | null;
   journey?: MobilityJourney | null;
   contextRoutes?: MobilityRoute[];
   navigationMode?: boolean;
+  inspectStops?: boolean;
+  compact?: boolean;
+  onExpand?: () => void;
   onPick?: (point: MapPosition) => void;
   onStopSelect?: (stop: MobilityStop) => void;
 }) {
@@ -90,13 +100,16 @@ export default function LocationMap({
         .slice()
         .sort((a, b) => Number(a.mode === 'metro') - Number(b.mode === 'metro'))
         .flatMap((route) =>
-          route.segments.map((segment) => ({
-            geometry: simplifyOverviewGeometry(segment.coordinates),
+          (Array.isArray(route.segments) ? route.segments : []).map((segment) => ({
+            geometry:
+              contextRoutes?.length === 1
+                ? segment.coordinates
+                : simplifyOverviewGeometry(segment.coordinates),
             lineId: route.id,
             mode: route.mode,
           })),
         ),
-    [displayedRoutes],
+    [displayedRoutes, contextRoutes?.length],
   );
   const contextSignature = contextRoutes
     ?.map((route) => route.id)
@@ -145,7 +158,7 @@ export default function LocationMap({
       .filter(isRegionalCoordinate)
       .map(([lng, lat]) => ({ lng, lat }));
     move(fitRegionalPositions(points, sizeRef.current));
-  }, [journey?.id, field]);
+  }, [journey?.id, field, size.width, size.height]);
   useEffect(() => {
     if (!contextRoutes || journey || field) return;
     move(
@@ -183,7 +196,11 @@ export default function LocationMap({
     const journeyStops = journey ? new Set(journey.stationIds ?? []) : null;
     const terminals = new Set(
       displayedRoutes.flatMap((route) =>
-        route.segments.flatMap((segment) => [segment.stopIds?.[0], segment.stopIds?.at(-1)]),
+        // Version-one saved trips can keep only their selected step geometry.
+        (Array.isArray(route.segments) ? route.segments : []).flatMap((segment) => [
+          segment.stopIds?.[0],
+          segment.stopIds?.at(-1),
+        ]),
       ),
     );
     return indexedStops
@@ -268,6 +285,7 @@ export default function LocationMap({
       .slice(0, size.width < 500 ? 5 : 9);
   }, [visibleTransitStops, view, size, inspectedId]);
   function inspectNearest(x: number, y: number) {
+    if (!inspectStops) return;
     const nearest = visibleTransitStops
       .map((item) => {
         const p = project(item.stop);
@@ -381,17 +399,20 @@ export default function LocationMap({
         } else if (active.moved) onPickRef.current?.(viewRef.current);
       }
     } else if (!multiTouch && active?.id === event.pointerId && !active.moved) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      if (
-        rect.width > 0 &&
-        rect.height > 0 &&
-        Number.isFinite(event.clientX) &&
-        Number.isFinite(event.clientY)
-      )
-        inspectNearest(
-          ((event.clientX - rect.left) * size.width) / rect.width,
-          ((event.clientY - rect.top) * size.height) / rect.height,
-        );
+      if (onExpand) onExpand();
+      else {
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          Number.isFinite(event.clientX) &&
+          Number.isFinite(event.clientY)
+        )
+          inspectNearest(
+            ((event.clientX - rect.left) * size.width) / rect.width,
+            ((event.clientY - rect.top) * size.height) / rect.height,
+          );
+      }
     }
     try {
       if (event.currentTarget.hasPointerCapture?.(event.pointerId))
@@ -402,7 +423,24 @@ export default function LocationMap({
   }
   const baseNW = project({ lng: geography.bounds[0], lat: geography.bounds[3] });
   const baseSE = project({ lng: geography.bounds[2], lat: geography.bounds[1] });
-  const paths = journey?.steps || contextPaths;
+  const paths = useMemo(
+    () =>
+      (journey?.steps || contextPaths).flatMap((step) => {
+        // Missing or invalid geometry is a gap, never a straight connection across it.
+        const segments: Array<typeof step & { geometry: [number, number][] }> = [];
+        let geometry: [number, number][] = [];
+        for (const coordinate of Array.isArray(step.geometry) ? step.geometry : []) {
+          if (isRegionalCoordinate(coordinate)) geometry.push(coordinate);
+          else {
+            if (geometry.length > 1) segments.push({ ...step, geometry });
+            geometry = [];
+          }
+        }
+        if (geometry.length > 1) segments.push({ ...step, geometry });
+        return segments;
+      }),
+    [journey?.steps, contextPaths],
+  );
   const stationCard = inspected && (
     <section
       className="location-station-card"
@@ -504,7 +542,7 @@ export default function LocationMap({
   );
   return (
     <div
-      className={`location-map ${field ? 'choosing' : ''}${navigationMode ? ' navigating' : ''}`}
+      className={`location-map ${field ? 'choosing' : ''}${navigationMode ? ' navigating' : ''}${compact ? ' map-compact' : ''}`}
     >
       <div ref={container} className="location-map-canvas">
         <svg
@@ -512,8 +550,13 @@ export default function LocationMap({
           role="group"
           aria-roledescription="mapa interactivo"
           tabIndex={0}
-          aria-label={`Mapa interactivo de la zona metropolitana de Monterrey${field ? ` para elegir ${field === 'from' ? 'el origen' : 'el destino'}` : ''}. Arrastra o usa las flechas para moverlo; más y menos para acercar.${!field ? ' Toca una estación para consultar su nombre y conexiones.' : ''}`}
+          aria-label={`Mapa interactivo de la zona metropolitana de Monterrey${field ? ` para elegir ${field === 'from' ? 'el origen' : 'el destino'}` : ''}. Arrastra o usa las flechas para moverlo; más y menos para acercar.${!field && inspectStops ? ' Toca una estación para consultar su nombre y conexiones.' : ''}`}
           onKeyDown={(event) => {
+            if (onExpand && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              onExpand();
+              return;
+            }
             const offsets: Record<string, [number, number]> = {
               ArrowLeft: [-70, 0],
               ArrowRight: [70, 0],
@@ -793,6 +836,37 @@ export default function LocationMap({
                 </g>
               );
             })}
+            {preview &&
+              isRegionalCoordinate([preview.lng, preview.lat]) &&
+              (() => {
+                const point = project(preview);
+                return (
+                  <g
+                    className="location-search-preview"
+                    transform={`translate(${point.x} ${point.y})`}
+                    role="img"
+                    aria-label={`Vista previa de ${preview.name}. Punto sin confirmar.`}
+                    pointerEvents="none"
+                  >
+                    <circle
+                      r="17"
+                      fill="var(--white)"
+                      stroke="var(--green)"
+                      strokeWidth="3"
+                      strokeDasharray="4 2"
+                    />
+                    <text
+                      textAnchor="middle"
+                      dy="5"
+                      fill="var(--green)"
+                      fontSize="17"
+                      fontWeight="700"
+                    >
+                      ?
+                    </text>
+                  </g>
+                );
+              })()}
           </g>
           {currentPosition &&
             isRegionalCoordinate([currentPosition.lng, currentPosition.lat]) &&
@@ -829,7 +903,19 @@ export default function LocationMap({
             <i />
           </div>
         )}
-        {!navigationMode && <div className="location-map-area">MONTERREY · ZMM</div>}
+        {!navigationMode && !compact && <div className="location-map-area">MONTERREY · ZMM</div>}
+        {compact && (
+          <details className="location-map-info">
+            <summary aria-label="Información del mapa">
+              <Info size={19} aria-hidden="true" />
+            </summary>
+            <div>
+              {mapLegend}
+              {inspectStops && stopSelection}
+              {mapCaption}
+            </div>
+          </details>
+        )}
         {navigationMode && (
           <details className="location-stop-picker location-navigation-info">
             <summary>
@@ -856,7 +942,7 @@ export default function LocationMap({
             type="button"
             aria-label="Alejar mapa"
             onClick={() => zoom(-1)}
-            disabled={view.zoom <= 10}
+            disabled={view.zoom <= minimumRegionalZoom(size) + 1e-8}
           >
             <Minus size={19} />
           </button>
@@ -893,7 +979,7 @@ export default function LocationMap({
             Reintentar calles
           </button>
         )}
-        {navigationMode && stationCard}
+        {(navigationMode || compact) && !onExpand && stationCard}
         <a
           className="location-map-credit"
           href="https://www.openstreetmap.org/copyright"
@@ -903,9 +989,19 @@ export default function LocationMap({
           © OpenStreetMap · ODbL
         </a>
       </div>
-      {!navigationMode && stationCard}
-      {!navigationMode && mapLegend}
-      {!navigationMode && stopSelection && (
+      {!navigationMode && !compact && stationCard}
+      {!navigationMode && !compact && inspectStops && inspected && (
+        <details className="station-context-disclosure">
+          <summary>Reconocer esta parada</summary>
+          <StationStreetView
+            key={inspected.stop.id}
+            station={{ ...inspected.stop, id: inspected.stop.stationId ?? inspected.stop.id }}
+            kind={inspected.stop.mode}
+          />
+        </details>
+      )}
+      {!navigationMode && !compact && mapLegend}
+      {!navigationMode && !compact && inspectStops && stopSelection && (
         <details className="location-stop-picker">
           <summary>
             <MapPin size={14} />
@@ -914,7 +1010,7 @@ export default function LocationMap({
           {stopSelection}
         </details>
       )}
-      {!navigationMode && mapCaption}
+      {!navigationMode && !compact && mapCaption}
     </div>
   );
 }

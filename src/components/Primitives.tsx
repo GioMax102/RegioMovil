@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { X, Users, TrainFront, Snowflake, CircleHelp } from 'lucide-react';
+import { X, Users, TrainFront, Snowflake, CircleHelp, ChevronRight, Clock3 } from 'lucide-react';
 import { network } from '../api';
 import type { Arrival } from '../types';
+import { filterMetroForecast } from './metroServiceHours';
 
 // A native modal blocks focus/clicks outside it, but mobile browsers can still scroll
 // its document. Keep one document lock until the final nested dialog has closed.
@@ -103,7 +104,7 @@ export function LineBadge({ id }: { id: string }) {
 export function Occupancy({ value, label }: { value: number; label?: string }) {
   return (
     <span className={`occupancy ${value >= 75 ? 'high' : value >= 45 ? 'medium' : 'low'}`}>
-      <Users size={14} />
+      <Users size={14} aria-hidden="true" />
       {label ??
         (value >= 75 ? 'Alta afluencia' : value >= 45 ? 'Afluencia media' : 'Poca afluencia')}
     </span>
@@ -112,35 +113,61 @@ export function Occupancy({ value, label }: { value: number; label?: string }) {
 export function ArrivalCard({ arrival, onDetails }: { arrival: Arrival; onDetails: () => void }) {
   return (
     <button
-      className="arrival-card"
+      className="arrival-card arrival-card-refined"
+      type="button"
       onClick={onDetails}
       aria-label={`${arrival.lineName} hacia ${arrival.direction}, llegada simulada en ${arrival.etaRange[0]} a ${arrival.etaRange[1]} minutos. Afluencia simulada ${arrival.occupancyLabel}. Aire acondicionado simulado: ${arrival.climate === 'working' ? 'funcionando' : arrival.climate === 'unavailable' ? 'no disponible' : 'sin información'}. Ver detalles.`}
     >
       <div className="arrival-top">
-        <span className="train-icon">
-          <TrainFront size={19} />
+        <span className="train-icon" aria-hidden="true">
+          <TrainFront size={21} />
         </span>
         <div>
           <span className="arrival-badges">
             <LineBadge id={arrival.lineId} />
             <small>Simulación</small>
           </span>
-          <h3>Hacia {arrival.direction}</h3>
+          <h3>
+            <span className="arrival-direction-label">Hacia</span> {arrival.direction}
+          </h3>
         </div>
+        <ChevronRight className="arrival-details-arrow" size={20} aria-hidden="true" />
+      </div>
+      <div className="arrival-estimate">
+        <span className="arrival-estimate-label">
+          <Clock3 size={16} aria-hidden="true" /> Llegada estimada
+        </span>
         <span className="arrival-time">
-          <strong>{Math.round(arrival.etaMinutes)}</strong>
-          <small>min aprox.</small>
+          <strong>
+            {arrival.etaRange[0]}–{arrival.etaRange[1]}
+          </strong>
+          <small>min</small>
         </span>
       </div>
       <div className="arrival-bottom">
-        <Occupancy value={arrival.occupancy} />
-        <span className="climate">
-          {arrival.climate === 'working' ? <Snowflake size={14} /> : <CircleHelp size={14} />}{' '}
-          {arrival.climate === 'working'
-            ? 'Con clima'
-            : arrival.climate === 'unavailable'
-              ? 'Sin clima'
-              : 'Clima sin dato'}
+        <span
+          className={`arrival-metric arrival-crowding ${arrival.occupancy >= 75 ? 'is-busy' : ''}`}
+        >
+          <span className="arrival-metric-label">Afluencia</span>
+          <Occupancy
+            value={arrival.occupancy}
+            label={arrival.occupancy >= 75 ? 'Alta' : arrival.occupancy >= 45 ? 'Media' : 'Baja'}
+          />
+        </span>
+        <span className="arrival-metric arrival-cooling">
+          <span className="arrival-metric-label">Aire acondicionado</span>
+          <span className="climate">
+            {arrival.climate === 'working' ? (
+              <Snowflake size={15} aria-hidden="true" />
+            ) : (
+              <CircleHelp size={15} aria-hidden="true" />
+            )}
+            {arrival.climate === 'working'
+              ? 'Disponible'
+              : arrival.climate === 'unavailable'
+                ? 'No disponible'
+                : 'Sin información'}
+          </span>
         </span>
       </div>
     </button>
@@ -160,6 +187,10 @@ export function Dialog({
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Capture before committing children: a child's autoFocus can run before this effect.
+  const opener = useRef<HTMLElement | null>(
+    typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null),
+  );
   const titleId = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -182,8 +213,31 @@ export function Dialog({
     dialog.addEventListener('cancel', onCancel);
     return () => {
       dialog.removeEventListener('cancel', onCancel);
+      const doc = dialog.ownerDocument;
+      const focused = doc.activeElement;
+      const ownedFocus =
+        focused === doc.body || focused === doc.documentElement || dialog.contains(focused);
       dialog.close();
       unlockScroll();
+      const target = opener.current;
+      const active = doc.activeElement;
+      const focusReleased =
+        active === doc.body || active === doc.documentElement || dialog.contains(active);
+      const anotherModal = [...doc.querySelectorAll('dialog[open]')].some(
+        (other) => other !== dialog && !other.contains(target),
+      );
+      if (
+        ownedFocus &&
+        focusReleased &&
+        target?.isConnected &&
+        target !== doc.body &&
+        target !== doc.documentElement &&
+        !target.matches(':disabled') &&
+        !target.closest('[inert], [hidden], [aria-hidden="true"]') &&
+        !anotherModal
+      ) {
+        target.focus({ preventScroll: true });
+      }
     };
   }, []);
   return (
@@ -208,31 +262,39 @@ export function Dialog({
 export function Forecast({
   data,
   compact = false,
+  serviceDate,
 }: {
   data: { hour: string; occupancy: number }[];
   compact?: boolean;
+  serviceDate?: string | Date;
 }) {
-  const items = data.slice(0, compact ? 6 : 10);
+  const date = serviceDate ? new Date(serviceDate) : null;
+  const available =
+    date && Number.isFinite(date.getTime()) ? filterMetroForecast(data, date) : data;
+  const items = available.slice(0, compact ? 6 : 10);
   const lowestOccupancy = Math.min(...items.map((item) => item.occupancy));
   return (
-    <div
-      className={`forecast ${compact ? 'compact' : ''}`}
-      role="img"
-      aria-label={`Afluencia simulada por hora: ${items.map((v) => `${v.hour}, ${v.occupancy}%`).join('; ')}`}
-    >
-      <div className="forecast-bars">
-        {items.map((item, i) => (
-          <div className="forecast-column" key={`${item.hour}-${i}`}>
-            <span className="bar-value">{Math.round(item.occupancy)}%</span>
-            <div className="bar-track">
-              <div
-                className={`bar-fill ${item.occupancy >= 75 ? 'busy' : ''} ${item.occupancy === lowestOccupancy ? 'current least-crowded' : ''}`}
-                style={{ height: `${Math.max(item.occupancy, 4)}%` }}
-              />
+    <div className={`forecast ${compact ? 'compact' : ''}`}>
+      <div
+        className="forecast-scroll"
+        tabIndex={0}
+        role="img"
+        aria-label={`Afluencia simulada por hora: ${items.map((v) => `${v.hour}, ${v.occupancy}%`).join('; ')}`}
+      >
+        <div className="forecast-bars">
+          {items.map((item, i) => (
+            <div className="forecast-column" key={`${item.hour}-${i}`}>
+              <span className="bar-value">{Math.round(item.occupancy)}%</span>
+              <div className="bar-track">
+                <div
+                  className={`bar-fill ${item.occupancy >= 75 ? 'busy' : ''} ${item.occupancy === lowestOccupancy ? 'current least-crowded' : ''}`}
+                  style={{ height: `${Math.max(item.occupancy, 4)}%` }}
+                />
+              </div>
+              <span className="bar-hour">{item.hour}</span>
             </div>
-            <span className="bar-hour">{item.hour}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -22,7 +22,9 @@ for (const name of [
   'window',
   'document',
   'navigator',
+  'localStorage',
   'HTMLElement',
+  'HTMLDialogElement',
   'SVGElement',
   'Element',
   'Node',
@@ -37,6 +39,13 @@ for (const name of [
     value: name === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[name as keyof Window],
   });
 }
+dom.window.scrollTo = () => {};
+dom.window.HTMLDialogElement.prototype.showModal = function () {
+  this.setAttribute('open', '');
+};
+dom.window.HTMLDialogElement.prototype.close = function () {
+  this.removeAttribute('open');
+};
 Object.defineProperty(dom.window.navigator, 'onLine', { value: false });
 Object.defineProperty(dom.window.document, 'visibilityState', {
   configurable: true,
@@ -149,6 +158,7 @@ const network = {
 } as MobilityNetwork;
 let finished = 0;
 beforeEach(() => {
+  localStorage.clear();
   watches.length = 0;
   cleared.length = 0;
   spoken.length = 0;
@@ -187,7 +197,12 @@ test('opening guidance does not request GPS, and start, pause, resume and unmoun
     document.activeElement,
     screen.getByRole('heading', { name: 'Camina hasta Talleres' }),
   );
-  assert.ok(screen.getByText('Sólo con la app visible · se pausa al salir.'));
+  const scope = screen.getByText('Sólo con la app visible; se pausa al salir.');
+  assert.equal(
+    scope.closest('details')?.open,
+    false,
+    'The foreground limitation remains available in collapsed information.',
+  );
   assert.ok(screen.getByText(/no emite avisos en segundo plano/));
   fireEvent.click(screen.getByRole('button', { name: 'Iniciar guía' }));
   await waitFor(() => assert.equal(watches.length, 1));
@@ -221,7 +236,7 @@ test('denied GPS leaves the manual route usable and releases the watch without r
   manual.focus();
   assert.equal(document.activeElement, manual);
   fireEvent.click(manual);
-  assert.ok(screen.getByText(/PASO 2 DE 2/));
+  assert.ok(screen.getByText(/Paso 2 de 2/));
   const nextInstruction = screen.getByRole('heading', { name: 'Viaja hasta Destino' });
   assert.equal(
     document.activeElement,
@@ -532,4 +547,96 @@ test('closing while the async watch subscription is still resolving releases it 
   assert.equal(watches.length, 1);
   assert.deepEqual(cleared, [1]);
   container.remove();
+});
+
+test('transfer photos and shared station bookmarks preserve a paused guide, its progress and the single location subscription', async () => {
+  const { within } = await import('@testing-library/react');
+  const transferJourney: MobilityJourney = {
+    ...journey,
+    steps: [
+      { ...ride, toId: 'metro:talleres', to: 'Talleres' },
+      {
+        ...walk,
+        fromId: 'metro:talleres',
+        from: 'Talleres',
+        toId: 'bus:boarding',
+        to: 'Andén de Transmetro',
+        minutes: 1,
+        distanceMeters: 45,
+      },
+      { ...ride, mode: 'bus', lineId: 'TM', fromId: 'bus:boarding', from: 'Andén de Transmetro' },
+    ],
+  };
+  const transferNetwork: MobilityNetwork = {
+    ...network,
+    stops: [
+      {
+        id: 'metro:talleres',
+        stationId: 'talleres',
+        name: 'Talleres',
+        lat: 25.759167,
+        lng: -100.368333,
+        mode: 'metro',
+        routeIds: ['L1'],
+        sourceIds: [],
+        official: true,
+      },
+      {
+        id: 'bus:boarding',
+        name: 'Andén de Transmetro',
+        lat: 25.758,
+        lng: -100.369,
+        mode: 'bus',
+        routeIds: ['TM'],
+        sourceIds: [],
+        official: true,
+      },
+    ],
+  };
+  render(
+    <ActiveJourney
+      journey={transferJourney}
+      network={transferNetwork}
+      autoStart
+      onFinish={() => finished++}
+    />,
+  );
+  await waitFor(() => assert.equal(watches.length, 1));
+  fireEvent.click(screen.getByRole('button', { name: 'Pausar guía' }));
+  const progress = screen.getByRole('progressbar').getAttribute('value');
+  const heading = screen.getByRole('heading', { name: 'Viaja hasta Talleres' });
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar Talleres' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar Andén de Transmetro' }));
+  assert.equal(
+    screen.getByRole('button', { name: 'Guardar Talleres' }).getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.deepEqual(JSON.parse(localStorage.getItem('regiomovil:favorites')!), [
+    'talleres',
+    'bus:boarding',
+  ]);
+  assert.deepEqual(
+    JSON.parse(localStorage.getItem('regiomovil:favoriteStops')!).map(
+      (entry: { id: string }) => entry.id,
+    ),
+    ['bus:boarding'],
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Ver fotografía de Talleres' }));
+  const photo = screen.getByRole('dialog', { name: 'Talleres' });
+  assert.match(photo.textContent!, /Fotografía histórica.*Dominio público/);
+  fireEvent.click(within(photo).getByRole('button', { name: 'Cerrar ventana' }));
+  assert.equal(screen.queryByRole('dialog'), null);
+  assert.ok(heading.isConnected);
+  assert.ok(screen.getByText('En pausa'));
+  assert.equal(screen.getByRole('progressbar').getAttribute('value'), progress);
+  assert.equal(watches.length, 1);
+  assert.deepEqual(cleared, [1]);
+  fireEvent.click(screen.getByRole('button', { name: 'Ya bajé en Talleres' }));
+  assert.ok(screen.getByRole('heading', { name: 'Transborda a Línea 1 Andén de Transmetro' }));
+  assert.equal(
+    screen.getByRole('button', { name: 'Guardar Talleres' }).getAttribute('aria-pressed'),
+    'true',
+  );
+  assert.match(screen.getByText(/Paso 2 de/).textContent!, /Paso 2 de/);
+  assert.equal(watches.length, 1);
 });

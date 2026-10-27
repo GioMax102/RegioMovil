@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -16,17 +16,16 @@ import {
   Leaf,
   MapPin,
   Monitor,
+  MoreHorizontal,
   Navigation,
   Route,
   Settings2,
   ShieldCheck,
-  Snowflake,
   Sparkles,
   TrainFront,
   Users,
   Volume2,
   WifiOff,
-  Accessibility,
   Bell,
   X,
 } from 'lucide-react';
@@ -35,16 +34,23 @@ import type { Arrival, Board, Page, Preference, Scenario, Station } from './type
 const loadNetworkExplorer = () => import('./components/NetworkExplorer');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
-import type { MobilityEndpoint } from './mobility/types';
+const SavedTripPreview = lazy(() => import('./mobility/SavedTripPreview'));
+const ArrivalDetails = lazy(() => import('./components/ArrivalDetails'));
+import type { MobilityEndpoint, SavedMobilityTrip } from './mobility/types';
 import { ArrivalCard, Brand, Dialog, Forecast, LineBadge } from './components/Primitives';
 import HomeDashboard from './components/HomeDashboard';
 import { useAppearance } from './appearance';
 import { AppearanceSettings } from './components/AppearanceSettings';
 import { ActionFeedback } from './components/ActionFeedback';
 import { DataPreferencesProvider } from './dataPreferences';
-import PublicReports from './components/PublicReports';
-import ReportDialog from './components/ReportDialog';
 import DeferredSection from './components/DeferredSection';
+import SectionLoading from './components/SectionLoading';
+import { usePageFocus } from './usePageFocus';
+import MetroStationDetail from './components/MetroStationDetail';
+import ReportDialog from './components/ReportDialog';
+import { useStationFavorites } from './components/stationFavorites';
+import MetroStationBrowser from './components/MetroStationBrowser';
+import { getNextMetroOpening, isMetroOperating } from './components/metroServiceHours';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
@@ -52,7 +58,7 @@ const navItems: { id: Page; label: string; short: string; icon: typeof House }[]
   { id: 'home', label: 'Mi camino', short: 'Inicio', icon: House },
   { id: 'plan', label: 'Planear viaje', short: 'Planear', icon: Route },
   { id: 'stations', label: 'Red de transporte', short: 'Red', icon: TrainFront },
-  { id: 'mobility', label: 'Mi movilidad', short: 'Guardados', icon: Bookmark },
+  { id: 'mobility', label: 'Mi movilidad', short: 'Viajes', icon: Bookmark },
 ];
 const scenarioLabels: Record<Scenario, string> = {
   normal: 'Día habitual',
@@ -89,6 +95,7 @@ export default function App() {
   const [page, setPage] = useState<Page>(
     !kiosk && params.get('page') === 'stations' ? 'stations' : 'home',
   );
+  const pageTitle = usePageFocus(page);
   const [initialMobilityTrip, setInitialMobilityTrip] = useState<
     | {
         from: MobilityEndpoint;
@@ -106,18 +113,16 @@ export default function App() {
   const [reportTarget, setReportTarget] = useState<{ stationId?: string; routeId?: string }>({});
   const [arrival, setArrival] = useState<Arrival | null>(null);
   const [toast, setToast] = useState('');
+  const [homeTrip, setHomeTrip] = useState<SavedMobilityTrip | null>(null);
   const [largeText, setLargeText] = useState(readStored('largeText', false));
   const [contrast, setContrast] = useState(readStored('contrast', false));
   const [lowData, setLowData] = useState(readStored('lowData', false));
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    if (params.get('kiosk') === '1') return [];
-    const saved = readStored<unknown>('favorites', []);
-    return Array.isArray(saved)
-      ? saved.filter(
-          (id): id is string => typeof id === 'string' && network.stations.some((s) => s.id === id),
-        )
-      : [];
-  });
+  const {
+    favorites,
+    entries: favoriteStations,
+    toggleFavorite: toggleStoredFavorite,
+  } = useStationFavorites(kiosk);
+  const [initialMobilityOrigin, setInitialMobilityOrigin] = useState<MobilityEndpoint>();
   const [savedJourneys, setSavedJourneys] = useState<SavedJourney[]>(() => {
     if (params.get('kiosk') === '1') return [];
     const saved = readStored<unknown>('journeys', []);
@@ -219,8 +224,8 @@ export default function App() {
   const announce = useCallback((message: string) => setToast(message), []);
   function openMobilityPlanner() {
     setInitialMobilityTrip(undefined);
+    setInitialMobilityOrigin(undefined);
     setPage('plan');
-    window.scrollTo({ top: 0 });
   }
   function toggleKiosk() {
     if (lockedKiosk) return;
@@ -237,13 +242,13 @@ export default function App() {
     history.replaceState({}, '', url);
   }
   function toggleFavorite(id: string) {
-    const next = favorites.includes(id) ? favorites.filter((v) => v !== id) : [...favorites, id];
-    setFavorites(next);
-    writeStored('favorites', next);
+    const result = toggleStoredFavorite(id);
     announce(
-      next.includes(id)
-        ? 'Estación guardada en este dispositivo.'
-        : 'Estación eliminada de tus guardadas.',
+      !result?.persisted
+        ? 'No pudimos guardar la estación en este dispositivo.'
+        : result.saved
+          ? 'Estación guardada en este dispositivo.'
+          : 'Estación eliminada de tus guardadas.',
     );
   }
   function speakBoard() {
@@ -252,21 +257,15 @@ export default function App() {
       return;
     }
     speechSynthesis.cancel();
-    const first = board?.arrivals[0];
+    const operating = isMetroOperating(now);
+    const first = operating ? board?.arrivals[0] : null;
     const utterance = new SpeechSynthesisUtterance(
-      `Regio Móvil. Estación ${currentStation.name}. Datos de demostración, no son arribos reales. ${first ? `Próxima unidad simulada de ${first.lineName}, hacia ${first.direction}, en aproximadamente ${first.etaRange[0]} a ${first.etaRange[1]} minutos. Afluencia ${first.occupancyLabel}.` : 'Sin información de unidades.'}`,
+      `Regio Móvil. Estación ${currentStation.name}. Datos de demostración, no son arribos reales. ${!operating ? `Fuera del horario general de Metro. Próxima apertura a las ${getNextMetroOpening(now)}.` : first ? `Próxima unidad simulada de ${first.lineName}, hacia ${first.direction}, en aproximadamente ${first.etaRange[0]} a ${first.etaRange[1]} minutos. Afluencia ${first.occupancyLabel}.` : 'Sin información de unidades.'}`,
     );
     utterance.lang = 'es-MX';
     utterance.rate = 0.9;
     speechSynthesis.speak(utterance);
   }
-  const filteredStations = network.stations.filter(
-    (s) =>
-      (lineFilter === 'all' || s.lineIds.includes(lineFilter)) &&
-      normalize(`${s.name} ${s.municipality} ${s.aliases?.join(' ') ?? ''}`).includes(
-        normalize(stationQuery),
-      ),
-  );
   const forecastPanel = board && (
     <section className="panel forecast-panel">
       <div className="panel-heading">
@@ -279,7 +278,7 @@ export default function App() {
         </span>
       </div>
       <p className="subtle">Afluencia estimada en {currentStation.name}</p>
-      <Forecast data={board.forecast} compact />
+      <Forecast data={board.forecast} compact serviceDate={board.generatedAt} />
       <div className="forecast-foot">
         <span>
           <i className="legend-dot" /> Menor afluencia
@@ -290,7 +289,9 @@ export default function App() {
   );
 
   const content = (
-    <div className={`app-shell ${kiosk ? 'kiosk' : ''}`}>
+    <div
+      className={`app-shell ${!kiosk && page !== 'home' ? 'context-page' : ''} ${kiosk ? 'kiosk' : ''} ${!kiosk && page === 'stations' ? 'network-page' : ''} ${!kiosk && (page === 'plan' || (page === 'stations' && networkTab === 'routes')) ? 'map-page' : ''}`}
+    >
       <a className="skip-link" href="#main-content">
         Saltar al contenido
       </a>
@@ -311,7 +312,7 @@ export default function App() {
             <MapPin size={14} />
             <span>Monterrey, Nuevo León</span>
           </div>
-          <span className="nav-caption">TU MOVILIDAD</span>
+          <span className="nav-caption">Tu movilidad</span>
           <nav aria-label="Navegación principal">
             {navItems.map((item) => (
               <button
@@ -339,7 +340,7 @@ export default function App() {
                 movernos por ella.
               </p>
               <span className="community-mini">
-                <Heart size={12} /> HECHO PARA NUEVO LEÓN
+                <Heart size={12} /> Hecho para Nuevo León
               </span>
             </div>
             <button className="sidebar-utility" onClick={toggleKiosk}>
@@ -360,68 +361,132 @@ export default function App() {
         </aside>
       )}
       <div className="workspace">
-        <header className="topbar">
-          {kiosk ? (
-            <Brand />
+        <header className={`topbar ${!kiosk && page !== 'home' ? 'context-topbar' : ''}`}>
+          {!kiosk && page !== 'home' ? (
+            <details
+              className="context-app-menu"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector('summary')?.focus();
+                }
+              }}
+            >
+              <summary aria-label="Información y avisos" title="Información y avisos">
+                <MoreHorizontal size={22} aria-hidden="true" />
+                {!!board?.alerts.length && <i className="context-alert-dot" />}
+              </summary>
+              <div>
+                <span role="status">
+                  {!online ? 'Sin conexión' : transport === 'local' ? 'Modo local' : 'En línea'}
+                </span>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    const menu = event.currentTarget.closest('details');
+                    menu?.removeAttribute('open');
+                    menu?.querySelector('summary')?.focus();
+                    setModal('sources');
+                  }}
+                >
+                  <Info size={18} />
+                  Datos y simulación
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    const menu = event.currentTarget.closest('details');
+                    menu?.removeAttribute('open');
+                    menu?.querySelector('summary')?.focus();
+                    setModal('alerts');
+                  }}
+                >
+                  <Bell size={18} />
+                  Ver avisos
+                </button>
+              </div>
+            </details>
           ) : (
             <>
-              <span className="mobile-brand">
+              {kiosk ? (
                 <Brand />
-              </span>
-              <div className="breadcrumb">
-                <span>Tu ciudad</span>
-                <ChevronRight size={14} />
-                <strong>{navItems.find((n) => n.id === page)?.label}</strong>
+              ) : (
+                <>
+                  <span className="mobile-brand">
+                    <Brand />
+                  </span>
+                  <div className="breadcrumb">
+                    <span>Tu ciudad</span>
+                    <ChevronRight size={14} />
+                    <strong>{navItems.find((n) => n.id === page)?.label}</strong>
+                  </div>
+                </>
+              )}
+              <div className="topbar-actions">
+                {!kiosk && (
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label="Datos y simulación"
+                    onClick={() => setModal('sources')}
+                  >
+                    <Info size={19} aria-hidden="true" />
+                  </button>
+                )}
+                <span className="local-time">
+                  {new Intl.DateTimeFormat('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                    timeZone: 'America/Monterrey',
+                  }).format(now)}
+                  <span> MONTERREY</span>
+                </span>
+                <span
+                  className={`connection-pill ${transport === 'local' || !online ? 'offline' : ''}`}
+                >
+                  {transport === 'local' || !online ? (
+                    <WifiOff size={12} />
+                  ) : (
+                    <span className="status-dot" />
+                  )}
+                  {!online ? 'Sin conexión' : transport === 'local' ? 'Modo local' : 'En línea'}
+                </span>
+                {!kiosk && (
+                  <button
+                    className="icon-button notification-button"
+                    aria-label="Ver avisos"
+                    onClick={() => setModal('alerts')}
+                  >
+                    <Bell size={20} />
+                    {!!board?.alerts.length && <i />}
+                  </button>
+                )}
+                {kiosk && !lockedKiosk && (
+                  <button className="text-button" onClick={toggleKiosk}>
+                    <X size={17} />
+                    Salir del modo parada
+                  </button>
+                )}
               </div>
             </>
           )}
-          <div className="topbar-actions">
-            <span className="local-time">
-              {new Intl.DateTimeFormat('es-MX', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-                timeZone: 'America/Monterrey',
-              }).format(now)}
-              <span> MONTERREY</span>
-            </span>
-            <span
-              className={`connection-pill ${transport === 'local' || !online ? 'offline' : ''}`}
-            >
-              {transport === 'local' || !online ? (
-                <WifiOff size={12} />
-              ) : (
-                <span className="status-dot" />
-              )}
-              {!online ? 'Sin conexión' : transport === 'local' ? 'Modo local' : 'En línea'}
-            </span>
-            {!kiosk && (
-              <button
-                className="icon-button notification-button"
-                aria-label="Ver avisos"
-                onClick={() => setModal('alerts')}
-              >
-                <Bell size={20} />
-                {!!board?.alerts.length && <i />}
-              </button>
-            )}
-            {kiosk && !lockedKiosk && (
-              <button className="text-button" onClick={toggleKiosk}>
-                <X size={17} />
-                Salir del modo parada
-              </button>
-            )}
-          </div>
         </header>
-        <main id="main-content" tabIndex={-1} key={page} className="page-transition">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          key={page}
+          className={`page-transition view-${page}`}
+          aria-labelledby="page-title"
+        >
           <div className={`page-heading ${page === 'home' || kiosk ? '' : 'compact-heading'}`}>
             <div>
               {(page === 'home' || kiosk) && (
                 <span className="eyebrow">
-                  {kiosk ? 'EN ESTA PARADA' : 'TU CIUDAD, A TU RITMO'}
+                  {kiosk ? 'En esta parada' : 'Tu ciudad, a tu ritmo'}
                 </span>
               )}
-              <h1>
+              <h1 id="page-title" ref={pageTitle} tabIndex={-1}>
                 {kiosk
                   ? currentStation.name
                   : page === 'home'
@@ -432,13 +497,7 @@ export default function App() {
                         ? 'Red de transporte.'
                         : 'Tus guardados.'}
               </h1>
-              {(page === 'home' || kiosk) && (
-                <p>
-                  {kiosk
-                    ? 'Llegadas y afluencia simuladas.'
-                    : 'Lo que necesitas saber, antes de salir.'}
-                </p>
-              )}
+              {kiosk && <p>Llegadas y afluencia simuladas.</p>}
             </div>
             {!kiosk && page === 'home' && (
               <button
@@ -465,7 +524,7 @@ export default function App() {
               </button>
             )}
           </div>
-          {(page === 'home' || kiosk || page === 'stations') && (
+          {kiosk && (
             <div className="demo-banner compact-demo">
               <span className="demo-label">
                 <span className="status-dot" /> DEMOSTRACIÓN
@@ -488,19 +547,20 @@ export default function App() {
               </span>
               <span>
                 <strong>¿A dónde vamos?</strong>
-                <small>Lugares, metro y autobús</small>
               </span>
               <ArrowRight size={20} />
             </button>
           )}
           {page === 'home' && !kiosk && (
             <HomeDashboard
+              now={now}
               station={currentStation}
               board={board}
               loading={loading}
               favorite={favorites.includes(station)}
               onFavorite={() => toggleFavorite(station)}
               onArrival={setArrival}
+              onSavedTrip={setHomeTrip}
               onSaved={() => setPage('mobility')}
               onNetwork={() => {
                 setNetworkTab('routes');
@@ -621,7 +681,12 @@ export default function App() {
                     {board && <span>Calculada {dateTime(board.generatedAt)}</span>}
                   </div>
                   <div className="arrival-list" aria-busy={loading}>
-                    {board ? (
+                    {!isMetroOperating(now) ? (
+                      <p className="metro-closed" role="status">
+                        <strong>Fuera de horario</strong>
+                        <span>Abre {getNextMetroOpening(now)}</span>
+                      </p>
+                    ) : board ? (
                       board.arrivals
                         .slice(0, kiosk ? 4 : 3)
                         .map((item) => (
@@ -680,16 +745,11 @@ export default function App() {
           )}
 
           {page === 'plan' && !kiosk && (
-            <Suspense
-              fallback={
-                <p role="status" className="panel empty-small">
-                  Abriendo el planificador…
-                </p>
-              }
-            >
+            <Suspense fallback={<SectionLoading label="Abriendo el planificador…" />}>
               <MobilityPlanner
                 scenario={scenario}
                 initialTrip={initialMobilityTrip}
+                initialOrigin={initialMobilityOrigin}
                 initialStationId={station}
               />
             </Suspense>
@@ -722,6 +782,7 @@ export default function App() {
                 role="tab"
                 aria-selected={networkTab === 'stations'}
                 aria-controls="network-stations-panel"
+                aria-label="Estaciones de Metro"
                 tabIndex={networkTab === 'stations' ? 0 : -1}
                 onClick={() => setNetworkTab('stations')}
               >
@@ -783,156 +844,36 @@ export default function App() {
           )}
           {page === 'stations' && networkTab === 'stations' && (
             <div
-              className="stations-layout"
+              className="stations-layout metro-stations-layout"
               id="network-stations-panel"
               role="tabpanel"
               aria-labelledby="network-stations-tab"
             >
-              <section className="panel station-browser">
-                <div className="panel-heading">
-                  <h2>Explora las estaciones</h2>
-                  <span className="count-pill">{network.stations.length}</span>
-                </div>
-                <label className="search-field">
-                  <MapPin size={18} />
-                  <input
-                    value={stationQuery}
-                    onChange={(e) => setStationQuery(e.target.value)}
-                    placeholder="Nombre o municipio"
-                    aria-label="Buscar estación por nombre o municipio"
-                  />
-                  {stationQuery && (
-                    <button onClick={() => setStationQuery('')} aria-label="Limpiar búsqueda">
-                      <X size={16} />
-                    </button>
-                  )}
-                </label>
-                <div className="line-filters" role="group" aria-label="Filtrar por línea">
-                  {['all', ...network.lines.map((l) => l.id)].map((id) => (
-                    <button
-                      key={id}
-                      aria-pressed={lineFilter === id}
-                      className={lineFilter === id ? 'active' : ''}
-                      onClick={() => setLineFilter(id)}
-                    >
-                      {id === 'all' ? 'Todas' : id.replace('L', 'Línea ')}
-                    </button>
-                  ))}
-                </div>
-                <div className="station-list">
-                  {filteredStations.map((s) => (
-                    <button
-                      key={s.id}
-                      className={`station-list-item ${station === s.id ? 'selected' : ''}`}
-                      onClick={() => setStation(s.id)}
-                    >
-                      <span className="station-circle">
-                        <TrainFront size={17} />
-                      </span>
-                      <span>
-                        <strong>{s.name}</strong>
-                        <small>{s.municipality}</small>
-                      </span>
-                      <span className="station-line-dots">
-                        {s.lineIds.map((id) => (
-                          <i
-                            key={id}
-                            style={{ background: network.lines.find((l) => l.id === id)?.color }}
-                            title={id}
-                          />
-                        ))}
-                      </span>
-                      <ChevronRight size={16} />
-                    </button>
-                  ))}
-                  {!filteredStations.length && (
-                    <p className="empty-small">
-                      No encontramos esa estación. Prueba otro nombre o municipio.
-                    </p>
-                  )}
-                </div>
-              </section>
-              <div className="station-detail">
-                <section className="station-detail-hero">
-                  <span className="eyebrow">TU PARADA, EN CONTEXTO</span>
-                  <div>
-                    <h2>{currentStation.name}</h2>
-                    <button
-                      className="icon-button"
-                      aria-label="Guardar esta estación"
-                      aria-pressed={favorites.includes(station)}
-                      onClick={() => toggleFavorite(station)}
-                    >
-                      <Bookmark
-                        size={23}
-                        fill={favorites.includes(station) ? 'currentColor' : 'none'}
-                      />
-                    </button>
-                  </div>
-                  <p>
-                    <MapPin size={16} />
-                    {currentStation.municipality}, Nuevo León
-                  </p>
-                  <div>
-                    {currentStation.lineIds.map((id) => (
-                      <LineBadge key={id} id={id} />
-                    ))}
-                  </div>
-                </section>
-                <PublicReports stationId={currentStation.id} onReport={() => openReport({ stationId: currentStation.id })} />
-                <div className="station-detail-grid">
-                  {forecastPanel}
-                  <section className="panel facilities-panel">
-                    <h3>Antes de llegar</h3>
-                    <p>
-                      <Accessibility size={20} />
-                      <span>
-                        <strong>Accesibilidad sin verificar</strong>
-                        <small>No hay datos operativos de elevadores.</small>
-                      </span>
-                    </p>
-                    <p>
-                      <Snowflake size={20} />
-                      <span>
-                        <strong>Condiciones por unidad</strong>
-                        <small>Consulta cada arribo simulado.</small>
-                      </span>
-                    </p>
-                    <a
-                      className="text-button"
-                      href="https://www.metrorrey.mx/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Consultar Metrorrey
-                      <ExternalLink size={14} />
-                    </a>
-                  </section>
-                </div>
-                <section className="panel station-arrivals">
-                  <div className="panel-heading">
-                    <h2>Próximas unidades simuladas</h2>
-                    <span className="subtle">
-                      {board ? `Calculadas ${dateTime(board.generatedAt)}` : ''}
-                    </span>
-                  </div>
-                  {board?.arrivals.slice(0, 4).map((item) => (
-                    <ArrivalCard key={item.id} arrival={item} onDetails={() => setArrival(item)} />
-                  ))}
-                </section>
-              </div>
+              <MetroStationBrowser
+                stations={network.stations}
+                lines={network.lines}
+                selectedStationId={station}
+                query={stationQuery}
+                lineFilter={lineFilter}
+                onQueryChange={setStationQuery}
+                onLineFilterChange={setLineFilter}
+                onSelect={setStation}
+              />
+              <MetroStationDetail
+                onReport={() => openReport({ stationId: station })}
+                station={currentStation}
+                board={board}
+                saved={favorites.includes(station)}
+                onSave={() => toggleFavorite(station)}
+                onArrival={setArrival}
+                now={now}
+              />
             </div>
           )}
 
           {page === 'mobility' && (
             <>
-              <Suspense
-                fallback={
-                  <p role="status" className="empty-small">
-                    Abriendo guardados…
-                  </p>
-                }
-              >
+              <Suspense fallback={<SectionLoading label="Abriendo guardados…" />}>
                 <SavedMobilityTrips
                   onStartPlanning={openMobilityPlanner}
                   onPlan={(trip) => {
@@ -1010,25 +951,36 @@ export default function App() {
                         <Heart size={20} />
                       </div>
                       {favorites.length ? (
-                        favorites.map((id) => (
-                          <div key={id} className="favorite-row">
+                        favoriteStations.map((entry) => (
+                          // Metro IDs remain compatible with the established station view.
+                          // Bus favorites open their public stop as an origin without inventing a destination.
+                          <div key={entry.id} className="favorite-row">
                             <button
                               onClick={() => {
-                                setStation(id);
-                                setPage('stations');
-                                setNetworkTab('stations');
-                                setLineFilter('all');
-                                setStationQuery('');
+                                if (entry.kind === 'metro') {
+                                  setStation(entry.id);
+                                  setPage('stations');
+                                  setNetworkTab('stations');
+                                  setLineFilter('all');
+                                  setStationQuery('');
+                                } else {
+                                  setInitialMobilityTrip(undefined);
+                                  setInitialMobilityOrigin({
+                                    id: entry.stopId,
+                                    name: entry.name,
+                                  });
+                                  setPage('plan');
+                                }
                               }}
                             >
                               <MapPin size={19} />
-                              {stationName(id)}
+                              {entry.name}
                               <ChevronRight size={16} />
                             </button>
                             <button
                               className="icon-button"
-                              aria-label={`Quitar ${stationName(id)} de guardadas`}
-                              onClick={() => toggleFavorite(id)}
+                              aria-label={`Quitar ${entry.name} de guardadas`}
+                              onClick={() => toggleFavorite(entry.id)}
                             >
                               <X size={16} />
                             </button>
@@ -1115,7 +1067,6 @@ export default function App() {
               onClick={() => {
                 setPage(item.id);
                 setStationQuery('');
-                window.scrollTo({ top: 0 });
               }}
             >
               <item.icon size={21} />
@@ -1129,6 +1080,17 @@ export default function App() {
         </nav>
       )}
       <ActionFeedback key={toast} message={toast} />
+      {homeTrip && (
+        <Suspense
+          fallback={
+            <span role="status" className="sr-only">
+              Abriendo trayecto…
+            </span>
+          }
+        >
+          <SavedTripPreview trip={homeTrip} onClose={() => setHomeTrip(null)} />
+        </Suspense>
+      )}
       {modal === 'station' && (
         <Dialog title="¿Desde dónde te mueves?" onClose={() => setModal(null)}>
           <p className="dialog-intro">Elige una estación de la red. No necesitamos tu ubicación.</p>
@@ -1171,7 +1133,6 @@ export default function App() {
       )}
       {modal === 'settings' && (
         <Dialog title="A tu manera" onClose={() => setModal(null)}>
-          <p className="dialog-intro">Pequeños ajustes para un camino más fácil.</p>
           {!lockedKiosk && <AppearanceSettings appearance={appearance} />}
           <div className="setting-row">
             <span>
@@ -1315,62 +1276,15 @@ export default function App() {
         </Dialog>
       )}
       {arrival && (
-        <Dialog title="Conoce esta unidad" onClose={() => setArrival(null)}>
-          <div className="arrival-dialog-hero">
-            <LineBadge id={arrival.lineId} />
-            <h3>Hacia {arrival.direction}</h3>
-            <strong>
-              {arrival.etaRange[0]}–{arrival.etaRange[1]} <small>min aprox.</small>
-            </strong>
-            <p>Intervalo orientativo de un modelo entrenado con datos sintéticos.</p>
-          </div>
-          <div className="unit-facts">
-            <div>
-              <Users size={20} />
-              <span>
-                Afluencia simulada
-                <strong>
-                  {Math.round(arrival.occupancy)}% · {arrival.occupancyLabel}
-                </strong>
-              </span>
-            </div>
-            <div>
-              <Snowflake size={20} />
-              <span>
-                Aire acondicionado simulado
-                <strong>
-                  {arrival.climate === 'working'
-                    ? 'Funcionando'
-                    : arrival.climate === 'unavailable'
-                      ? 'No disponible'
-                      : 'Sin información'}
-                </strong>
-              </span>
-            </div>
-            <div>
-              <ShieldCheck size={20} />
-              <span>
-                Condición simulada
-                <strong>
-                  {arrival.condition === 'good'
-                    ? 'Sin incidencia en el escenario'
-                    : 'Con observación en el escenario'}
-                </strong>
-              </span>
-            </div>
-            <div>
-              <Accessibility size={20} />
-              <span>
-                Accesibilidad real<strong>Sin verificar</strong>
-              </span>
-            </div>
-          </div>
-          <p className="notice">
-            <Info size={16} />
-            No representa una unidad real ni confirma su estado. La confianza del modelo se evalúa
-            únicamente con datos sintéticos.
-          </p>
-        </Dialog>
+        <Suspense
+          fallback={
+            <span role="status" className="sr-only">
+              Abriendo unidad…
+            </span>
+          }
+        >
+          <ArrivalDetails arrival={arrival} onClose={() => setArrival(null)} />
+        </Suspense>
       )}
     </div>
   );

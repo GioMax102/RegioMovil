@@ -1,0 +1,24 @@
+.station-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
+.station-actions .station-save-action {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--dark);
+  background: var(--white);
+}
+.station-actions .station-save-action:hover {
+  border-color: var(--dark);
+}
+.station-actions .station-save-action:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.station-actions .station-save-action[aria-pressed='true'] {
+  color: var(--green);
+}

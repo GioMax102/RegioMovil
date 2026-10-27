@@ -1,0 +1,107 @@
+.station-street-view {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.station-street-view > :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--dark);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.station-street-view.compact {
+  flex-wrap: nowrap;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.station-street-view.compact > :is(button, a) {
+  padding: 9px;
+  border-color: transparent;
+  border-radius: 50%;
+}
+.station-street-view > :is(button, a):hover {
+  border-color: var(--dark);
+}
+.station-image-info {
+  position: relative;
+}
+.station-image-info summary {
+  display: grid;
+  place-items: center;
+  list-style: none;
+  min-height: 44px;
+  min-width: 44px;
+  color: var(--dark);
+  cursor: pointer;
+}
+.station-image-info summary::-webkit-details-marker {
+  display: none;
+}
+.station-image-info > div {
+  padding: 9px 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--dark);
+}
+.station-image-info p {
+  margin: 0 0 8px;
+}
+.station-image-info[open] {
+  flex-basis: 100%;
+}
+.station-image-info[open] summary {
+  width: 44px;
+}
+.station-archive-photo {
+  margin: 0;
+  overflow: hidden;
+  background: var(--white);
+}
+.station-archive-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 50dvh;
+  object-fit: contain;
+}
+.station-archive-photo figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 0 0;
+  color: var(--dark);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.station-archive-photo figcaption strong {
+  font-weight: 650;
+}
+.station-archive-photo figcaption a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  color: var(--dark);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.station-street-view :is(a, button, summary):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.high-contrast .station-street-view > :is(button, a) {
+  border-color: var(--dark);
+}
