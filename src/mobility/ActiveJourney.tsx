@@ -11,6 +11,8 @@ import {
   SignalLow,
 } from 'lucide-react';
 import LocationMap from './LocationMap';
+import TransferStationActions from './TransferStationActions';
+import { journeyTransfers } from './transferStations';
 import { watchLocation } from './location';
 import {
   advanceGuidance,
@@ -56,6 +58,9 @@ export default function ActiveJourney({
     typeof window.SpeechSynthesisUtterance === 'function';
   const instruction = describeGuidance(route, state);
   const leg = route.legs[state.stepIndex];
+  const transfer = journeyTransfers(journey.steps).find(
+    (point) => state.stepIndex >= point.afterStepIndex && state.stepIndex < point.beforeStepIndex,
+  );
   // Stable between GPS samples: fit the current leg when a step changes,
   // while the original route remains responsible for guidance and total progress.
   const mapJourney = useMemo(
@@ -271,8 +276,8 @@ export default function ActiveJourney({
       >
         <span className="active-journey-step">
           {state.completed
-            ? 'TRAYECTO COMPLETADO'
-            : `PASO ${state.stepIndex + 1} DE ${route.legs.length}`}
+            ? 'Trayecto completado'
+            : `Paso ${state.stepIndex + 1} de ${route.legs.length}`}
           {leg && !state.completed && (
             <span>
               {' · '}
@@ -300,6 +305,9 @@ export default function ActiveJourney({
               )}
             </span>
           </p>
+        )}
+        {transfer && !state.completed && (
+          <TransferStationActions transfer={transfer} network={network} />
         )}
         {positionHint && <p className="active-journey-position-hint">{positionHint}</p>}
         {!state.completed &&
@@ -413,7 +421,6 @@ export default function ActiveJourney({
           <Check size={20} aria-hidden="true" /> Cerrar guía
         </button>
       )}
-      <p className="active-journey-scope">Sólo con la app visible · se pausa al salir.</p>
       {locationError && !state.completed && (
         <p className="active-journey-warning" role="status">
           {locationError}
@@ -421,6 +428,7 @@ export default function ActiveJourney({
       )}
       <details className="active-journey-about">
         <summary>Sobre la guía y tu ubicación</summary>
+        <p>Sólo con la app visible; se pausa al salir.</p>
         <p>Tu ubicación se procesa en este dispositivo y no se guarda como historial.</p>
         <p>
           La guía no emite avisos en segundo plano. Al volver, reanuda el GPS para obtener una

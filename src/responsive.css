@@ -5,10 +5,6 @@
   .page-heading {
     margin-bottom: 29px;
   }
-  .planner {
-    padding: 21px 24px 23px;
-    margin-bottom: 27px;
-  }
   .dashboard-grid {
     grid-template-columns: minmax(0, 1fr) 350px;
     gap: 25px;
@@ -111,20 +107,6 @@
   .dashboard-grid {
     grid-template-columns: minmax(0, 1fr) 281px;
     gap: 17px;
-  }
-  .planner {
-    padding: 17px;
-  }
-  .planner-fields {
-    gap: 6px;
-  }
-  .station-input {
-    padding: 9px;
-    gap: 8px;
-  }
-  .planner-fields .primary-button {
-    padding: 12px 14px;
-    font-size: max(0.73rem, 12px);
   }
   .dashboard-lower {
     gap: 14px;
@@ -238,32 +220,6 @@
     grid-template-columns: 275px minmax(0, 1fr);
     gap: 18px;
   }
-  .station-detail-grid {
-    grid-template-columns: 1fr;
-  }
-  .facilities-panel {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 18px;
-  }
-  .facilities-panel h3 {
-    grid-column: 1/-1;
-  }
-  .facilities-panel > p {
-    margin: 10px 0;
-  }
-  .facilities-panel .text-button {
-    grid-column: 1/-1;
-    margin-top: 7px;
-  }
-  .plan-layout {
-    grid-template-columns: 1.1fr 1fr;
-    gap: 18px;
-  }
-  .plan-map .panel-heading .subtle {
-    display: none;
-  }
   .payment-card {
     padding: 25px;
   }
@@ -364,21 +320,6 @@
   }
   .demo-banner > button > span {
     display: none;
-  }
-  .planner-heading .desktop-only {
-    display: none;
-  }
-  .planner-fields {
-    display: grid;
-    grid-template-columns: 1fr 26px 1fr;
-  }
-  .planner-fields .primary-button {
-    grid-column: 1/-1;
-    min-height: 43px;
-    margin: 5px 0 0;
-  }
-  .planner-fields .station-input {
-    min-height: 53px;
   }
   .dashboard-grid {
     grid-template-columns: minmax(0, 1fr) 258px;
@@ -499,33 +440,8 @@
   .station-list-item strong {
     font-size: max(0.72rem, 12px);
   }
-  .station-detail-hero {
-    padding: 21px;
-  }
-  .station-detail-hero h2 {
-    font-size: 1.4rem;
-  }
-  .station-browser .panel-heading {
-    padding: 17px;
-  }
-  .station-browser .panel-heading h2 {
-    font-size: 0.9rem;
-  }
   .search-field {
     margin: 0 13px;
-  }
-  .line-filters {
-    margin: 12px 10px;
-  }
-  .line-filters button {
-    font-size: max(0.61rem, 12px);
-  }
-  .plan-layout {
-    grid-template-columns: 1fr;
-  }
-  .plan-map .network-map > svg {
-    aspect-ratio: 2;
-    max-height: 380px;
   }
   .mobility-grid {
     grid-template-columns: 1fr;
@@ -681,47 +597,6 @@
   .demo-banner > button > span {
     display: none;
   }
-  .planner {
-    padding: 17px 15px;
-    margin-bottom: 20px;
-    border-radius: 12px;
-  }
-  .planner-heading {
-    margin-bottom: 15px;
-    gap: 8px;
-  }
-  .planner-heading h2 {
-    font-size: 0.99rem;
-  }
-  .planner-heading .desktop-only {
-    display: none;
-  }
-  .planner-fields {
-    display: grid;
-    grid-template-columns: 1fr;
-    position: relative;
-    gap: 9px;
-  }
-  .station-input {
-    min-height: 59px;
-    padding: 11px 14px;
-    gap: 13px;
-  }
-  .station-input > .origin-dot {
-    margin-left: 4px;
-    margin-right: 5px;
-  }
-  .field-content > span {
-    font-size: max(0.63rem, 12px);
-  }
-  .field-content select {
-    font-size: 0.8rem;
-    font-weight: 500;
-    min-height: 24px;
-  }
-  .station-input > svg:last-child {
-    margin-right: 25px;
-  }
   .swap-button {
     position: absolute;
     right: 14px;
@@ -733,12 +608,6 @@
     height: 38px;
     width: 38px;
     color: var(--muted);
-  }
-  .planner-fields .primary-button {
-    margin: 3px 0 0;
-    min-height: 47px;
-    font-size: 0.8rem;
-    gap: 14px;
   }
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -1102,25 +971,6 @@
   .methodology p {
     font-size: max(0.72rem, 12px);
   }
-  .preference-tabs {
-    gap: 6px;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-  .preference-tabs button {
-    padding: 7px 8px;
-    font-size: max(0.64rem, 12px);
-    gap: 5px;
-    flex: 1;
-    min-height: 43px;
-  }
-  .preference-tabs button svg {
-    width: 14px;
-  }
-  .plan-layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
   .empty-state {
     min-height: 315px;
     padding: 34px 18px;
@@ -1131,83 +981,9 @@
   .empty-state p {
     font-size: max(0.74rem, 12px);
   }
-  .empty-chips {
-    gap: 12px;
-  }
-  .empty-chips span {
-    font-size: max(0.6rem, 12px);
-  }
-  .plan-map .panel-heading {
-    padding: 18px 16px;
-  }
-  .plan-map .panel-heading h2 {
-    font-size: 0.95rem;
-  }
-  .plan-map .panel-heading .subtle {
-    font-size: max(0.6rem, 12px);
-  }
-  .plan-map .network-map > svg {
-    aspect-ratio: 1.3;
-    max-height: 350px;
-  }
-  .plan-map-foot {
-    padding: 14px 16px;
-    font-size: max(0.66rem, 12px);
-  }
-  .results-heading h2 {
-    font-size: 0.92rem;
-  }
-  .results-heading .text-button {
-    font-size: max(0.6rem, 12px);
-    gap: 5px;
-  }
-  .results-note {
-    font-size: max(0.66rem, 12px);
-    line-height: 1.8;
-    margin: 8px 2px 16px;
-  }
-  .journey-card {
-    padding: 20px 17px;
-  }
-  .journey-top h3 {
-    font-size: 0.91rem;
-    line-height: 1.6;
-  }
-  .journey-top > div > span {
-    font-size: max(0.67rem, 12px);
-  }
-  .journey-duration strong {
-    font-size: 1.9rem;
-  }
-  .journey-lines {
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .journey-destination {
-    font-size: max(0.65rem, 12px);
-  }
-  .journey-bottom {
-    gap: 18px;
-  }
-  .journey-bottom .occupancy {
-    font-size: max(0.65rem, 12px);
-  }
-  .journey-bottom > span:last-child {
-    font-size: max(0.62rem, 12px);
-  }
-  .accessibility-note {
-    font-size: max(0.67rem, 12px);
-    margin-top: 12px;
-  }
   .stations-layout {
     grid-template-columns: 1fr;
     gap: 20px;
-  }
-  .station-browser .panel-heading {
-    padding: 19px 18px;
-  }
-  .station-browser .panel-heading h2 {
-    font-size: 1.04rem;
   }
   .search-field {
     margin: 0 15px;
@@ -1216,14 +992,6 @@
   .search-field input {
     font-size: max(0.77rem, 12px);
     min-height: 44px;
-  }
-  .line-filters {
-    margin: 13px 15px;
-    gap: 8px;
-  }
-  .line-filters button {
-    font-size: max(0.68rem, 12px);
-    min-height: 38px;
   }
   .station-list {
     max-height: 260px;
@@ -1243,45 +1011,6 @@
     display: grid;
     width: 32px;
     height: 34px;
-  }
-  .station-detail-hero {
-    padding: 23px 22px;
-  }
-  .station-detail-hero h2 {
-    font-size: 1.57rem;
-    line-height: 1.7;
-  }
-  .station-detail-hero .eyebrow {
-    font-size: max(0.55rem, 12px);
-  }
-  .station-detail-hero p {
-    font-size: max(0.73rem, 12px);
-    margin-top: 4px;
-  }
-  .station-detail-grid {
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-  .facilities-panel {
-    display: block;
-    padding: 22px;
-  }
-  .facilities-panel h3 {
-    font-size: 1rem;
-  }
-  .facilities-panel > p {
-    margin-top: 19px;
-    gap: 15px;
-  }
-  .facilities-panel p strong {
-    font-size: max(0.78rem, 12px);
-  }
-  .facilities-panel small {
-    font-size: max(0.66rem, 12px);
-  }
-  .facilities-panel .text-button {
-    margin-top: 19px;
-    font-size: max(0.72rem, 12px);
   }
   .station-arrivals {
     padding: 0 12px 12px;
@@ -1374,46 +1103,10 @@
   .offline-card .text-button {
     font-size: max(0.71rem, 12px);
   }
-  .arrival-dialog-hero h3 {
-    font-size: 1.07rem;
-    line-height: 1.7;
-  }
-  .arrival-dialog-hero > strong {
-    font-size: 2rem;
-  }
-  .arrival-dialog-hero p {
-    font-size: max(0.65rem, 12px);
-  }
-  .unit-facts > div {
-    padding: 17px 4px;
-  }
-  .unit-facts strong {
-    font-size: 0.8rem;
-  }
-  .unit-facts > div > span {
-    font-size: max(0.67rem, 12px);
-  }
   .notice {
     font-size: max(0.67rem, 12px);
     padding: 13px;
     line-height: 1.85;
-  }
-  .journey-summary > span:first-child {
-    font-size: max(0.73rem, 12px);
-    flex-wrap: wrap;
-  }
-  .journey-summary > strong {
-    font-size: 1.6rem;
-  }
-  .journey-summary > strong small {
-    font-size: max(0.68rem, 12px);
-  }
-  .journey-steps h3 {
-    font-size: 0.8rem;
-    line-height: 1.9;
-  }
-  .journey-steps p {
-    font-size: max(0.68rem, 12px);
   }
   .report-form label {
     font-size: max(0.78rem, 12px);
@@ -1444,9 +1137,6 @@
   .large-text .location-button > span:nth-child(2) {
     flex-wrap: wrap;
     gap: 4px 8px;
-  }
-  .large-text .preference-tabs button {
-    flex-basis: 45%;
   }
   .large-text .forecast-foot {
     font-size: max(0.52rem, 12px);
@@ -1561,9 +1251,6 @@
   .mobile-nav button {
     font-size: max(0.5rem, 12px);
   }
-  .preference-tabs button {
-    font-size: max(0.59rem, 12px);
-  }
   .local-storage-note {
     font-size: max(0.57rem, 12px);
   }
@@ -1631,13 +1318,7 @@
   width: 44px;
   height: 44px;
 }
-.line-filters button {
-  min-height: 44px;
-}
 .report-link {
-  min-height: 44px;
-}
-.preference-tabs button {
   min-height: 44px;
 }
 .demo-banner > button,
@@ -1855,9 +1536,6 @@
   flex-basis: 65%;
 }
 @media (max-width: 1250px) {
-  .planner-heading .desktop-only {
-    display: none;
-  }
   .dashboard-lower {
     grid-template-columns: 1fr;
   }
@@ -1952,7 +1630,7 @@
     min-height: 44px;
   }
   .mobile-nav button {
-    font-size: 11px;
+    font-size: 0.8rem;
   }
   .mobile-nav {
     padding-left: calc(5px + var(--app-safe-left));
@@ -2000,10 +1678,6 @@
   .line-badge {
     font-size: 12px;
   }
-  .preference-tabs button {
-    min-width: 95px;
-    flex-basis: 29%;
-  }
   .dialog .source-summary {
     grid-template-columns: 1fr;
   }
@@ -2039,7 +1713,7 @@
     gap: 6px;
   }
   .large-text .connection-pill {
-    font-size: 10px;
+    font-size: 0.8rem;
   }
   .large-text .page-heading h1 {
     font-size: 1.6rem;
@@ -2049,9 +1723,6 @@
   }
   .large-text .train-icon {
     display: none;
-  }
-  .large-text .preference-tabs button {
-    flex-basis: 45%;
   }
   .large-text .demo-banner p {
     flex-basis: 90%;

@@ -1,0 +1,36 @@
+.transfer-station-actions {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  min-width: 0;
+}
+.transfer-station-point {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.transfer-station-point > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.transfer-station-point small,
+.transfer-station-point strong {
+  display: block;
+  font-size: 0.75rem;
+}
+.transfer-station-point small {
+  color: var(--muted);
+}
+.transfer-station-point strong {
+  color: var(--dark);
+  font-weight: 600;
+}
+@media (max-width: 380px) {
+  .journey-detail-step-body .transfer-station-point {
+    flex-wrap: wrap;
+    gap: 0 8px;
+  }
+}

@@ -1,7 +1,7 @@
 .planner-heading .service-discovery-button {
   margin-left: auto;
   font-size: 12px;
-  min-height: 32px;
+  min-height: 44px;
   color: var(--green);
   display: flex;
   align-items: center;
@@ -12,89 +12,109 @@
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  margin: 5px 2px 20px;
+  margin: 6px 0 12px;
 }
 .service-catalog-heading h2 {
-  font-size: 1.8rem;
-  margin: 9px 0;
-  letter-spacing: -0.6px;
-}
-.service-catalog-heading p {
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 1.25rem;
+  margin: 0;
 }
 .service-catalog-symbol {
-  background: var(--soft);
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  color: var(--green);
-  width: 62px;
-  height: 62px;
+  color: var(--dark);
   display: grid;
   place-items: center;
 }
-.service-catalog-notice {
-  display: flex;
-  gap: 10px;
-  padding: 14px 17px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  color: var(--muted);
-  margin: 0 0 20px;
-  font-size: 12px;
+.service-catalog-notice,
+.service-catalog-information,
+.service-detail-disclosure {
+  margin: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--dark);
 }
-.service-catalog-notice > svg {
-  flex-shrink: 0;
-  margin-top: 2px;
+.service-catalog-notice > summary,
+.service-catalog-information > summary,
+.service-detail-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  min-height: 48px;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+.service-catalog-notice > summary::-webkit-details-marker,
+.service-catalog-information > summary::-webkit-details-marker,
+.service-detail-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.service-catalog-notice > summary::after,
+.service-catalog-information > summary::after,
+.service-detail-disclosure > summary::after {
+  content: '+';
+  margin-left: auto;
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+.service-catalog-notice[open] > summary::after,
+.service-catalog-information[open] > summary::after,
+.service-detail-disclosure[open] > summary::after {
+  content: '−';
+}
+.service-catalog-notice p,
+.service-catalog-information p,
+.service-detail-information p {
+  font-size: 0.8rem;
+  line-height: 1.65;
+  margin: 8px 0 14px;
 }
 .service-toolbar {
   display: grid;
-  grid-template-columns: minmax(200px, 1.6fr) 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: minmax(180px, 1.6fr) 1fr 1fr;
+  gap: 10px;
 }
 .service-toolbar .search-field {
   margin: 0;
-  min-height: 58px;
-  background: #fff;
+  min-height: 50px;
+  background: var(--surface);
 }
 .service-toolbar .search-field input {
-  font-size: 13px;
+  font-size: 0.85rem;
 }
 .service-select {
   display: grid;
   grid-template-columns: 1fr 16px;
   align-items: center;
-  gap: 4px;
-  background: #fff;
+  gap: 2px;
+  background: var(--surface);
   border: 1px solid var(--line);
-  padding: 10px 13px;
-  border-radius: 7px;
+  padding: 7px 12px;
+  border-radius: 12px;
   min-width: 0;
 }
 .service-select > span {
   grid-column: 1/-1;
-  font-size: 11px;
+  font-size: 0.65rem;
   color: var(--muted);
 }
 .service-select select {
   appearance: none;
-  font-size: 13px;
+  font-size: 0.8rem;
   color: var(--dark);
-  background: none;
+  background: transparent;
   border: 0;
   width: 100%;
   min-width: 0;
   padding: 3px 0;
   cursor: pointer;
+  min-height: 28px;
 }
 .service-results-meta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
+  font-size: 0.76rem;
   color: var(--muted);
-  margin: 20px 2px 15px;
+  margin: 14px 0;
   flex-wrap: wrap;
 }
 .service-results-meta > span {
@@ -105,21 +125,23 @@
 .service-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 15px;
+  gap: 10px;
 }
 .service-card {
+  position: relative;
   text-align: left;
-  padding: 18px 17px;
+  padding: 15px 38px 15px 15px;
   display: flex;
   flex-direction: column;
-  min-height: 214px;
-  transition:
-    border-color 0.15s,
-    transform 0.15s;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  min-height: 120px;
+  color: var(--dark);
+  box-shadow: none;
 }
 .service-card:hover {
-  border-color: #43b58f;
-  transform: translateY(-2px);
+  border-color: var(--dark);
 }
 .service-card-top {
   display: flex;
@@ -132,61 +154,46 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--service-color);
+  font-size: 0.85rem;
+  font-weight: 750;
+  color: var(--dark);
   line-height: 1.6;
 }
+.service-route-code > svg {
+  color: var(--service-color);
+}
 .service-status {
-  font-size: 10px;
-  color: var(--muted);
-  background: var(--soft);
-  border-radius: 4px;
-  padding: 4px 7px;
+  font-size: 0.67rem;
+  color: var(--dark);
   display: inline-flex;
   align-items: center;
   min-height: 23px;
+  gap: 5px;
 }
-.service-status.construction,
-.service-status.announced {
-  color: #805e2d;
-  background: #fff0cd;
+.service-status.construction::before,
+.service-status.announced::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b66d0a;
 }
 .service-network-name {
-  font-size: 11px;
+  font-size: 0.7rem;
   color: var(--muted);
-  margin-top: 14px;
+  margin-top: 6px;
 }
 .service-card h3 {
-  font-size: 14px;
-  line-height: 1.65;
-  margin: 6px 0 11px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 4px 0 0;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
-.service-municipalities {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.8;
-  margin-bottom: 18px;
-}
-.service-municipalities svg {
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-.service-card-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
-  margin-top: auto;
-  font-size: 12px;
-  color: var(--green);
+.service-card-arrow {
+  position: absolute;
+  top: calc(50% - 9px);
+  right: 12px;
 }
 .service-load-more {
   display: flex;
@@ -194,206 +201,153 @@
   align-items: center;
   justify-content: center;
   min-height: 46px;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--green);
-  background: var(--soft);
-  font-size: 13px;
-  margin: 23px auto;
-}
-.service-offline-note {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.9;
-  margin: 22px 3px;
-}
-.service-offline-note svg {
-  flex-shrink: 0;
-  margin-top: 4px;
+  border-radius: 22px;
+  color: var(--dark);
+  background: var(--surface);
+  font-size: 0.8rem;
+  margin: 20px auto;
 }
 .service-load-error {
   padding: 17px;
-  border: 1px solid #e8d6c4;
-  background: #fbf2e6;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 12px;
   margin: 15px 0;
-  color: #805b36;
-  font-size: 13px;
+  color: var(--dark);
+  font-size: 0.85rem;
 }
 .service-load-error button {
   margin-top: 12px;
 }
+.service-detail-dialog .dialog-heading {
+  margin-bottom: 8px;
+}
 .service-detail-heading {
-  margin-top: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 .service-detail-heading h3 {
-  font-size: 1.4rem;
-  line-height: 1.6;
-  margin-top: 13px;
+  font-size: 1rem;
+  line-height: 1.45;
+  margin: 0;
 }
-.service-detail-heading p {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 12px 0 18px;
+.service-detail-dialog .network-map {
+  border-radius: 16px;
+  margin: 0;
+  overflow: hidden;
+}
+.service-detail-dialog .network-map > svg {
+  width: 100%;
+  min-height: 270px;
+  height: min(48dvh, 430px);
+  background: #edf3ee;
+}
+.service-detail-dialog .map-controls {
+  right: 12px;
+  top: 12px;
+  border-radius: 13px;
+}
+.service-detail-dialog .map-controls button {
+  min-width: 44px;
+  min-height: 44px;
 }
 .service-endpoints {
   display: grid;
   grid-template-columns: 1fr 20px 1fr;
-  gap: 13px;
+  gap: 12px;
   align-items: center;
-  border-radius: 9px;
-  background: var(--soft);
-  padding: 16px;
-  margin-bottom: 20px;
-}
-.service-endpoints small {
-  font-size: 11px;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 6px;
+  padding: 13px 1px;
+  margin-bottom: 8px;
+  background: transparent;
 }
 .service-endpoints strong {
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: 0.8rem;
+  line-height: 1.5;
   display: block;
 }
-.service-map-loading {
-  font-size: 13px;
-  padding: 26px;
-  background: var(--surface);
-  border-radius: 9px;
-  color: var(--muted);
-  text-align: center;
+.service-endpoints > strong:last-child {
+  text-align: right;
 }
-.service-map-context {
-  font-size: 12px;
-  line-height: 1.9;
-  color: var(--muted);
-  margin-top: 13px;
+.service-map-loading {
+  font-size: 0.85rem;
+  padding: 70px 20px;
+  background: var(--surface);
+  border-radius: 16px;
+  color: var(--dark);
+  text-align: center;
 }
 .service-planning-limit {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: #fff7e1;
-  border: 1px solid #f2e5bd;
-  border-radius: 8px;
-  padding: 17px;
-  margin: 17px 0;
-  color: #795f1c;
-  font-size: 13px;
+  align-items: center;
+  gap: 9px;
+  color: var(--dark);
+  font-size: 0.8rem;
+  padding: 12px 0;
 }
-.service-planning-limit svg {
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-.service-via,
-.service-reference-stations {
-  margin: 23px 0;
-}
-.service-via h4,
-.service-reference-stations h4,
-.service-detail-sources h4 {
-  font-family: 'Montserrat Variable', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
+.service-detail-disclosure > .service-identity {
   margin: 0 0 12px;
 }
-.service-via p {
-  font-size: 13px;
-  color: var(--muted);
-}
-.service-reference-stations ol {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-left: 1px solid var(--line);
-  margin-left: 11px;
-}
-.service-reference-stations li {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  font-size: 13px;
-  line-height: 1.8;
-  padding: 7px 0;
-  margin-left: -12px;
-}
-.service-reference-stations li > span {
-  width: 23px;
-  height: 23px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  background: var(--soft);
-  border: 1px solid var(--line);
-  flex-shrink: 0;
-}
 .service-stop-list {
-  margin: 22px 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0 15px;
+  margin: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 0;
 }
 .service-stop-list summary {
   cursor: pointer;
   min-height: 48px;
   padding: 13px 0;
-  font-size: 13px;
-  font-weight: 550;
+  font-size: 0.8rem;
+  font-weight: 650;
 }
 .service-stop-list p {
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 0.78rem;
   margin-bottom: 13px;
 }
-.service-stop-list ul {
-  list-style: none;
+.service-stop-list ul,
+.service-stop-list ol {
   margin: 0 0 13px;
   padding: 0;
   max-height: 240px;
   overflow: auto;
+  list-style: none;
 }
 .service-stop-list li {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  font-size: 12px;
-  line-height: 1.9;
-  padding: 6px 0;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  padding: 8px 0;
   border-bottom: 1px solid var(--line);
 }
 .service-stop-list li svg {
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 .service-data-notes {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 18px 0;
-  line-height: 1.9;
-}
-.service-data-notes p + p {
-  margin-top: 9px;
+  font-size: 0.8rem;
+  margin: 14px 0;
+  line-height: 1.7;
 }
 .service-detail-sources {
-  margin-top: 25px;
+  margin-top: 15px;
   border-top: 1px solid var(--line);
-  padding-top: 20px;
+  padding-top: 10px;
 }
 .service-detail-sources a {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 13px;
-  font-size: 12px;
+  font-size: 0.78rem;
   color: var(--green);
-  line-height: 1.8;
+  line-height: 1.7;
   min-height: 44px;
   padding: 9px 0;
 }
@@ -403,18 +357,39 @@
 .service-detail-sources svg {
   flex-shrink: 0;
 }
-.service-saved-confirmation {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 19px;
-  line-height: 1.9;
+.network-map-information {
+  position: absolute;
+  left: 10px;
+  bottom: 27px;
+  z-index: 4;
 }
-.service-saved-confirmation svg {
-  flex-shrink: 0;
-  margin-top: 3px;
+.network-map-information summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  list-style: none;
+  cursor: pointer;
+  color: var(--dark);
+}
+.network-map-information summary::-webkit-details-marker {
+  display: none;
+}
+.network-map-information > .map-key {
+  position: absolute;
+  bottom: 50px !important;
+  left: 0;
+  width: max-content;
+  max-width: min(290px, calc(100vw - 90px)) !important;
+  background: var(--surface);
+  color: var(--dark);
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 4px 18px #132e2924;
 }
 @media (max-width: 1250px) {
   .service-cards {
@@ -426,15 +401,12 @@
   .service-toolbar > .search-field {
     grid-column: 1/-1;
   }
-  .service-card {
-    min-height: 225px;
-  }
 }
 @media (max-width: 760px) {
   .network-section-tabs {
     gap: 5px;
-    padding-bottom: 12px;
-    margin-bottom: 20px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
   }
   .network-section-tabs button {
     font-size: 12px;
@@ -443,99 +415,33 @@
   .network-new-label {
     font-size: 9px;
   }
-  .service-catalog-heading h2 {
-    font-size: 1.55rem;
-  }
-  .service-catalog-heading p {
-    font-size: 12px;
-    line-height: 1.8;
-  }
-  .service-catalog-symbol {
-    width: 47px;
-    height: 47px;
-    border-radius: 11px;
-    flex-shrink: 0;
-  }
-  .service-catalog-symbol svg {
-    width: 24px;
-  }
-  .service-catalog .eyebrow {
-    font-size: 10px;
-    letter-spacing: 1px;
-  }
-  .service-catalog-notice {
-    padding: 13px 12px;
-    font-size: 12px;
-    gap: 8px;
-  }
   .service-toolbar {
-    gap: 9px;
-  }
-  .service-select {
-    padding: 10px 11px;
-  }
-  .service-select select {
-    font-size: 12px;
-    min-height: 27px;
-  }
-  .service-select > span {
-    font-size: 10px;
+    gap: 8px;
   }
   .service-cards {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
   }
   .service-card {
-    min-height: 195px;
-    padding: 18px;
+    min-height: 104px;
   }
-  .service-card h3 {
-    font-size: 15px;
-    line-height: 1.7;
+  .service-detail-dialog {
+    padding: 18px 14px;
   }
-  .service-route-code {
-    font-size: 15px;
+  .service-detail-dialog .network-map > svg {
+    height: min(45dvh, 380px);
   }
-  .service-status {
-    font-size: 11px;
-  }
-  .service-network-name,
-  .service-municipalities {
-    font-size: 12px;
-  }
-  .service-card-bottom {
-    font-size: 13px;
-  }
-  .service-results-meta {
-    font-size: 11px;
-    line-height: 1.8;
-    gap: 6px;
-  }
-  .service-detail-heading h3 {
-    font-size: 1.18rem;
-  }
-  .service-endpoints {
-    gap: 10px;
-    padding: 14px;
-  }
-  .service-endpoints strong {
-    font-size: 12px;
-  }
-  .service-map-context,
-  .service-offline-note {
-    font-size: 12px;
-  }
-  .planner-heading .service-discovery-button {
-    font-size: 11px;
-    gap: 4px;
-  }
-  .planner-heading .service-discovery-button svg {
-    width: 14px;
-  }
-  .service-reference-stations li {
-    font-size: 12px;
-  }
-  .service-detail-sources a {
-    font-size: 12px;
-  }
+}
+
+.service-pending-source {
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.service-pending-source a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--green);
+  font-weight: 650;
 }

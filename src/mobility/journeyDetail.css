@@ -264,3 +264,23 @@
     left: 13px;
   }
 }
+.journey-service-details {
+  margin-top: 8px;
+  color: var(--dark);
+}
+.journey-service-details > summary {
+  display: list-item;
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--green);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.journey-service-details > .service-identity {
+  margin-top: 0;
+}
+.journey-service-details > summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}

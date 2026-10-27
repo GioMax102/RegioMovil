@@ -1,0 +1,137 @@
+.service-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 12px 0;
+  padding: 4px 0;
+  color: var(--dark);
+  min-width: 0;
+}
+.service-identity-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.service-identity-number {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  color: var(--dark);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+.service-identity-number strong {
+  font-size: 1rem;
+  font-weight: 750;
+}
+.service-vehicle-reference {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 7px;
+  color: var(--dark);
+  border-radius: 50%;
+}
+.service-vehicle-swatch {
+  display: inline-block;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1px solid var(--dark);
+  flex-shrink: 0;
+}
+.service-payment-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.service-payment-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--dark);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+}
+.service-payment-chip:hover,
+.service-vehicle-reference:hover {
+  border-color: var(--dark);
+}
+.service-payment-chip.unconfirmed {
+  border-style: dashed;
+}
+.service-access-unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dark);
+  font-size: 0.78rem;
+}
+.service-identity.compact {
+  margin: 7px 0 0;
+  gap: 6px;
+}
+.service-identity.compact .service-identity-number {
+  padding: 4px 7px;
+}
+.service-identity.compact .service-identity-number strong {
+  font-size: 0.88rem;
+}
+.service-payment-dialog > p {
+  margin: 12px 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--dark);
+}
+.service-payment-dialog .service-payment-scope {
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent-blue, var(--dark));
+  font-size: 0.83rem;
+  color: var(--dark);
+}
+.service-identity-sources {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin: 18px 0;
+  color: var(--dark);
+  font-size: 0.8rem;
+}
+.service-identity-sources a {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  color: var(--dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  line-height: 1.5;
+}
+.service-identity :is(button, a):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.high-contrast .service-payment-chip,
+.high-contrast .service-identity-number {
+  border-color: var(--dark);
+}

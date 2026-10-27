@@ -1,21 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownUp,
+  ArrowLeft,
   ArrowRight,
-  ArrowLeftRight,
   Bookmark,
-  BusFront,
   Check,
   BriefcaseBusiness,
-  Footprints,
   Home,
   Info,
   LocateFixed,
   MapPin,
   Search,
   School,
-  TrainFront,
   WifiOff,
+  X,
 } from 'lucide-react';
 import { Dialog } from '../components/Primitives';
 import { ActionFeedback } from '../components/ActionFeedback';
@@ -25,12 +23,19 @@ import EndpointPicker from './EndpointPicker';
 import LocationMap from './LocationMap';
 import { type MapPosition } from './regionalViewport';
 import { stopEndpoint } from './search';
-import { networkLabel } from './networks';
 import { currentLocation } from './location';
-import JourneyDialog from './JourneyDialog';
-import SavedMobilityTrips from './SavedMobilityTrips';
+import useMapWorkspaceHeight from '../useMapWorkspaceHeight';
+import { isRegionalCoordinate } from './mapGeography';
+import MobilityJourneyDetail from './MobilityJourneyDetail';
+import JourneyOptions, { matchesTransport, type TransportFilter } from './JourneyOptions';
+import MapSheet, { type SheetSize } from './MapSheet';
 import SavedTripPreview from './SavedTripPreview';
-import { saveMobilityTrip, snapshotMobilityPlan } from './savedTrips';
+import {
+  readSavedMobilityTrips,
+  savedMobilityEvent,
+  saveMobilityTrip,
+  snapshotMobilityPlan,
+} from './savedTrips';
 import type {
   MobilityEndpoint,
   MobilityJourney,
@@ -40,6 +45,8 @@ import type {
   SavedMobilityTrip,
 } from './types';
 import './mobility.css';
+import './mapPlanner.css';
+const ActiveJourney = lazy(() => import('./ActiveJourney'));
 
 const endpointName = (endpoint: MobilityEndpoint | null, network: MobilityNetwork | null) =>
   (endpoint &&
@@ -58,18 +65,15 @@ const endpointPosition = (
   if ('lat' in point) return point;
   return network?.stops.find((stop) => stop.id === point.id || stop.stationId === point.id) || null;
 };
-const priorities: { id: Preference; label: string }[] = [
-  { id: 'fastest', label: 'Menos tiempo' },
-  { id: 'comfortable', label: 'Menos afluencia' },
-  { id: 'accessible', label: 'Menos transbordos' },
-];
 export default function MobilityPlanner({
   scenario,
   initialTrip,
+  initialOrigin,
   initialStationId = 'padre-mier',
 }: {
   scenario: Scenario;
   initialTrip?: MobilityTripEndpoints | null;
+  initialOrigin?: MobilityEndpoint;
   initialStationId?: string;
 }) {
   const [network, setNetwork] = useState<MobilityNetwork | null>(null);
@@ -79,14 +83,23 @@ export default function MobilityPlanner({
   const [from, setFrom] = useState<MobilityEndpoint | null>(null);
   const [to, setTo] = useState<MobilityEndpoint | null>(null);
   const [picker, setPicker] = useState<'from' | 'to' | null>(null);
+  const [searchPreview, setSearchPreview] = useState<(MapPosition & { name: string }) | null>(null);
   const [mapField, setMapField] = useState<'from' | 'to' | null>(null);
   const [mapDraft, setMapDraft] = useState<MapPosition | null>(null);
   const [mapFocus, setMapFocus] = useState<MapPosition | null>(null);
   const mapPanel = useRef<HTMLDivElement>(null);
   const [preference, setPreference] = useState<Preference>('fastest');
-  const [transportFilter, setTransportFilter] = useState<'all' | 'metro' | 'bus' | 'combined'>(
-    'all',
-  );
+  const [transportFilter, setTransportFilter] = useState<TransportFilter>('all');
+  const [sheetSize, setSheetSize] = useState<SheetSize>('half');
+  const [guideJourney, setGuideJourney] = useState<MobilityJourney | null>(null);
+  const [savedTrips, setSavedTrips] = useState(readSavedMobilityTrips);
+  const workspace = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const refresh = () => setSavedTrips(readSavedMobilityTrips());
+    window.addEventListener(savedMobilityEvent, refresh);
+    return () => window.removeEventListener(savedMobilityEvent, refresh);
+  }, []);
+  useMapWorkspaceHeight(workspace);
   const [submitted, setSubmitted] = useState<{
     from: MobilityEndpoint;
     to: MobilityEndpoint;
@@ -98,6 +111,7 @@ export default function MobilityPlanner({
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const [saveDraft, setSaveDraft] = useState<SavedMobilityTrip | null>(null);
   const [saveLabel, setSaveLabel] = useState('Casa');
   const [customLabel, setCustomLabel] = useState('');
@@ -113,6 +127,10 @@ export default function MobilityPlanner({
     const timer = setTimeout(() => setSavedFeedback(''), 4800);
     return () => clearTimeout(timer);
   }, [savedFeedback]);
+  useEffect(() => {
+    setSearchPreview(null);
+    setLocationError('');
+  }, [picker]);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine !== false);
     window.addEventListener('online', update);
@@ -131,15 +149,26 @@ export default function MobilityPlanner({
         if (!active) return;
         setNetwork(data);
         planner.current = createMobilityPlanner(data);
-        setFrom(
-          (current) =>
-            current ?? {
+        const origin = initialOrigin;
+        const requestedStop =
+          origin && 'id' in origin
+            ? data.stops.find((stop) => stop.id === origin.id || stop.stationId === origin.id)
+            : undefined;
+        const initialPoint = origin
+          ? 'id' in origin
+            ? requestedStop
+              ? stopEndpoint(requestedStop)
+              : null
+            : origin
+          : {
               id:
                 data.stops.find((stop) => stop.stationId === initialStationId)?.id ??
                 data.stops.find((stop) => stop.stationId === 'padre-mier')?.id ??
                 data.stops[0].id,
-            },
-        );
+            };
+        if (origin && 'id' in origin && !requestedStop && !initialTrip)
+          setNotice('Esta parada guardada ya no está en la red disponible. Elige otro origen.');
+        setFrom((current) => current ?? initialPoint);
       })
       .catch((cause) => {
         if (active) setLoadError(cause.message);
@@ -215,6 +244,18 @@ export default function MobilityPlanner({
         ?.focus({ preventScroll: true });
     }
   }, [mapField]);
+  const previousPicker = useRef(picker);
+  useEffect(() => {
+    const closed = previousPicker.current;
+    previousPicker.current = picker;
+    if (!closed || picker || mapField) return;
+    const frame = window.requestAnimationFrame(() =>
+      workspace.current
+        ?.querySelector<HTMLButtonElement>(`[data-endpoint-field="${closed}"]`)
+        ?.focus({ preventScroll: true }),
+    );
+    return () => window.cancelAnimationFrame(frame);
+  }, [picker, mapField]);
   const originPoint = endpointPosition(from, network);
   const destinationPoint = endpointPosition(to, network);
   const nearbyOfficial = useMemo(() => {
@@ -234,6 +275,7 @@ export default function MobilityPlanner({
   }, [network, mapDraft, online]);
   function chooseOnMap(field: 'from' | 'to') {
     setPicker(null);
+    setSheetSize('half');
     locationGeneration.current++;
     setLocating(false);
     if (mapField === field) return;
@@ -259,21 +301,6 @@ export default function MobilityPlanner({
     setMapDraft(null);
   }
 
-  const journeyModes = (item: MobilityJourney) => ({
-    metro: item.steps.some((step) => step.mode === 'metro'),
-    bus: item.steps.some((step) => step.mode === 'bus'),
-  });
-  const matchesTransport = (item: MobilityJourney, filter: typeof transportFilter) => {
-    const modes = journeyModes(item);
-    return (
-      filter === 'all' ||
-      (filter === 'metro'
-        ? modes.metro && !modes.bus
-        : filter === 'bus'
-          ? modes.bus && !modes.metro
-          : modes.metro && modes.bus)
-    );
-  };
   const visibleJourneys =
     plan?.journeys.filter((item) => matchesTransport(item, transportFilter)) || [];
 
@@ -291,16 +318,29 @@ export default function MobilityPlanner({
     setMapFocus(endpointPosition(endpoint, network));
     setMapField(null);
     setMapDraft(null);
+    setSheetSize('half');
+  }
+  function closePicker() {
+    locationGeneration.current++;
+    setLocating(false);
+    setPicker(null);
+    setSearchPreview(null);
+    setLocationError('');
   }
   async function locate() {
-    if (!online) return;
+    if (!online) return false;
     const generation = ++locationGeneration.current;
     setLocating(true);
     setError('');
+    setLocationError('');
     setNotice('');
     try {
       const endpoint = await currentLocation();
-      if (generation !== locationGeneration.current || !onlineRef.current) return;
+      if (generation !== locationGeneration.current || !onlineRef.current) return false;
+      if (!('lat' in endpoint) || !isRegionalCoordinate([endpoint.lng, endpoint.lat]))
+        throw new Error(
+          'Tu ubicación está fuera de la ZMM. Busca una parada o elige un punto en el mapa.',
+        );
       if ('accuracy' in endpoint && endpoint.accuracy && endpoint.accuracy > 1500)
         throw new Error(
           'La ubicación es demasiado imprecisa. Elige una parada o busca un lugar cercano.',
@@ -310,9 +350,14 @@ export default function MobilityPlanner({
         setNotice(
           `Ubicación obtenida. Precisión aproximada: ${Math.round(endpoint.accuracy ?? 0)} m.`,
         );
+      return true;
     } catch (cause) {
-      if (generation === locationGeneration.current)
-        setError(cause instanceof Error ? cause.message : 'No pudimos leer tu ubicación.');
+      if (generation === locationGeneration.current) {
+        const message = cause instanceof Error ? cause.message : 'No pudimos leer tu ubicación.';
+        setError(message);
+        setLocationError(message);
+      }
+      return false;
     } finally {
       if (generation === locationGeneration.current) setLocating(false);
     }
@@ -325,6 +370,15 @@ export default function MobilityPlanner({
     setSaveError('');
     setDetail(null);
   }
+  function finishGuidance() {
+    setGuideJourney(null);
+    // The detail stays mounted below the modal, so restore its primary control.
+    window.requestAnimationFrame(() =>
+      workspace.current
+        ?.querySelector<HTMLButtonElement>('.journey-start')
+        ?.focus({ preventScroll: true }),
+    );
+  }
   function saveJourney() {
     if (!saveDraft) return;
     const label = saveLabel === 'Personalizada' ? customLabel.trim() : saveLabel;
@@ -335,25 +389,46 @@ export default function MobilityPlanner({
       setSavedFeedback(
         `${saveDraft.journeys.length} ${saveDraft.journeys.length === 1 ? 'ruta guardada' : 'rutas guardadas'} como ${label}. Disponibles sin internet en Guardados.`,
       );
+      window.requestAnimationFrame(() =>
+        workspace.current
+          ?.querySelector<HTMLHeadingElement>('.map-sheet-heading h2')
+          ?.focus({ preventScroll: true }),
+      );
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'No pudimos guardar las rutas.');
     }
   }
-  function reuseTrip(trip: MobilityTripEndpoints) {
-    changeEndpoint('from', trip.from);
-    changeEndpoint('to', trip.to);
-    setPreference(trip.preference);
+  const panelTitle = picker
+    ? picker === 'from'
+      ? '¿Desde dónde sales?'
+      : '¿A dónde vas?'
+    : mapField
+      ? mapField === 'from'
+        ? 'Confirma tu origen'
+        : 'Confirma tu destino'
+      : detail
+        ? 'Tu trayecto'
+        : plan
+          ? 'Elige tu ruta'
+          : '¿A dónde vamos?';
+  function openPicker(field: 'from' | 'to') {
+    setPicker(field);
+    setSheetSize('half');
+    setMapField(null);
   }
   return (
-    <section className="mobility-planner" aria-labelledby="mobility-title">
-      <div className="mobility-intro">
-        <span className="mobility-experiment">
-          <span /> VISTA PREVIA · TIEMPOS SIMULADOS
-        </span>
-        <h2 id="mobility-title" className="sr-only">
-          Conecta más de tu ciudad.
-        </h2>
-      </div>
+    <section
+      ref={workspace}
+      className="mobility-planner map-experience"
+      data-sheet={sheetSize}
+      data-mode={
+        mapField ? 'map' : picker ? 'search' : detail ? 'detail' : plan ? 'results' : 'form'
+      }
+      aria-label="Planear viaje"
+    >
+      <h2 id="mobility-title" className="sr-only">
+        Planear viaje
+      </h2>
       {loadError ? (
         <div className="panel mobility-feedback" role="alert">
           <p>{loadError}</p>
@@ -367,442 +442,346 @@ export default function MobilityPlanner({
         </p>
       ) : (
         <>
-          <p className="mobility-search-prompt">¿A dónde te llevamos?</p>
-          <div className={`mobility-connection ${online ? '' : 'offline'}`}>
-            <span>
-              {online ? <Check size={15} /> : <WifiOff size={15} />}
-              {online
-                ? 'Busca en Monterrey y su zona metropolitana'
-                : 'Sin conexión · sólo puntos oficiales'}
-            </span>
-          </div>
-          <div className="mobility-plan-workspace">
-            <form
-              className="panel mobility-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!from || !to) {
-                  setError('Elige un origen y un destino.');
-                  return;
-                }
-                setSubmitted({ from, to, attempt: Date.now() });
+          <div
+            className="mobility-map-stage"
+            ref={mapPanel}
+            role="region"
+            aria-label="Mapa del viaje"
+          >
+            <LocationMap
+              network={network}
+              online={online}
+              compact
+              origin={originPoint}
+              destination={destinationPoint}
+              field={mapField}
+              focus={searchPreview || mapFocus || destinationPoint || originPoint}
+              preview={picker ? searchPreview : null}
+              journey={picker || mapField ? null : detail || visibleJourneys[0]}
+              onPick={setMapDraft}
+              inspectStops={!picker && !mapField}
+              onStopSelect={(stop) => {
+                if (mapField) changeEndpoint(mapField, stopEndpoint(stop));
               }}
-            >
-              <div className="mobility-fields">
-                <div className="mobility-endpoint-entry">
-                  <button
-                    type="button"
-                    className="mobility-endpoint"
-                    onClick={() => setPicker('from')}
-                    aria-label={`Origen: ${endpointName(from, network)}`}
-                  >
-                    <span className="mobility-point origin">A</span>
-                    <span>
-                      <small>Desde</small>
-                      <strong>{endpointName(from, network)}</strong>
-                    </span>
-                    <Search size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    className="mobility-point-map-action"
-                    onClick={() => chooseOnMap('from')}
-                    aria-label="Elegir origen en mapa"
-                  >
-                    <MapPin size={16} />
-                    Mapa
-                  </button>
-                </div>
+            />
+          </div>
+          {!online && (
+            <span className="map-offline-indicator">
+              <WifiOff size={15} aria-hidden="true" /> Sin conexión
+            </span>
+          )}
+          <MapSheet
+            title={panelTitle}
+            size={sheetSize}
+            onSizeChange={setSheetSize}
+            actions={
+              picker || mapField || detail || plan ? (
                 <button
                   type="button"
-                  className="mobility-swap"
-                  aria-label="Intercambiar origen y destino"
+                  className="icon-button"
+                  aria-label={
+                    picker || mapField
+                      ? 'Cerrar búsqueda'
+                      : detail
+                        ? 'Volver a las rutas'
+                        : 'Editar origen y destino'
+                  }
                   onClick={() => {
-                    setFrom(to);
-                    setTo(from);
-                    setSubmitted(null);
-                    setPlan(null);
-                    setTransportFilter('all');
-                    setError('');
-                    setNotice('');
-                    setMapField(null);
-                    setMapDraft(null);
-                    locationGeneration.current++;
-                    setLocating(false);
+                    if (picker) closePicker();
+                    else if (mapField) {
+                      setMapField(null);
+                      setMapDraft(null);
+                    } else if (detail) setDetail(null);
+                    else {
+                      setPlan(null);
+                      setSubmitted(null);
+                    }
+                    setSheetSize('half');
                   }}
                 >
-                  <ArrowDownUp size={18} />
+                  {picker || mapField ? <X size={20} /> : <ArrowLeft size={20} />}
                 </button>
-                <div className="mobility-endpoint-entry">
-                  <button
-                    type="button"
-                    className="mobility-endpoint"
-                    onClick={() => setPicker('to')}
-                    aria-label={`Destino: ${to ? endpointName(to, network) : 'Elige un lugar, dirección o parada'}`}
-                  >
-                    <span className="mobility-point destination">B</span>
-                    <span>
-                      <small>Hacia</small>
-                      <strong>{to ? endpointName(to, network) : '¿A dónde vas?'}</strong>
-                    </span>
-                    <Search size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    className="mobility-point-map-action"
-                    onClick={() => chooseOnMap('to')}
-                    aria-label="Elegir destino en mapa"
-                  >
-                    <MapPin size={16} />
-                    Mapa
-                  </button>
-                </div>
-              </div>
-              <div className="mobility-location-row">
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={locate}
-                  disabled={!online || locating}
-                >
-                  <LocateFixed size={16} />
-                  {locating ? 'Obteniendo ubicación…' : 'Usar mi ubicación'}
-                </button>
-                <small>Sin seguimiento. Sólo se guarda si tú lo eliges.</small>
-              </div>
-              <fieldset className="mobility-priorities">
-                <legend>Tu prioridad</legend>
-                <div>
-                  {priorities.map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      aria-pressed={preference === item.id}
-                      onClick={() => setPreference(item.id)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-              <button
-                className="primary-button full-width"
-                type="submit"
-                disabled={busy || !from || !to || !!mapField}
-              >
-                {busy ? 'Calculando conexiones…' : 'Buscar rutas'}
-                <ArrowRight size={17} />
-              </button>
-              {busy && (
-                <p className="mobility-feedback mobility-form-feedback" role="status">
-                  Actualizando las opciones con tu prioridad…
-                </p>
-              )}
-              {error && (
-                <p className="mobility-error mobility-form-feedback" role="alert">
-                  {error}
-                </p>
-              )}
-              {notice && !mapField && (
-                <p className="mobility-feedback mobility-form-feedback" role="status">
-                  {notice}
-                </p>
-              )}
-              <p className="mobility-honesty">
-                <Info size={15} />
-                Tiempos y afluencia simulados
-              </p>
-            </form>
-            <div className="mobility-map-panel" ref={mapPanel}>
-              <div className="mobility-map-heading">
-                <span>
-                  <MapPin size={17} />{' '}
-                  {mapField
-                    ? `Elige tu ${mapField === 'from' ? 'origen' : 'destino'}`
-                    : 'Tu viaje en el mapa'}
-                </span>
-                <div role="group" aria-label="Punto que quieres marcar en el mapa">
-                  <button
-                    type="button"
-                    aria-pressed={mapField === 'from'}
-                    onClick={() => chooseOnMap('from')}
-                  >
-                    Origen
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={mapField === 'to'}
-                    onClick={() => chooseOnMap('to')}
-                  >
-                    Destino
-                  </button>
-                </div>
-              </div>
-              {notice && mapField && (
-                <p className="mobility-feedback mobility-form-feedback" role="status">
-                  {notice}
-                </p>
-              )}
-              <LocationMap
+              ) : undefined
+            }
+          >
+            {picker ? (
+              <EndpointPicker
+                key={picker}
+                inline
+                field={picker}
                 network={network}
                 online={online}
-                origin={originPoint}
-                destination={destinationPoint}
-                field={mapField}
-                focus={mapFocus || destinationPoint || originPoint}
-                journey={visibleJourneys[0]}
-                onPick={setMapDraft}
-                onStopSelect={(stop) => {
-                  if (mapField) changeEndpoint(mapField, stopEndpoint(stop));
+                onClose={() => {
+                  closePicker();
+                  setSheetSize('half');
+                }}
+                locating={locating}
+                locationError={locationError}
+                onPreview={setSearchPreview}
+                onQueryChange={(query) => setSheetSize(query.trim() ? 'full' : 'half')}
+                onSearchRequest={() => setSheetSize('full')}
+                onChooseMap={() => chooseOnMap(picker)}
+                onRefinePlace={(place) => {
+                  const field = picker;
+                  closePicker();
+                  setMapField(field);
+                  setSheetSize('half');
+                  setMapFocus(place);
+                  setMapDraft(place);
+                }}
+                onOpenSavedTrip={(trip) => {
+                  closePicker();
+                  setPreviewSaved(trip);
+                  setSheetSize('half');
+                }}
+                onUseLocation={async () => {
+                  if (await locate()) {
+                    setPicker(null);
+                    setSheetSize('half');
+                  }
+                }}
+                onSelect={(endpoint) => {
+                  changeEndpoint(picker, endpoint);
+                  setPicker(null);
                 }}
               />
-              {mapField && (
-                <div className="mobility-pin-confirm" aria-label="Confirma el punto del mapa">
-                  <div>
-                    <strong>
-                      {mapField === 'from' ? '¿Sales desde aquí?' : '¿Quieres llegar aquí?'}
-                    </strong>
-                    <p>
-                      {online
-                        ? 'Ajusta el pin hasta el acceso que prefieras.'
-                        : 'Sin internet, confirma una parada oficial cercana.'}
-                    </p>
-                  </div>
-                  {!online &&
-                    nearbyOfficial.map(({ stop, meters }) => (
-                      <button
-                        type="button"
-                        className="mobility-nearby-stop"
-                        key={stop.id}
-                        onClick={() => changeEndpoint(mapField, stopEndpoint(stop))}
-                      >
-                        <MapPin size={16} />
-                        <span>
-                          {stop.name}
-                          <small>{Math.round(meters)} m del pin</small>
-                        </span>
-                        <ArrowRight size={16} />
-                      </button>
-                    ))}
-                  {!online && !nearbyOfficial.length && (
-                    <p role="status">
-                      No hay paradas oficiales cerca del pin. Muévelo o busca una por nombre.
-                    </p>
-                  )}
-                  <div className="mobility-pin-actions">
+            ) : mapField ? (
+              <div className="mobility-pin-confirm" aria-label="Confirma el punto del mapa">
+                {!online &&
+                  nearbyOfficial.map(({ stop, meters }) => (
                     <button
+                      className="mobility-nearby-stop"
                       type="button"
-                      className="text-button"
-                      onClick={() => {
-                        setMapField(null);
-                        setMapDraft(null);
-                        setNotice('');
-                      }}
+                      key={stop.id}
+                      onClick={() => changeEndpoint(mapField, stopEndpoint(stop))}
                     >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      className="primary-button"
-                      disabled={
-                        !mapDraft ||
-                        (!online && (!nearbyOfficial[0] || nearbyOfficial[0].meters > 250))
-                      }
-                      onClick={confirmMapPoint}
-                    >
-                      <Check size={17} />
-                      {online
-                        ? mapField === 'from'
-                          ? 'Usar este origen'
-                          : 'Usar este destino'
-                        : 'Usar parada cercana'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          {plan && (
-            <div className="mobility-results" aria-busy={busy} aria-label="Resultados multimodales">
-              <div className="mobility-results-heading">
-                <h3>
-                  {plan.journeys.length ? 'Rutas para tu viaje' : 'No encontramos una conexión'}
-                </h3>
-                <span>{visibleJourneys.length} opciones</span>
-              </div>
-              {!!plan.journeys.length && (
-                <div
-                  className="mobility-result-filters"
-                  role="group"
-                  aria-label="Filtrar rutas por transporte"
-                >
-                  {(
-                    [
-                      ['all', 'Todas'],
-                      ['metro', 'Metro'],
-                      ['bus', 'Autobús'],
-                      ['combined', 'Metro + autobús'],
-                    ] as const
-                  ).map(([id, label]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      aria-pressed={transportFilter === id}
-                      onClick={() => setTransportFilter(id)}
-                    >
-                      {label}
+                      <MapPin size={17} />
                       <span>
-                        {plan.journeys.filter((item) => matchesTransport(item, id)).length}
+                        {stop.name}
+                        <small>{Math.round(meters)} m</small>
                       </span>
+                      <ArrowRight size={17} />
                     </button>
                   ))}
-                </div>
-              )}
-              {!!plan.journeys.length && !visibleJourneys.length && (
-                <p className="mobility-feedback" role="status">
-                  No hay opciones de este tipo en las conexiones calculadas.{' '}
-                  <button className="text-button" onClick={() => setTransportFilter('all')}>
-                    Ver todas las rutas
-                  </button>
-                </p>
-              )}
-              {plan.message && <p className="mobility-feedback">{plan.message}</p>}
-              {visibleJourneys.map((journey, index) => (
+                {!online && !nearbyOfficial.length && (
+                  <p role="status">Acerca el pin a una parada oficial.</p>
+                )}
                 <button
-                  key={journey.id}
-                  className="panel mobility-result"
-                  onClick={() => setDetail(journey)}
-                  aria-label={`Ver conexión ${index + 1}: ${journey.durationMinutes} minutos, ${journey.transfers} ${journey.transfers === 1 ? 'transbordo' : 'transbordos'}`}
+                  type="button"
+                  className="primary-button full-width"
+                  disabled={
+                    !mapDraft || (!online && (!nearbyOfficial[0] || nearbyOfficial[0].meters > 250))
+                  }
+                  onClick={confirmMapPoint}
                 >
-                  <div className="mobility-result-time">
-                    <span>
-                      {journey.durationMinutes}
-                      <small> min aprox.</small>
-                    </span>
-                    {journey === plan.journeys[0] && <span>Recomendada</span>}
-                  </div>
-                  <div className="mobility-modes" aria-label="Servicios de esta ruta">
-                    {journey.steps
-                      .filter((step) => step.mode !== 'walk')
-                      .map((step, stepIndex) => (
-                        <span key={stepIndex} className={`mobility-mode ${step.mode}`}>
-                          {step.mode === 'metro' ? (
-                            <TrainFront size={16} aria-hidden="true" />
-                          ) : (
-                            <BusFront size={16} aria-hidden="true" />
-                          )}
-                          <span>
-                            {step.mode === 'bus'
-                              ? `${networkLabel(step.networkId)} · ${step.lineName}`
-                              : step.lineName}
-                          </span>
-                        </span>
-                      ))}
-                  </div>
-                  <div className="mobility-result-metrics">
-                    <span>
-                      <ArrowLeftRight size={15} aria-hidden="true" />
-                      {journey.transfers === 0
-                        ? 'Sin transbordos'
-                        : `${journey.transfers} ${journey.transfers === 1 ? 'transbordo' : 'transbordos'}`}
-                    </span>
-                    <span>
-                      <Footprints size={15} aria-hidden="true" />
-                      {journey.walkingMinutes} min a pie
-                    </span>
-                  </div>
-                  <p className="mobility-result-simulation">
-                    Afluencia simulada: {journey.occupancy}%
-                  </p>
-                  <div className="mobility-result-footer">
-                    <span>Ver mapa y pasos</span>
-                    <ArrowRight size={17} />
-                  </div>
+                  <Check size={18} />
+                  {online ? 'Confirmar punto' : 'Usar parada cercana'}
                 </button>
-              ))}
-              {!!plan.journeys.length && (
-                <div className="mobility-save-action">
+              </div>
+            ) : detail ? (
+              <>
+                <MobilityJourneyDetail
+                  key={detail.id}
+                  journey={detail}
+                  network={network}
+                  embedded
+                  onStartJourney={() => setGuideJourney(detail)}
+                />
+                <button
+                  type="button"
+                  className="journey-save-button"
+                  disabled={busy}
+                  onClick={startSaving}
+                >
+                  <Bookmark size={18} />
+                  Guardar trayecto
+                </button>
+              </>
+            ) : plan ? (
+              <>
+                <div className="mobility-trip-caption">
                   <button
-                    className="primary-button full-width"
+                    type="button"
+                    aria-label={`Origen: ${endpointName(from, network)}`}
+                    data-endpoint-field="from"
+                    onClick={() => openPicker('from')}
+                  >
+                    {endpointName(from, network)}
+                  </button>
+                  <ArrowRight size={15} aria-hidden="true" />
+                  <button
+                    type="button"
+                    aria-label={`Destino: ${endpointName(to, network)}`}
+                    data-endpoint-field="to"
+                    onClick={() => openPicker('to')}
+                  >
+                    {endpointName(to, network)}
+                  </button>
+                </div>
+                <JourneyOptions
+                  plan={plan}
+                  preference={preference}
+                  onPreference={setPreference}
+                  filter={transportFilter}
+                  onFilter={setTransportFilter}
+                  onSelect={(journey) => {
+                    setDetail(journey);
+                    setSheetSize('half');
+                  }}
+                  busy={busy}
+                />
+                {!!plan.journeys.length && (
+                  <button
+                    type="button"
+                    className="journey-save-button"
                     disabled={busy}
                     onClick={startSaving}
                   >
-                    <Bookmark size={17} />
+                    <Bookmark size={18} />
                     Guardar sin internet
                   </button>
-                  <small>Las alternativas calculadas · Sólo en este dispositivo</small>
+                )}
+              </>
+            ) : (
+              <form
+                className="mobility-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!from || !to) {
+                    setError('Elige un origen y un destino.');
+                    return;
+                  }
+                  setSubmitted({ from, to, attempt: Date.now() });
+                  setSheetSize('half');
+                }}
+              >
+                <div className="mobility-fields">
+                  {(['from', 'to'] as const).map((field) => (
+                    <div className="mobility-endpoint-entry" key={field}>
+                      <button
+                        type="button"
+                        className="mobility-endpoint"
+                        data-endpoint-field={field}
+                        aria-label={`${field === 'from' ? 'Origen' : 'Destino'}: ${endpointName(field === 'from' ? from : to, network)}`}
+                        onClick={() => openPicker(field)}
+                      >
+                        <span
+                          className={`mobility-point ${field === 'from' ? 'origin' : 'destination'}`}
+                          aria-hidden="true"
+                        >
+                          {field === 'from' ? 'A' : 'B'}
+                        </span>
+                        <span>
+                          <small>{field === 'from' ? 'Desde' : 'Hacia'}</small>
+                          <strong>
+                            {field === 'to' && !to
+                              ? '¿A dónde vas?'
+                              : endpointName(field === 'from' ? from : to, network)}
+                          </strong>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="mobility-point-map-action"
+                        aria-label={`Elegir ${field === 'from' ? 'origen' : 'destino'} en mapa`}
+                        onClick={() => chooseOnMap(field)}
+                      >
+                        <MapPin size={19} aria-hidden="true" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="mobility-swap"
+                    aria-label="Intercambiar origen y destino"
+                    onClick={() => {
+                      setFrom(to);
+                      setTo(from);
+                      setSubmitted(null);
+                      setPlan(null);
+                      setTransportFilter('all');
+                      setError('');
+                      setNotice('');
+                      setMapField(null);
+                      setMapDraft(null);
+                      locationGeneration.current++;
+                      setLocating(false);
+                    }}
+                  >
+                    <ArrowDownUp size={18} aria-hidden="true" />
+                  </button>
                 </div>
-              )}
-              <details className="mobility-method mobility-result-method">
-                <summary>Cobertura y límites de estas opciones</summary>
-                {plan.coverage && (
-                  <p>
-                    Red consultada:{' '}
-                    {plan.coverage.networks.map((item) => networkLabel(item.id)).join(' · ')}. Hasta{' '}
-                    {plan.coverage.alternativesLimit} combinaciones distintas por búsqueda.
-                  </p>
+                <div className="mobility-form-actions">
+                  <button
+                    type="button"
+                    className="mobility-use-location"
+                    aria-label="Usar mi ubicación actual"
+                    disabled={!online || locating}
+                    onClick={() => void locate()}
+                  >
+                    <LocateFixed size={18} aria-hidden="true" />
+                    {locating ? 'Localizando…' : 'Mi ubicación'}
+                  </button>
+                  <button type="submit" className="primary-button" disabled={busy || !from || !to}>
+                    {busy ? 'Calculando…' : 'Buscar rutas'}
+                    <Search size={18} aria-hidden="true" />
+                  </button>
+                </div>
+                {!!savedTrips.length && (
+                  <div className="planner-saved-shortcuts" aria-label="Tus trayectos guardados">
+                    {savedTrips.map((trip) => (
+                      <button key={trip.id} type="button" onClick={() => setPreviewSaved(trip)}>
+                        <Bookmark size={16} aria-hidden="true" />
+                        {trip.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
-                {plan.diagnostics.truncated && (
-                  <p>
-                    La búsqueda alcanzó su límite de cálculo. Puede haber otras opciones; cambia la
-                    prioridad para compararlas.
-                  </p>
-                )}
-                <p>Conexiones de la red documentada. Caminatas aproximadas y tiempos simulados.</p>
+              </form>
+            )}
+            {busy && !plan && (
+              <p className="mobility-feedback" role="status">
+                Calculando conexiones…
+              </p>
+            )}
+            {error && !picker && (
+              <p className="mobility-error" role="alert">
+                {error}
+              </p>
+            )}
+            {!picker && (
+              <details className="planner-information">
+                <summary>
+                  <Info size={16} aria-hidden="true" />
+                  Información del viaje
+                </summary>
+                {notice && <p role="status">{notice}</p>}
+                <p>
+                  Tiempos y afluencia simulados. Caminatas aproximadas. Confirma el sentido al
+                  abordar.
+                </p>
+                <p>
+                  Las rutas combinan estaciones de Metro y puntos publicados de autobús con
+                  geometría disponible. Servicios sin coordenadas o en construcción quedan fuera del
+                  cálculo.
+                </p>
+                <p>
+                  Sin conexión sólo se generan rutas entre puntos oficiales. Puedes consultar tus
+                  trayectos guardados. La exploración se limita a la ZMM.
+                </p>
+                <p>
+                  «Mi ubicación» obtiene un punto; el seguimiento comienza sólo al iniciar el
+                  trayecto. El GPS se procesa en tu dispositivo.
+                </p>
+                {network.sources?.map((source) => (
+                  <a key={source.id} href={source.url} target="_blank" rel="noreferrer">
+                    {source.title}
+                  </a>
+                ))}
               </details>
-            </div>
-          )}
-          <SavedMobilityTrips compact onPlan={reuseTrip} />
-          <details className="mobility-method">
-            <summary>Rutas incluidas y fuentes del cálculo</summary>
-            <p>
-              {network.routes.filter((route) => route.mode === 'metro').length} líneas Metro ·{' '}
-              {network.routes.filter((route) => route.mode === 'bus').length} recorridos de autobús
-            </p>
-            <p>
-              Se combinan estaciones de Metro y puntos publicados de los autobuses con geometría
-              disponible. Los servicios sin coordenadas o en construcción quedan fuera del cálculo.
-              «Menos transbordos» no garantiza accesibilidad.
-            </p>
-            <p>
-              Sin conexión sólo se aceptan puntos oficiales. La web debe abrir este modelo una vez
-              con internet; Android incluye la red. El GPS no se envía al buscador. Las calles
-              visibles se consultan con conexión; el mapa local tiene cobertura parcial. La
-              exploración permanece dentro de la ZMM.
-            </p>
-          </details>
+            )}
+          </MapSheet>
         </>
-      )}
-      {picker && network && (
-        <EndpointPicker
-          field={picker}
-          network={network}
-          online={online}
-          onClose={() => setPicker(null)}
-          onChooseMap={() => chooseOnMap(picker)}
-          onRefinePlace={(place) => {
-            setPicker(null);
-            setMapField(picker);
-            const point = { lat: place.lat, lng: place.lng };
-            setMapFocus(point);
-            setMapDraft(point);
-            setNotice(
-              `Encontramos ${place.name}. Ajusta el punto en el mapa y confirma dónde quieres ${picker === 'from' ? 'salir' : 'llegar'}.`,
-            );
-          }}
-          onOpenSavedTrip={(trip) => {
-            setPicker(null);
-            setPreviewSaved(trip);
-          }}
-          onUseLocation={() => {
-            setPicker(null);
-            void locate();
-          }}
-          onSelect={(endpoint) => {
-            changeEndpoint(picker, endpoint);
-            setPicker(null);
-          }}
-        />
       )}
       {previewSaved && (
         <SavedTripPreview
@@ -812,25 +791,35 @@ export default function MobilityPlanner({
         />
       )}
       <ActionFeedback key={savedFeedback} message={savedFeedback} />
-      {detail && network && (
-        <JourneyDialog
-          title="Tu conexión, paso a paso"
-          onClose={() => setDetail(null)}
-          journey={detail}
-          network={network}
-          after={
-            <div className="mobility-save-action">
-              <button className="primary-button full-width" disabled={busy} onClick={startSaving}>
-                <Bookmark size={17} />
-                Guardar sin internet
-              </button>
-              <small>Se guarda solo en este dispositivo</small>
-            </div>
-          }
-        />
+      {guideJourney && network && (
+        <Dialog
+          title="Sigue tu ruta"
+          wide
+          className="journey-guidance-dialog"
+          onClose={finishGuidance}
+        >
+          <Suspense fallback={<p role="status">Abriendo tu guía de viaje…</p>}>
+            <ActiveJourney
+              journey={guideJourney}
+              network={network}
+              autoStart
+              onFinish={finishGuidance}
+            />
+          </Suspense>
+        </Dialog>
       )}
       {saveDraft && (
-        <Dialog title="Guarda tu viaje" onClose={() => setSaveDraft(null)}>
+        <Dialog
+          title="Guarda tu viaje"
+          onClose={() => {
+            setSaveDraft(null);
+            window.requestAnimationFrame(() =>
+              workspace.current
+                ?.querySelector<HTMLHeadingElement>('.map-sheet-heading h2')
+                ?.focus({ preventScroll: true }),
+            );
+          }}
+        >
           <form
             className="mobility-save-form"
             onSubmit={(event) => {

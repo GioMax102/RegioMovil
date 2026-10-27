@@ -1,6 +1,54 @@
 # Catálogo de autobuses: fuentes y alcance
 
-Verificado el **15 de octubre de 2026**. El catálogo permite descubrir corredores publicados y consultar su cobertura. Un corredor catalogado no implica que el planificador pueda calcular un viaje en él. Los nuevos registros tienen `planningEligible: false` hasta validar sentidos, secuencia de paradas y conexiones.
+## Inventario de cobertura — 25 de octubre de 2026
+
+El catálogo local contiene **214 servicios documentados de seis redes**, no 41. Los 41 de la investigación inicial que figura más abajo fueron una primera incorporación y no describen la cobertura actual. Hay **59 servicios con mapa de consulta en su ficha**: tres líneas de Metro y 56 paquetes de autobús. El mapa general y el grafo experimental conservan **54 recorridos y 3,417 puntos**, porque los cinco mapas nuevos se incorporan **sólo para consulta**.
+
+| Red | Catalogados | Mapa de ficha | Mapa general / grafo experimental | Sin mapa importado |
+| --- | ---: | ---: | ---: | ---: |
+| Metrorrey | 5 | 3 | 3 | 2 |
+| Muevo León / urbanas IMA | 152 | 17 | 12 | 135 |
+| RegioRuta | 7 | 7 | 7 | 0 |
+| Transmetro | 40 | 30 | 30 | 10 |
+| Ecovía / GMG | 1 | 1 | 1 | 0 |
+| Troncales e integradas | 9 | 1 | 1 | 8 |
+| **Total** | **214** | **59** | **54** | **155** |
+
+El [inventario completo por ID](inventario-rutas-2026-10-25.csv) conserva nombre, ramal, estado fechado, fuente, existencia de mapa, pertenencia al grafo y motivo pendiente de cada servicio. Su versión estructurada es [`data/route-coverage-inventory.json`](../data/route-coverage-inventory.json); se regenera sin red mediante `node scripts/prepare-coverage-inventory.mjs`. `--check` comprueba que coincide con los catálogos y el grafo. El inventario no se carga en el cliente y no aumenta la carga inicial de la app.
+
+### Cinco trazos recuperados para consulta
+
+El 25 de octubre se descargaron cinco KML públicos enlazados en los registros SETME del IMA. Se conservaron sus LineString por separado y los marcadores publicados, sin crear paradas ni unir calles. El [conjunto SETME](https://catalogodatos.nl.gob.mx/dataset/2024_2025_tpe_publico_setme) sigue describiendo el periodo octubre de 2024–septiembre de 2025 y declara Open Data Commons Attribution License; el KML no declara una licencia individual. Cada paquete conserva esa distinción, atribución y SHA-256 de la descarga original. La consulta de hoy no actualiza la fecha de vigencia del servicio.
+
+| ID exacto del servicio | Trazos | Vértices | Marcadores | Mapa oficial |
+| --- | ---: | ---: | ---: | --- |
+| `ima-13-remanente-soriana-sendero-lincoln` | 1 | 614 | 128 | [13 Lincoln](https://www.google.com/maps/d/viewer?mid=1jQDzqpCErmQqiYIhUchO7ZFNeSSmfuE) |
+| `ima-39-directa-san-bernabe-centro` | 1 | 591 | 195 | [39 San Bernabé–Centro](https://www.google.com/maps/d/viewer?mid=1tqxvKxRLT9Gv4v2P2vZq8ObReJWHeWw) |
+| `ima-109-remanente-aeropuerto-y-griega` | 1 | 447 | 96 | [109 Aeropuerto–Y Griega](https://www.google.com/maps/d/viewer?mid=1qixqkTypIZUkUJmCeod-jrYqwxFEmcI) |
+| `ima-124-alimentadora-quinta-colonial-ruiz-cortines-por-anillo` | 1 | 560 | 174 | [124 por Anillo](https://www.google.com/maps/d/viewer?mid=1WGmhGxnbDB2h18JzOiSC7heM_FSEEoM) |
+| `ima-310-remanente-portal-de-lincoln-estacion-san-bernabe` | 1 | 812 | 130 | [310 Portal de Lincoln–San Bernabé](https://www.google.com/maps/d/viewer?mid=1U9xL8zAwPsLQVBNTZv3nuvLei9yM01w) |
+
+Los conteos y hashes auditables están en [`data/coverage-source-audit-20261025.json`](../data/coverage-source-audit-20261025.json). `scripts/import-ima-view-maps.py` reproduce la descarga, valida coordenadas finitas dentro de la cobertura y exige al menos un trazo y dos marcadores antes de modificar snapshots. Los cinco paquetes suman 723 marcadores y aproximadamente 335 KiB sin compresión; se descargan únicamente al consultar la ficha correspondiente.
+
+Sus marcadores incluyen infraestructura propuesta. `stopOrderVerified: false` y `experimentalRouting: false` evitan que la mera disponibilidad del mapa habilite instrucciones de abordaje. El pipeline registra `visualization-only` como razón de exclusión del grafo. Todos los autobuses conservan `planningEligible: false` en el catálogo; los 51 autobuses anteriores continúan en el experimento documentado de combinaciones, que no equivale a una secuencia validada por el operador.
+
+### Por qué faltan otros recorridos
+
+Antes de esta incorporación faltaban 160 mapas de ficha: 158 de autobús y dos de Metro. Ahora faltan **155: 153 de autobús y dos de Metro**. El inventario distingue razones sin afirmar una auditoría que no se realizó:
+
+- **114 autobuses tienen enlace My Maps en el catálogo, pendiente de descarga y revisión individual en otro lote.** Es trabajo de importación pendiente, no evidencia de que el recorrido no exista. El motivo por ID es `linked-map-not-imported-or-inspected-this-batch`.
+- **39 autobuses conservan fuentes administrativas, páginas de índice o boletines sin enlace individual de geometría en su registro local.** El motivo es `metadata-without-individual-geometry-link`. No significa que se haya descartado toda fuente pública posible ni permite reemplazar un ramal con el trazo de otro que comparte número.
+- **L4 y L6 mantienen el estado fechado del catálogo local y quedan fuera del grafo.** El sitio oficial consultado enlaza una [noticia sobre un viaje de prueba](https://www.metrorrey.mx/post/primer-viaje-de-prueba-en-l%C3%ADneas-4-y-6); esa evidencia no basta para certificar apertura de servicio regular, horarios, estaciones operativas u orden de abordaje actual. No se cambió su estado operativo a partir de esa noticia.
+
+El [directorio actual de rutas urbanas del IMA](https://www.imanuevoleon.mx/rutasurbanas) ofrece fichas individuales para más servicios. Se consultaron como muestra las fichas de [Pilares Andalucía](https://www.imanuevoleon.mx/rutadirectapilaresandalucia), 39 San Bernabé y 98 Héroes de Capellanía desde sus enlaces oficiales; no se atribuyeron automáticamente sus geometrías a registros de otro corte. La revisión completa de ese directorio y de los 114 enlaces restantes sigue pendiente. Los diez Transmetro sin mapa importado siguen identificados en el inventario; no se los sustituyó por otros ramales de nombre parecido.
+
+### Verificación de este lote
+
+Se comprobó por script: 214 IDs únicos; fuentes resueltas; cinco descargas XML sin DTD/entidades; 723 IDs de marcador únicos dentro de su paquete; coordenadas y vértices finitos en la ZMM; SHA-256 por fuente; 59 mapas de ficha; los cinco IDs nuevos ausentes del grafo; 54 recorridos/3,417 puntos conservados en el grafo. Esto verifica integridad de snapshots y separación entre consulta y planificación; no certifica servicio en vivo, licencia individual del KML, seguridad del acceso peatonal ni sentidos operativos.
+
+## Antecedentes de investigación — 15 y 16 de octubre de 2026
+
+La investigación que sigue es histórica. El catálogo permite descubrir corredores publicados y consultar su cobertura. Un corredor catalogado no implica que el planificador pueda calcular un viaje en él. Los nuevos registros tienen `planningEligible: false` hasta validar sentidos, secuencia de paradas y conexiones.
 
 ## Regio Ruta
 
@@ -44,4 +92,4 @@ El Gobierno estatal enlaza [Muevo León para pasajeros](https://pasajero.lowcoba
 
 Para actualizar Regio Ruta: revisar primero la página municipal, seguir el mapa conjunto que conserve capas identificadas y comparar las capas y marcadores con la versión anterior. Para STCM: descargar el CSV y su diccionario desde la ficha, comprobar periodo y anomalías y conservar la procedencia de los campos. Antes de habilitar viajes calculados, verificar por sentido orden de paradas, enlaces peatonales y transferencias con estaciones. La proximidad entre coordenadas no prueba que exista una conexión transitable.
 
-Validación realizada: 41 identificadores únicos; fuentes resueltas; siete paquetes con 519 identificadores de parada únicos dentro de cada ruta; coordenadas finitas dentro de la ZMM; longitudes de segmentos conservadas; ningún corredor nuevo elegible para el grafo.
+Validación de la primera incorporación del 15 de octubre: 41 identificadores únicos; fuentes resueltas; siete paquetes con 519 identificadores de parada únicos dentro de cada ruta; coordenadas finitas dentro de la ZMM; longitudes de segmentos conservadas; ningún corredor de esa primera incorporación elegible para el grafo en aquel corte. Los conteos actuales están al inicio de este documento.

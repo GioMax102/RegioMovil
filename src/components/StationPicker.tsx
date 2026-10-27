@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, ChevronDown, MapPin, Search } from 'lucide-react';
 import { network } from '../api';
 import { Dialog, LineBadge } from './Primitives';
+import '../route-planning.css';
 
 const normalize = (text: string) =>
   text

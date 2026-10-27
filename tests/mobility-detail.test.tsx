@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import type { MobilityJourney, MobilityNetwork, MobilityStep } from '../src/mobility/types';
 import { isCompactTransfer, presentJourneySteps } from '../src/mobility/journeyPresentation';
+import { journeyTransfers, resolveTransferStation } from '../src/mobility/transferStations';
 
 const hooks = registerHooks({
   load(url, context, nextLoad) {
@@ -90,7 +91,12 @@ test('journey detail retains travel facts, uncertainty and relevant provenance i
     doc.querySelector('ol')!.textContent!,
     /Ruta 130.*Origen.*Destino.*Sentido por confirmar.*27 min.*12 tramos/,
   );
-  assert.match(doc.querySelector('details')!.textContent!, /orden inferido del mapa/);
+  assert.match(
+    doc.querySelector('.journey-detail-sources')!.textContent!,
+    /orden inferido del mapa/,
+  );
+  assert.equal(doc.querySelector('.journey-service-details summary')!.textContent, 'Unidad y pago');
+  assert.ok(doc.querySelector('.service-payment-chip.unconfirmed'));
   assert.equal(
     doc.querySelector('a[href="https://example.org/mapa"]')?.textContent,
     'Mapa de la ruta',
@@ -103,12 +109,15 @@ test('journey detail retains travel facts, uncertainty and relevant provenance i
   assert.match(boarding.textContent!, /confirma el sentido al abordar/);
   assert.equal(boarding.closest('details'), null);
   assert.ok(boarding.compareDocumentPosition(start) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING);
-  assert.match(
-    doc.querySelector('.journey-guide-scope')!.textContent!,
-    /app abierta.*GPS en tu dispositivo/,
-  );
-  assert.match(doc.querySelector('.journey-detail-note')!.textContent!, /Tiempo simulado/);
-  assert.equal((doc.querySelector('details') as HTMLDetailsElement).open, false);
+  const information = doc.querySelector<HTMLDetailsElement>('.journey-detail-sources')!;
+  assert.equal(information.querySelector('summary')!.textContent, 'Información del trayecto');
+  assert.match(information.textContent!, /Tiempo y afluencia simulados.*Caminatas aproximadas/);
+  assert.match(information.textContent!, /app abierta.*GPS en tu dispositivo; se pausa al salir/);
+  assert.equal(information.open, false, 'Simulation and GPS scope are disclosed on demand.');
+  assert.equal(doc.querySelector('.journey-guide-scope'), null);
+  assert.equal(doc.querySelector('.journey-detail-note'), null);
+  assert.equal(doc.querySelector('.journey-detail-section-title'), null);
+  assert.equal((doc.querySelector('.journey-service-details') as HTMLDetailsElement).open, false);
   dom.window.close();
 });
 
@@ -220,4 +229,91 @@ test('transfer threshold is under three minutes and 250 metres, and consecutive 
   const adjacent = between(1, 31);
   adjacent.splice(1, 0, { ...adjacent[1] });
   assert.ok(adjacent.every((_, index) => !isCompactTransfer(adjacent, index)));
+});
+
+test('every transfer resolves exact stop IDs and distinguishes alighting from boarding, including longer walks', () => {
+  const ride = journey.steps[0];
+  const steps: MobilityStep[] = [
+    { ...ride, toId: 'metro:talleres', to: 'Talleres' },
+    {
+      ...ride,
+      mode: 'walk',
+      fromId: 'metro:talleres',
+      toId: 'bus:boarding',
+      minutes: 5,
+      distanceMeters: 380,
+    },
+    { ...ride, fromId: 'bus:boarding', from: 'Talleres', lineId: 'other' },
+  ];
+  const transferNetwork: MobilityNetwork = {
+    ...network,
+    stops: [
+      {
+        id: 'metro:talleres',
+        stationId: 'talleres',
+        name: 'Talleres',
+        mode: 'metro',
+        lat: 25.759167,
+        lng: -100.368333,
+        routeIds: ['L1'],
+        sourceIds: [],
+        official: true,
+      },
+      {
+        id: 'bus:boarding',
+        name: 'Talleres',
+        mode: 'bus',
+        lat: 25.756,
+        lng: -100.369,
+        routeIds: ['other'],
+        sourceIds: [],
+        official: true,
+      },
+    ],
+  };
+  assert.equal(resolveTransferStation(transferNetwork, 'missing'), null);
+  assert.equal(resolveTransferStation(transferNetwork, 'bus:boarding')?.kind, 'bus');
+  assert.equal(resolveTransferStation(transferNetwork, 'metro:talleres')?.id, 'talleres');
+  const raw = JSON.stringify(steps);
+  const dom = new JSDOM(
+    renderToStaticMarkup(
+      <MobilityJourneyDetail journey={{ ...journey, steps }} network={transferNetwork} />,
+    ),
+  );
+  try {
+    const actions = dom.window.document.querySelector('.transfer-station-actions')!;
+    assert.match(actions.textContent!, /Baja en.*Talleres.*Aborda en.*Talleres/);
+    assert.equal(actions.querySelectorAll('.station-save-action').length, 2);
+    assert.equal(
+      actions.querySelectorAll('.station-photo-action').length,
+      1,
+      'The bus stop must never borrow the identically named Metro photo.',
+    );
+    const viewpoints = [...actions.querySelectorAll('a')].map((link) =>
+      new URL(link.href).searchParams.get('viewpoint'),
+    );
+    assert.deepEqual(viewpoints, ['25.759167,-100.368333', '25.756000,-100.369000']);
+    assert.equal(JSON.stringify(steps), raw, 'Station actions never rewrite a saved route.');
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('direct changes at one graph stop expose one action row and incomplete old snapshots retain names without invented actions', () => {
+  const ride = journey.steps[0];
+  const steps = [ride, { ...ride, fromId: ride.toId, from: ride.to, lineId: 'next' }];
+  assert.equal(journeyTransfers(steps).length, 1);
+  const dom = new JSDOM(
+    renderToStaticMarkup(
+      <MobilityJourneyDetail journey={{ ...journey, steps }} network={network} />,
+    ),
+  );
+  try {
+    const actions = dom.window.document.querySelector('.transfer-station-actions')!;
+    assert.match(actions.textContent!, /Transbordo en.*Destino/);
+    assert.equal(actions.querySelectorAll('.transfer-station-point').length, 1);
+    assert.equal(actions.querySelector('a,button'), null);
+  } finally {
+    dom.window.close();
+  }
 });

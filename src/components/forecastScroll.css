@@ -1,0 +1,21 @@
+.forecast .forecast-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px;
+}
+.forecast .forecast-scroll .forecast-bars {
+  display: flex;
+  gap: 10px;
+  min-width: 100%;
+}
+.forecast-scroll .forecast-column {
+  flex: 1 0 4.1rem;
+  min-width: 4.1rem;
+  scroll-snap-align: start;
+}
+.forecast-scroll:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 3px;
+}
