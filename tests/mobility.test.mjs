@@ -297,6 +297,30 @@ test('score conserva el objetivo de búsqueda sin duplicar transbordos ni sumar 
   }
 });
 
+test('la cota con esperas mantiene el servicio continuo y el orden por coste real', () => {
+  const stops = [
+    { id: 'a', name: 'A', lat: 25.67, lng: -100.32, routeIds: ['L2', 'direct'] },
+    { id: 'b', name: 'B', lat: 25.68, lng: -100.31, routeIds: ['L2', 'L3'] },
+    { id: 'c', name: 'C', lat: 25.69, lng: -100.30, routeIds: ['L3', 'direct'] },
+  ].map(stop => ({ ...stop, mode: 'metro', official: true }));
+  const route = (id, ids, coordinates) => ({ id, code: id, name: id, mode: 'metro', segments: [{
+    id: `${id}:0`, stopIds: ids, coordinates, positions: [0, coordinates.length - 1],
+  }] });
+  const points = ids => ids.map(id => { const stop = stops.find(stop => stop.id === id); return [stop.lng, stop.lat]; });
+  const data = { bounds: network.bounds, stops, routes: [
+    route('L2', ['a', 'b'], points(['a', 'b'])),
+    route('L3', ['b', 'c'], points(['b', 'c'])),
+    route('direct', ['a', 'c'], [[-100.32, 25.67], [-100.33, 25.69], [-100.30, 25.69]]),
+  ], throughServices: [{ stationId: 'b', lineIds: ['L2', 'L3'] }] };
+  const result = planMobility(data, { from: { id: 'a' }, to: { id: 'c' }, transport: 'metro', offline: true });
+  assert.deepEqual(result.journeys[0].serviceIds, ['L2', 'L3']);
+  assert.equal(result.journeys[0].transfers, 0);
+  assert.equal(result.journeys[0].steps.reduce((sum, step) => sum + step.waitingMinutes, 0), 4);
+  const changedTrain = planMobility({ ...data, throughServices: [] }, { from: { id: 'a' }, to: { id: 'c' }, transport: 'metro', offline: true });
+  assert.deepEqual(changedTrain.journeys[0].serviceIds, ['direct']);
+  assert.ok(result.journeys.every((journey, index) => index === 0 || journey.score >= result.journeys[index - 1].score));
+});
+
 test('conserva una llegada con menos caminata aunque otra más barata consuma el mismo antiguo bucket', () => {
   const lngAt = meters => -100.32 + meters / (111195 * Math.cos(25.67 * Math.PI / 180));
   const stops = [80, 112, 144].map((meters, index) => ({ id: ['a', 'b', 'c'][index], name: ['A', 'B', 'C'][index],
@@ -345,6 +369,8 @@ test('búsqueda limitada y benchmark determinista de consultas representativas',
   t.diagnostic(`9 consultas; mediana ${timings[4].toFixed(1)} ms; p95 ${p95.toFixed(1)} ms; JSON ${(Buffer.byteLength(raw) / 1024).toFixed(1)} KiB, gzip ${(gzipSync(raw).byteLength / 1024).toFixed(1)} KiB.`);
   // Generous CI ceiling catches unbounded/exponential regressions, not host noise.
   assert.ok(p95 < 1500, `Consulta fuera del presupuesto de prueba: ${p95.toFixed(1)} ms`);
-  // Expanded official bus maps are downloaded on demand, outside initial precache.
-  assert.ok(gzipSync(raw).byteLength < 512 * 1024);
+  // The user-requested full public IMA import adds 134 bus maps to the previous
+  // 51. This network remains deferred and outside initial precache; bound its
+  // compressed size to 1.25 MiB (measured about 1 MiB for 185 bus routes).
+  assert.ok(gzipSync(raw).byteLength < 1280 * 1024);
 });

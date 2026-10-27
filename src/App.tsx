@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -30,8 +30,9 @@ import {
   X,
 } from 'lucide-react';
 import { loadBoard, network, readStored, writeStored, type Transport } from './api';
-import type { Arrival, Board, Page, Preference, Scenario, Station } from './types';
+import type { Arrival, Board, Page, Preference, Scenario } from './types';
 const loadNetworkExplorer = () => import('./components/NetworkExplorer');
+const loadReportDialog = () => import('./components/ReportDialog');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
 const SavedTripPreview = lazy(() => import('./mobility/SavedTripPreview'));
@@ -47,7 +48,6 @@ import DeferredSection from './components/DeferredSection';
 import SectionLoading from './components/SectionLoading';
 import { usePageFocus } from './usePageFocus';
 import MetroStationDetail from './components/MetroStationDetail';
-import ReportDialog from './components/ReportDialog';
 import { useStationFavorites } from './components/stationFavorites';
 import MetroStationBrowser from './components/MetroStationBrowser';
 import { getNextMetroOpening, isMetroOperating } from './components/metroServiceHours';
@@ -734,7 +734,10 @@ export default function App() {
                   </div>
                 </section>
                 {!kiosk && (
-                  <button className="report-link" onClick={() => openReport({ stationId: station })}>
+                  <button
+                    className="report-link"
+                    onClick={() => openReport({ stationId: station })}
+                  >
                     <Flag size={15} />
                     ¿Algo no está bien? Compártelo
                     <ArrowUpRight size={14} />
@@ -1228,13 +1231,31 @@ export default function App() {
         <SourcesDialog onClose={() => setModal(null)} transport={transport} scenario={scenario} />
       )}
       {modal === 'report' && !kiosk && (
-        <ReportDialog
-          initialStationId={reportTarget.stationId}
-          initialRouteId={reportTarget.routeId}
-          onClose={() => setModal(null)}
-          onSent={() => {
-            setModal(null);
-            announce('Reporte recibido. Queda privado y pendiente de revisión.');
+        <DeferredSection
+          load={loadReportDialog}
+          loadingLabel="Abriendo reporte…"
+          onRetry={() => location.reload()}
+          loadingFallback={
+            <Dialog title="Tu experiencia cuenta" onClose={() => setModal(null)}>
+              <SectionLoading label="Abriendo reporte…" />
+            </Dialog>
+          }
+          errorFallback={
+            <Dialog title="No pudimos abrir el reporte" onClose={() => setModal(null)}>
+              <p role="alert">Revisa tu conexión y recarga la aplicación para volver a intentar.</p>
+              <button className="primary-button" onClick={() => location.reload()}>
+                Recargar aplicación
+              </button>
+            </Dialog>
+          }
+          componentProps={{
+            initialStationId: reportTarget.stationId,
+            initialRouteId: reportTarget.routeId,
+            onClose: () => setModal(null),
+            onSent: () => {
+              setModal(null);
+              announce('Reporte recibido. Queda privado y pendiente de revisión.');
+            },
           }}
         />
       )}

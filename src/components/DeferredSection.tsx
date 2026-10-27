@@ -8,12 +8,16 @@ export default function DeferredSection<P extends object>({
   loadingLabel,
   fallback,
   onRetry,
+  loadingFallback,
+  errorFallback,
 }: {
   load: () => Promise<{ default: ComponentType<P> }>;
   componentProps: P;
   loadingLabel: string;
   fallback?: ReactNode;
   onRetry: () => void;
+  loadingFallback?: ReactNode;
+  errorFallback?: ReactNode;
 }) {
   const [result, setResult] = useState<{ component: ComponentType<P> } | { failed: true } | null>(
     null,
@@ -35,11 +39,12 @@ export default function DeferredSection<P extends object>({
       active = false;
     };
   }, [load]);
-  if (!result) return <SectionLoading label={loadingLabel} />;
+  if (!result) return loadingFallback ?? <SectionLoading label={loadingLabel} />;
   if ('component' in result) {
     const Section = result.component;
     return <Section {...componentProps} />;
   }
+  if (errorFallback) return errorFallback;
   return (
     <section className="panel deferred-section-error" aria-label="Red no disponible">
       <h2>No pudimos abrir las redes</h2>

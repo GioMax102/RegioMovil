@@ -193,6 +193,23 @@ async function search(query: string) {
   await user.clear(input);
   await user.type(input, query);
 }
+function assert223JuarezResults() {
+  assert.ok(screen.getByText('8 rutas · 6 redes'));
+  assert.deepEqual(
+    [...document.querySelectorAll('.service-card h3')].map((heading) => heading.textContent).sort(),
+    [
+      'Ruta 223 Alimentadora Seminario Las Torres Exposicion',
+      'Ruta 223 Directa Evolucion',
+      'Ruta 223 Directa Huertos',
+      'Ruta 223 Directa Huertos Portal de Juarez',
+      'Ruta 223 Directa San Francisco Felix U. Gomez',
+      'Ruta 223 Directa Teofilo Salinas Eloy Cavazos',
+      'Ruta 223 Directa Teofilo Salinas Gine',
+      'Ruta 223 Remanente Monteverde Exposicion',
+    ].sort(),
+    'The geometry import adds municipality evidence for eight distinct 223 variants; the search must return each one.',
+  );
+}
 async function openRoute(code: string, name = '') {
   await user.click(
     screen.getByRole('button', {
@@ -272,8 +289,7 @@ test('App exposes Rutas y redes, filters seven RegioRuta services and loads maps
 test('route search combines route number and accent-free municipality and can recover from no matches', async () => {
   await mountCatalog();
   await search('223 Juárez');
-  assert.ok(screen.getByText('3 rutas · 6 redes'));
-  assert.equal(document.querySelectorAll('.service-card').length, 3);
+  assert223JuarezResults();
   assert.ok(screen.getByRole('button', { name: /223:.*Teofilo Salinas Eloy Cavazos/ }));
   assert.ok(screen.getByRole('button', { name: /223:.*Huertos Portal de Juarez/ }));
   await search('223 juarez inexistente');
@@ -316,10 +332,14 @@ test('RegioRuta A keeps the unknown publication date and official sources and re
   await filterNetwork('regioruta');
   dialog = await openRoute('A');
   await within(dialog).findByRole('img', { name: /Recorrido publicado.*93 puntos de referencia/ });
-  assert.equal(
-    within(dialog).queryByRole('alert'),
-    null,
-    'A previously opened map remains available offline.',
+  assert.ok(
+    !within(dialog).queryByRole('button', { name: 'Reintentar mapa' }),
+    'A previously opened map remains available offline; the report feed has its own connection state.',
+  );
+  assert.match(
+    within(dialog).getByRole('alert').textContent || '',
+    /No pudimos consultar los reportes/,
+    'Public community reports are not cached together with route geometry.',
   );
   assertNoTravelAction(dialog);
 });
@@ -517,11 +537,11 @@ test('map search discovers a catalog service without geometry and opens its sour
   const searchInput = await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
   const map = await screen.findByRole('group', { name: /^Mapa interactivo/ });
   await screen.findByText('214 rutas · 6 redes');
-  await user.type(searchInput, '1 Pilares Andalucia');
+  await user.type(searchInput, '5 Estanzuela Los Cristales');
   await user.click(
-    await screen.findByRole('option', { name: /1.*Pilares Andalucia.*Trazo pendiente/ }),
+    await screen.findByRole('option', { name: /5.*Estanzuela.*Los Cristales.*Trazo pendiente/ }),
   );
-  const dialog = await screen.findByRole('dialog', { name: /1 ·/ });
+  const dialog = await screen.findByRole('dialog', { name: /5 ·/ });
   assert.ok(within(dialog).getByText('Trazo pendiente'));
   assert.ok(within(dialog).getByRole('link', { name: 'Consultar fuente oficial' }));
   assert.equal(within(dialog).queryByRole('img', { name: /Mapa|Recorrido/ }), null);
@@ -530,7 +550,7 @@ test('map search discovers a catalog service without geometry and opens its sour
   assert.equal(screen.getByRole('group', { name: /^Mapa interactivo/, hidden: true }), map);
   await closeDetails();
   assert.equal(document.activeElement, searchInput);
-  assert.ok(screen.getByRole('button', { name: /Ver ficha de 1:/ }));
+  assert.ok(screen.getByRole('button', { name: /Ver ficha de 5:/ }));
   assert.ok(!requests.some((path) => path.startsWith('/route-packs/')));
 });
 
@@ -551,7 +571,7 @@ test('catalog slides from its bar without trapping focus, closes with Escape and
   );
   assert.equal(document.body.style.position, '', 'This is an in-page region, not a modal.');
   await user.type(document.activeElement as HTMLInputElement, '223 juarez');
-  assert.ok(screen.getByText('3 rutas · 6 redes'));
+  assert223JuarezResults();
   panel.scrollTop = 210;
   await user.keyboard('{Escape}');
   assert.equal(document.activeElement, toggle);

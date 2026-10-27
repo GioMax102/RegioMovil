@@ -22,7 +22,7 @@ Verificación del buscador de lugares y conexiones: [resultado del 16 de octubre
 - **Modo parada:** `/?kiosk=1&locked=1&station=padre-mier` para un módulo dedicado, interfaz de consulta con lectura en voz alta cuando el dispositivo ofrece síntesis de voz. No muestra guardados personales ni permite reportar.
 - **Accesibilidad:** texto ampliado, contraste alto, controles con nombre, teclado, diálogos nativos y respeto de movimiento reducido.
 - **Sin conexión:** catálogo, planificador, modelo y guardados funcionan localmente. Android incorpora el bundle; la PWA precachea también JavaScript, CSS y fuentes al completar su instalación inicial.
-- **Reportes:** formulario con validación y almacenamiento SQLite; no se envía a autoridades ni se convierte en un aviso oficial.
+- **Reportes:** fallas de estación, parada/recorrido o unidad con título, descripción y foto opcional. La ruta y variante se seleccionan explícitamente; los reportes permanecen privados hasta revisión y consentimiento. Las fichas muestran reportes publicados, abiertos y resueltos. [Operación, moderación y valor público](docs/quejas-comunitarias.md).
 
 ## Qué datos son reales
 
@@ -111,6 +111,6 @@ Para un servicio público faltan el dominio HTTPS, respaldo del volumen, monitor
 
 ## Próximas iteraciones
 
-Metro, Transmetro, GMG, RegioRuta e IMA ya participan en el cálculo con los trazos disponibles. Consulta [cobertura actual, fuentes y límites](docs/cobertura-autobuses-20261016.md). La validación de sentidos, secuencias operativas, accesos peatonales y horarios continúa como [trabajo pendiente](docs/proximas-iteraciones.md).
+Metro, Transmetro, GMG, RegioRuta e IMA ya participan en el cálculo con los trazos disponibles. La [cobertura del 27 de octubre](docs/cobertura-rutas-2026-10-27.md) incluye 185 de 209 rutas de autobús, las tres líneas Metro y la explicación individual de las 24 rutas pendientes. La validación de sentidos, secuencias operativas, accesos peatonales y horarios continúa como [trabajo pendiente](docs/proximas-iteraciones.md).
 
 La [evaluación de esta iteración](docs/iteracion-viajes-cotidianos.md) explica qué se incluye, qué se descarta y los criterios para recomendar tramos a pie, bicicleta y monopatín en la siguiente etapa.

@@ -59,19 +59,39 @@ def map_id(url):
     return value if re.fullmatch(r"[-A-Za-z0-9_]{15,100}", value) else None
 
 
-def discover(route, index):
+def expected_name(route):
     key = name_key(route["name"])
     if route["id"] == "ima-1-directa-pilares-central-de-autobuses":
         key = name_key("Ruta Directa Pilares - Central de Autobuses")
+    return key
+
+
+def discover(route, index, browser_evidence):
+    key = expected_name(route)
     page = index.get(key)
     base = {"id": route["id"], "sourceUrl": route.get("officialUrl") or INDEX}
     if not page:
         return {**base, "status": "pending", "reason": "no-matching-official-map-page"}
+    if urllib.parse.urlparse(page["officialPageUrl"]).hostname != "www.imanuevoleon.mx":
+        return {**base, "status": "pending", "reason": "official-index-link-outside-ima"}
     base.update(page)
+    base["sourceUrl"] = page["officialPageUrl"]
     original = download(page["officialPageUrl"])
     base["officialPageSha256"] = hashlib.sha256(original).hexdigest()
-    feature_urls = re.findall(r'<link[^>]+href="([^"]+)"[^>]+id="features_[^"]+"', original.decode())
     embed_urls = set()
+    visible = browser_evidence.get(route["id"])
+    if visible:
+        if visible["officialPageUrl"] != page["officialPageUrl"]:
+            return {**base, "status": "pending", "reason": "official-page-url-changed-since-browser-audit"}
+        base["renderedHeading"] = visible["renderedHeading"]
+        if name_key(visible["renderedHeading"]) != key:
+            return {**base, "status": "pending", "reason": "official-page-identity-mismatch"}
+        if not visible.get("embedUrl"):
+            return {**base, "status": "pending", "reason": "official-page-without-map-embed"}
+        if urllib.parse.urlparse(visible["embedUrl"]).hostname != "www-imanuevoleon-mx.filesusr.com":
+            raise ValueError("Unexpected public embed host")
+        embed_urls.add(visible["embedUrl"])
+    feature_urls = [] if visible else re.findall(r'<link[^>]+href="([^"]+)"[^>]+id="features_[^"]+"', original.decode())
     for url in feature_urls:
         # Do not html.unescape bare query strings (&reg becomes a character).
         url = url.replace("&amp;", "&")
@@ -102,8 +122,10 @@ def coordinates(value):
 
 
 def parse_kml(original):
+    if b"<!DOCTYPE" in original.upper() or b"<!ENTITY" in original.upper():
+        raise ValueError("Unsupported KML declaration")
     tree = ET.fromstring(original)
-    paths, markers = [], []
+    paths, markers, seen_ids = [], [], set()
     for placemark in tree.findall(".//k:Placemark", NS):
         for line in placemark.findall(".//k:LineString/k:coordinates", NS):
             path = coordinates(line.text)
@@ -119,6 +141,9 @@ def parse_kml(original):
         fields = {item.attrib["name"]: item.findtext("k:value", default="", namespaces=NS).strip()
                   for item in placemark.findall("k:ExtendedData/k:Data", NS)}
         marker_id = fields.get("FID") or str(len(markers) + 1)
+        if marker_id in seen_ids:
+            marker_id += ":" + str(len(markers) + 1)
+        seen_ids.add(marker_id)
         name = " · ".join(filter(None, [fields.get("NOMVIAL"), fields.get("CRUCE")]))
         markers.append({"id": marker_id, "name": name or placemark.findtext("k:name", default=marker_id, namespaces=NS),
                         "lat": lat, "lng": lng, "municipality": fields.get("MUNICIPIO", ""),
@@ -149,7 +174,11 @@ def main():
     catalog_path = ROOT / "data/ima-services.json"
     catalog = json.loads(catalog_path.read_text())
     merged = json.loads((ROOT / "data/transit-catalog.json").read_text())
-    candidates = [r for r in catalog["routes"] if r.get("catalogEligible") is not False and not r.get("geometryPack")]
+    # User-authorized experimental planning uses the same bounded projection
+    # rules for new maps and the older five consultation-only packages.
+    candidates = [r for r in catalog["routes"] if r.get("catalogEligible") is not False and
+                  (not r.get("geometryPack") or json.loads((ROOT / "public/route-packs" /
+                   (r["geometryPack"] + ".json")).read_text()).get("experimentalRouting") is False)]
     by_id = {r["id"]: r for r in catalog["routes"]}
     index = {}
     for block in download(INDEX).decode().split('role="listitem"')[1:]:
@@ -159,6 +188,8 @@ def main():
             name = html.unescape(re.sub(r"<[^>]+>", "", title[1])).strip()
             index[name_key(name)] = {"officialPageTitle": name, "officialPageUrl": html.unescape(link[1])}
     manifest_path = ROOT / "data/ima-map-sources.json"
+    browser_path = ROOT / "data/ima-map-browser-evidence.json"
+    browser_evidence = {row["id"]: row for row in json.loads(browser_path.read_text())["routes"]} if browser_path.exists() else {}
     prior = json.loads(manifest_path.read_text()).get("routes", []) if manifest_path.exists() else []
     outcomes = {row["id"]: row for row in prior}
     maps = defaultdict(list)
@@ -170,7 +201,7 @@ def main():
         else:
             discovery.append(route)
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        jobs = {pool.submit(discover, route, index): route for route in discovery}
+        jobs = {pool.submit(discover, route, index, browser_evidence): route for route in discovery}
         for job in concurrent.futures.as_completed(jobs):
             route = jobs[job]
             try:
@@ -181,7 +212,7 @@ def main():
                     outcomes[route["id"]] = source
             except Exception as error:
                 outcomes[route["id"]] = {"id": route["id"], "status": "pending", "reason": "official-page-download-failed",
-                                         "sourceUrl": route.get("officialUrl") or INDEX, "detail": str(error)[:350]}
+                                         "sourceUrl": index.get(expected_name(route), {}).get("officialPageUrl", route.get("officialUrl") or INDEX), "detail": str(error)[:350]}
     source_id = "ima-public-maps-" + args.verified_at.replace("-", "")
     imported = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.concurrency) as pool:
@@ -201,13 +232,19 @@ def main():
                 if len(shared_ids) > 1:
                     notes.append("La referencia oficial comparte mapa entre variantes. No se afirma que tengan trazos distintos: " + ", ".join(shared_ids) + ".")
                 pack = {"id": route["id"], **parsed, "verifiedAt": args.verified_at, "additionalPaths": [],
-                        "stopOrderVerified": False, "geometryKind": "official-published", "license": "not-specified",
+                        "stopOrderVerified": False, "experimentalRouting": True,
+                        "geometryKind": "official-published", "license": "not-specified",
                         "officialReferenceUrl": source["sourceUrl"], "officialPageUrl": source.get("officialPageUrl", INDEX),
+                        "officialPageTitle": source.get("officialPageTitle"), "officialPageSha256": source.get("officialPageSha256"),
                         "referenceDatasetUrl": source.get("referenceDatasetUrl"), "sharedOfficialMapRouteIds": shared_ids, "notes": notes}
                 write_json(ROOT / "public/route-packs" / (route["id"] + ".json"), pack)
                 route["geometryPack"] = route["id"]
+                route["planningEligible"] = False
+                route["officialUrl"] = source.get("officialPageUrl", route.get("officialUrl"))
                 route["sourceIds"] = list(dict.fromkeys(route.get("sourceIds", []) + [source_id]))
-                route["notes"] = list(dict.fromkeys(route.get("notes", []) + notes[:3] + notes[4:]))
+                previous_notes = [note for note in route.get("notes", []) if not
+                                  ("Mapa oficial importado para consulta" in note and "fuera del grafo experimental" in note)]
+                route["notes"] = list(dict.fromkeys(previous_notes + notes[:3] + notes[4:]))
                 route["municipalities"] = sorted(set(route.get("municipalities", []) + [s["municipality"] for s in parsed["stops"] if s["municipality"]]))
                 outcomes[route["id"]] = {**source, "status": "imported", "verifiedAt": args.verified_at,
                     "geometryPack": route["id"], "segments": len(parsed["segments"]), "publishedPoints": len(parsed["stops"]),

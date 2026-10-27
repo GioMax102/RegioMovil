@@ -94,18 +94,19 @@ test('report files and SQLite journals are private even with a permissive proces
   }
 });
 
-test('community HTML remains plain unverified JSON and cannot change response security headers', async t => {
+test('legacy community HTML stays private and cannot change response security headers', async t => {
   const { request } = fixture(t);
   const detail = '<img src=x onerror="alert(document.cookie)">';
   const created = await request('/api/reports', { body: { stationId: 'a', category: 'condition', detail } });
   assert.equal(created.status, 201);
-  assert.equal(created.body.report.status, 'unverified');
+  assert.equal(created.body.report.status, 'pending');
   const read = await request('/api/reports?station=a');
-  assert.equal(read.body.reports[0].detail, detail);
+  assert.equal(read.body.reports.length, 0);
+  assert.equal(created.body.report.detail, detail);
   assert.match(read.headers.get('Content-Type'), /^application\/json/);
   assert.equal(read.headers.get('X-Content-Type-Options'), 'nosniff');
   assert.equal(read.headers.get('Cache-Control'), 'no-store');
   const denied = await request('/api/reports', { headers: { origin: 'https://attacker.example' }, body: { stationId: 'a', category: 'condition', detail: 'No se debe guardar.' } });
   assert.equal(denied.status, 403);
-  assert.equal((await request('/api/reports?station=a')).body.reports.length, 1);
+  assert.equal((await request('/api/reports?station=a')).body.reports.length, 0);
 });

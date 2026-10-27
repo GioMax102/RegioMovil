@@ -145,7 +145,11 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
     catch { return false; }
     if (!realFile.startsWith(`${realRoot}${sep}`)) throw new HttpError(403, 'FORBIDDEN_PATH', 'No se puede abrir esa dirección.');
     if (!metadata.isFile()) return false;
-    const encoding = TEXT_EXTENSIONS.has(extension) && metadata.size >= 1024 && metadata.size <= 4 * 1024 * 1024 ? preferredEncoding(request.headers['accept-encoding']) : null;
+    // The published multimodal graph grows with imported route geometries.
+    // Give only this canonical JSON document a larger compression budget;
+    // arbitrary text and binary assets retain the existing bounds.
+    const compressionLimit = realFile === resolve(realRoot, 'mobility-network.json') ? 12 * 1024 * 1024 : 4 * 1024 * 1024;
+    const encoding = TEXT_EXTENSIONS.has(extension) && metadata.size >= 1024 && metadata.size <= compressionLimit ? preferredEncoding(request.headers['accept-encoding']) : null;
     const encoded = encoding ? await compressedFile(realFile,metadata,encoding) : null;
     const content = request.method === 'HEAD' ? undefined : encoded || await readFile(realFile);
     response.writeHead(200, { 'Content-Type': MIME[extension], 'Content-Length': encoded?.length ?? metadata.size,
@@ -249,12 +253,14 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
           if (routeId) {
             validRoute(routeId);
             if (url.pathname.endsWith('/summary')) return send(response, 200, { ...store.summary({ routeId }, date), routeId, source: 'community', verification: 'moderated', notice: 'Conteos de reportes publicados, no de personas únicas ni medidas de calidad o prioridad de inversión.' });
-            return send(response, 200, { reports: store.listByRoute(routeId, 20, date), routeId,
+            const { total, open, resolved, byCategory } = store.summary({ routeId }, date);
+            return send(response, 200, { reports: store.listByRoute(routeId, 20, date), routeId, summary: { total, open, resolved, byCategory },
               source: 'community', verification: 'moderated', notice: 'Reportes comunitarios revisados; no son avisos oficiales.' });
           }
           const station = validStation(stationId || 'padre-mier');
           if (url.pathname.endsWith('/summary')) return send(response, 200, { ...store.summary({ stationId: station.id }, date), stationId: station.id, source: 'community', verification: 'moderated', notice: 'Conteos de reportes publicados, no de personas únicas ni medidas de calidad o prioridad de inversión.' });
-          return send(response, 200, { reports: store.list(station.id, 20, date), stationId: station.id,
+          const { total, open, resolved, byCategory } = store.summary({ stationId: station.id }, date);
+          return send(response, 200, { reports: store.list(station.id, 20, date), stationId: station.id, summary: { total, open, resolved, byCategory },
             source: 'community', verification: 'moderated', notice: 'Reportes comunitarios revisados. No son avisos oficiales ni alimentan el modelo.' });
         }
       }
@@ -299,7 +305,7 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
         if (typeof body.detail !== 'string') throw new HttpError(400, 'INVALID_DETAIL', 'Agrega una descripción de 3 a 500 caracteres.');
         const detail = body.detail.trim().normalize('NFC');
         if ([...detail].length < 3 || [...detail].length > 500 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(detail)) throw new HttpError(400, 'INVALID_DETAIL', 'Agrega una descripción de 3 a 500 caracteres, sin caracteres de control.');
-        const title = legacy ? [...detail].slice(0, 100).join('') : typeof body.title === 'string' ? body.title.trim().normalize('NFC') : '';
+        const title = legacy ? [...detail.replace(/\s+/g, ' ')].slice(0, 100).join('') : typeof body.title === 'string' ? body.title.trim().normalize('NFC') : '';
         if ([...title].length < 3 || [...title].length > 100 || /[\u0000-\u001f\u007f]/.test(title)) throw new HttpError(400, 'INVALID_TITLE', 'Agrega un título de 3 a 100 caracteres.');
         const reference = (key, max) => {
           if (body[key] === undefined) return '';

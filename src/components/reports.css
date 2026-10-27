@@ -1,0 +1,136 @@
+.report-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.report-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 550;
+}
+.report-form select,
+.report-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 12px;
+  font-weight: 400;
+  color: var(--dark);
+  font-size: 0.81rem;
+  resize: vertical;
+}
+.report-form textarea {
+  line-height: 1.8;
+}
+.report-form textarea::placeholder {
+  color: var(--muted);
+}
+.character-count {
+  text-align: right;
+  font-size: max(0.62rem, 12px);
+  color: var(--muted);
+  font-weight: 400;
+}
+.report-form > .subtle {
+  font-size: max(0.7rem, 12px);
+}
+
+.report-form input:not([type='checkbox']) {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 10px 12px;
+  color: var(--dark);
+  font: inherit;
+}
+.report-form input[type='file'] {
+  padding: 8px;
+}
+.report-form .report-consent {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.report-form .report-consent > input {
+  margin: 3px 0 0;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+.report-target-summary {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--soft);
+  line-height: 1.5;
+}
+.report-photo-field {
+  display: grid;
+  gap: 10px;
+}
+.report-photo-field > small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.report-photo-field p {
+  margin: 0;
+}
+.report-photo-preview {
+  display: block;
+  width: min(100%, 360px);
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--soft);
+}
+.public-reports {
+  margin: 16px 0;
+}
+.public-reports > p,
+.public-reports article > p {
+  color: var(--muted);
+  margin: 6px 0;
+}
+.public-reports article {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.public-reports article small {
+  display: block;
+  color: var(--muted);
+}
+.public-reports article img {
+  display: block;
+  max-width: min(100%, 360px);
+  max-height: 240px;
+  object-fit: contain;
+  margin-top: 10px;
+  border-radius: 8px;
+}
+.public-report-summary {
+  padding: 12px;
+  margin-block: 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--dark);
+  line-height: 1.6;
+}
+.public-report-summary p {
+  margin: 0;
+}
+.public-report-categories {
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  margin: 8px 0 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

@@ -26,7 +26,13 @@ const normalize = (text: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ');
 
-export default function NetworkExplorer({ onPlanLine, onReportRoute }: { onPlanLine: (lineId: string) => void; onReportRoute?: (routeId: string) => void }) {
+export default function NetworkExplorer({
+  onPlanLine,
+  onReportRoute,
+}: {
+  onPlanLine: (lineId: string) => void;
+  onReportRoute?: (routeId: string) => void;
+}) {
   const [network, setNetwork] = useState<MobilityNetwork | null>(null);
   const [catalog, setCatalog] = useState<TransitCatalogData | null>(null);
   const [catalogOffline, setCatalogOffline] = useState(false);

@@ -17,7 +17,7 @@ import type { RoutePack, TransitCatalogData, TransitRoute } from '../types';
 import { Dialog } from './Primitives';
 import NetworkMap from './NetworkMap';
 import ServiceIdentity from './ServiceIdentity';
-import PublicReports from './PublicReports';
+import PublicReports from './DeferredReports';
 import './transit-catalog.css';
 
 export const serviceColors: Record<string, string> = {
@@ -131,17 +131,23 @@ export default function TransitCatalog({
   );
   useEffect(() => setLimit(24), [query, networkId, status]);
   const networkName = (id: string) => catalog?.networks.find((item) => item.id === id)?.name ?? id;
+  const busRoutes = catalog?.routes.filter((route) => route.mode === 'bus') ?? [];
+  const missingGeometry = busRoutes.filter((route) => !route.geometryPack);
   const selectedRoute = selected ?? catalog?.routes.find((route) => route.id === detailRouteId);
   const detail =
     selectedRoute && catalog ? (
       <ServiceDetails
         route={selectedRoute}
         catalog={catalog}
-        onReport={onReportRoute ? () => {
-          setSelected(null);
-          onDetailClose?.();
-          onReportRoute(selectedRoute.id);
-        } : undefined}
+        onReport={
+          onReportRoute
+            ? () => {
+                setSelected(null);
+                onDetailClose?.();
+                onReportRoute(selectedRoute.id);
+              }
+            : undefined
+        }
         onClose={() => {
           setSelected(null);
           onDetailClose?.();
@@ -205,6 +211,29 @@ export default function TransitCatalog({
       )}
       {catalog && (
         <>
+          <div className="service-coverage-summary">
+            <p>
+              {busRoutes.length - missingGeometry.length} de {busRoutes.length} rutas de autobús
+              tienen un trazo importado. Los trazos y sus paradas se consideran en el planificador
+              experimental; el orden y los sentidos de circulación necesitan confirmación.
+            </p>
+            {missingGeometry.length > 0 && (
+              <details>
+                <summary>Ver {missingGeometry.length} rutas pendientes de geometría</summary>
+                <p>
+                  Estas fichas se pueden consultar, pero todavía no generan trayectorias. La
+                  auditoría de fuentes registra los enlaces revisados y los motivos pendientes.
+                </p>
+                <ul>
+                  {missingGeometry.map((route) => (
+                    <li key={route.id}>
+                      {route.code} · {route.name}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
           <div className="service-toolbar">
             <label className="search-field">
               <Search size={18} />
@@ -433,6 +462,7 @@ function ServiceDetails({
           )}
         </div>
       )}
+      <PublicReports routeId={route.id} onReport={onReport} />
       <details className="service-detail-disclosure">
         <summary>
           <BusFront size={18} aria-hidden="true" /> Unidad y pago
@@ -509,7 +539,6 @@ function ServiceDetails({
             </ul>
           </details>
         )}
-        <PublicReports routeId={route.id} onReport={onReport} />
         <div className="service-data-notes">
           {notes.map((note, index) => (
             <p key={index}>{note}</p>

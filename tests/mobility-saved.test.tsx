@@ -98,6 +98,26 @@ test('snapshots keep only the distinct routes available instead of padding to ei
   );
 });
 
+test('offline packages do not duplicate unrelated city import audits and retain selected provenance', () => {
+  const snapshot = snapshotMobilityPlan(plan, network, 'Casa', savedAt);
+  const inflated = snapshotMobilityPlan(
+    plan,
+    {
+      ...network,
+      coverage: {
+        ...network.coverage,
+        unrelatedAudit: Array(10000).fill({ routeId: 'not-used', reason: 'proposed-only' }),
+      },
+    },
+    'Casa',
+    savedAt,
+  );
+  assert.deepEqual(inflated.network, snapshot.network);
+  const sources = new Set(snapshot.network.sources?.map((source) => source.id));
+  for (const item of [...snapshot.network.stops, ...snapshot.network.routes])
+    for (const sourceId of item.sourceIds) assert.ok(sources.has(sourceId));
+});
+
 test('deleting an alternative keeps the others; deleting the last removes its package and endpoints', () => {
   const trip = saveMobilityTrip(snapshotMobilityPlan(plan, network, 'Casa'));
   assert.ok(trip.journeys.length >= 2);
@@ -162,12 +182,17 @@ test('corrupt snapshots are ignored while legacy official IDs remain available u
 test('saved route keeps intermediate metro stops so foreground guidance can name the next station offline', () => {
   const snapshot = snapshotMobilityPlan(plan, network, 'Guía sin internet', savedAt);
   const preserved = new Set(snapshot.network.stops.map((stop) => stop.id));
+  let metroLegCount = 0;
   for (const journey of snapshot.journeys) {
     for (const id of journey.stationIds)
       assert.ok(preserved.has(id), `Missing intermediate stop ${id}`);
     const route = createGuidanceRoute(journey, snapshot.network);
     const metro = route.legs.filter((leg) => leg.step.mode === 'metro');
-    assert.ok(metro.length);
+    metroLegCount += metro.length;
     assert.ok(metro.every((leg) => leg.stopsComplete));
   }
+  assert.ok(
+    metroLegCount > 0,
+    'The saved package retains its Metro alternatives alongside the new bus alternatives',
+  );
 });

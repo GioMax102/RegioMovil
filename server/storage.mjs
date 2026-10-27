@@ -26,7 +26,8 @@ const schema = `CREATE TABLE reports (
   publication_consent INTEGER NOT NULL DEFAULT 0 CHECK(publication_consent IN (0,1)),
   created_at TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','published','resolved','rejected')),
-  CHECK((target_type = 'station' AND station_id IS NOT NULL) OR (target_type IN ('unit','route') AND route_id IS NOT NULL)),
+  CHECK((target_type = 'station' AND station_id IS NOT NULL) OR (target_type IN ('unit','route') AND route_id IS NOT NULL)
+    OR (target_type = 'unit' AND station_id IS NOT NULL AND route_id IS NULL AND status IN ('pending','rejected') AND publication_consent = 0)),
   CHECK((photo_data IS NULL) = (photo_mime IS NULL))
 );`;
 
@@ -47,11 +48,14 @@ function migrate(db) {
         if (row.photo_data && row.photo_mime) {
           try { photo = sanitizeReportPhoto(row.photo_mime, row.photo_data); } catch { /* Invalid legacy attachments are discarded and the report stays private. */ }
         }
-        const consent = row.publication_consent === 1 ? 1 : 0;
+        let consent = row.publication_consent === 1 ? 1 : 0;
         const category = REPORT_CATEGORIES.includes(row.category) ? row.category : 'condition';
-        const target = ['unit', 'route'].includes(row.target_type) && row.route_id ? row.target_type : 'station';
-        const title = [...(row.title?.trim() || row.detail || 'Reporte comunitario')].slice(0, 100).join('');
+        const target = row.target_type === 'unit' || (row.target_type === 'route' && row.route_id) ? row.target_type : 'station';
+        const title = [...(row.title?.trim() || row.detail || 'Reporte comunitario').replace(/\s+/g, ' ')].slice(0, 100).join('');
         let status = ['published', 'resolved', 'rejected'].includes(row.status) ? row.status : 'pending';
+        // Old versions accepted unassigned units. Preserve their meaning, but
+        // never guess a route or turn an observation into a station complaint.
+        if (target === 'unit' && !row.route_id) { consent = 0; status = 'pending'; }
         if ((status === 'published' || status === 'resolved') && (!consent || (row.photo_data && !photo))) status = 'pending';
         insert.run(row.id, row.station_id || null, row.route_id || null, target, title.length >= 3 ? title : 'Reporte comunitario', category, row.detail,
           row.unit_reference || null, row.location_reference || null, photo ? row.photo_mime : null, photo, consent, row.created_at, status);
@@ -80,7 +84,7 @@ export function createReportStore(path = ':memory:') {
       }
     }
     db.exec(`PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 3000;
-      PRAGMA foreign_keys = ON; PRAGMA journal_size_limit = 8388608;`);
+      PRAGMA foreign_keys = ON; PRAGMA secure_delete = ON; PRAGMA journal_size_limit = 8388608;`);
     migrate(db);
   } catch (error) { db.close(); throw error; }
   const insert = db.prepare(`INSERT INTO reports(id, station_id, route_id, target_type, title, category, detail,
@@ -95,9 +99,10 @@ export function createReportStore(path = ':memory:') {
   }
   const store = {
     add({ stationId, routeId, category, detail, title, targetType = 'station', unitReference, locationReference, photoMime, photoData, publicationConsent = false }, date = new Date()) {
+      if (['unit', 'route'].includes(targetType) && !routeId) throw new RangeError('Una unidad o recorrido requiere un identificador de ruta explícito.');
       // Older clients sent only station/category/detail. Preserve those reports
       // privately; all public consent must be explicit in the new contract.
-      title ??= [...detail].slice(0, 100).join('');
+      title ??= [...detail.replace(/\s+/g, ' ')].slice(0, 100).join('');
       const sanitizedPhoto = photoData ? sanitizeReportPhoto(photoMime, photoData) : null;
       const report = { id: randomUUID(), stationId: stationId || null, routeId: routeId || null, category, detail, title,
         targetType, unitReference: unitReference || null, locationReference: locationReference || null,
@@ -118,8 +123,9 @@ export function createReportStore(path = ':memory:') {
     },
     list(stationId, limit = 20, date = new Date()) { return listPublic('station_id', stationId, limit, date); },
     listByRoute(routeId, limit = 20, date = new Date()) { return listPublic('route_id', routeId, limit, date); },
-    get(id) { return db.prepare('SELECT * FROM reports WHERE id = ?').get(id); },
+    get(id, date = new Date()) { prune(date); return db.prepare('SELECT * FROM reports WHERE id = ?').get(id); },
     getPublicPhoto(id, date = new Date()) {
+      prune(date);
       return db.prepare(`SELECT photo_mime AS mime, photo_data AS data FROM reports WHERE id = ? AND ${publicCondition} AND photo_data IS NOT NULL`).get(id, cutoff(date));
     },
     reviewList({ status = 'pending', limit = 50 } = {}, date = new Date()) {
@@ -138,10 +144,10 @@ export function createReportStore(path = ':memory:') {
       db.exec('BEGIN IMMEDIATE');
       try {
         prune(date);
-        const report = store.get(id);
+        const report = store.get(id, date);
         if (!report) { db.exec('COMMIT'); return false; }
         const next = { publish: 'published', reject: 'rejected', resolve: 'resolved', unpublish: 'pending' }[action];
-        const allowed = action === 'publish' ? report.status === 'pending' && report.publication_consent === 1
+        const allowed = action === 'publish' ? report.status === 'pending' && report.publication_consent === 1 && (report.target_type === 'station' || !!report.route_id)
           : action === 'resolve' ? report.status === 'published'
           : action === 'reject' ? ['pending', 'published'].includes(report.status) : report.status !== 'pending';
         if (!allowed) { db.exec('COMMIT'); return false; }

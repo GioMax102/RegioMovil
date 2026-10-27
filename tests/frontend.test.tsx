@@ -227,12 +227,23 @@ test('screen changes from home, sidebar and mobile consistently reset scroll and
     await user.click(
       mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
     );
-    const title = screen.getByRole('heading', { name: 'Rutas y redes.', exact: true });
+    const title = screen.getByRole('heading', { name: 'Red de transporte.', exact: true });
     assert.equal(document.activeElement, title);
     assert.equal(screen.getByRole('main').getAttribute('aria-labelledby'), title.id);
     assert.deepEqual(scrolls, [{ top: 0, left: 0, behavior: 'auto' }]);
     // A module finishing its download must not take focus a second time.
-    await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
+    const metroTab = screen.getByRole('tab', { name: 'Estaciones de Metro' });
+    const routesTab = screen.getByRole('tab', { name: 'Rutas y redes' });
+    await user.click(metroTab);
+    assert.equal(document.activeElement, metroTab);
+    assert.equal(screen.getByRole('heading', { name: 'Red de transporte.', exact: true }), title);
+    await user.keyboard('{ArrowRight}');
+    assert.equal(document.activeElement, routesTab);
+    assert.equal(routesTab.getAttribute('aria-selected'), 'true');
+    assert.equal(screen.getByRole('heading', { name: 'Red de transporte.', exact: true }), title);
+    await user.keyboard('{ArrowLeft}');
+    assert.equal(document.activeElement, metroTab);
+    assert.equal(metroTab.getAttribute('aria-selected'), 'true');
     const search = screen.getByRole('textbox', { name: 'Buscar estación por nombre o municipio' });
     await user.click(search);
     await user.type(search, 'Anahuac');
@@ -251,7 +262,7 @@ test('screen changes from home, sidebar and mobile consistently reset scroll and
     );
     assert.equal(
       document.activeElement,
-      screen.getByRole('heading', { name: 'Estaciones.', exact: true }),
+      screen.getByRole('heading', { name: 'Red de transporte.', exact: true }),
     );
     assert.equal(scrolls.length, 3);
   } finally {
@@ -452,7 +463,7 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
     mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
   );
   await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
-  assert.ok(screen.getByRole('heading', { name: 'Rutas y redes.', exact: true }));
+  assert.ok(screen.getByRole('heading', { name: 'Red de transporte.', exact: true }));
   assert.equal(screen.queryByRole('heading', { name: 'Próximas llegadas' }), null);
   assert.equal(
     screen.getByRole('tab', { name: /Rutas y redes/ }).getAttribute('aria-selected'),
@@ -463,6 +474,7 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
 test('a report is submitted through the UI and stays private and pending in SQLite', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   await user.selectOptions(
     within(dialog).getByRole('combobox', { name: '¿Qué observaste?' }),
@@ -490,6 +502,7 @@ test('a report is submitted through the UI and stays private and pending in SQLi
 test('failed report submission preserves its text and does not claim success', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const description = 'La puerta no cerró durante la observación de este viaje.';
   await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Puerta con una falla');
@@ -501,7 +514,7 @@ test('failed report submission preserves its text and does not claim success', a
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   assert.match(
     (await within(dialog).findByRole('alert')).textContent || '',
-    /No hay conexión con el servidor del piloto.*Tu texto sigue aquí/,
+    /No pudimos confirmar la recepción.*Puede haberse guardado.*Tu texto sigue aquí/,
   );
   assert.equal(textarea.value, description);
   assert.equal(screen.queryByRole('status'), null);
@@ -551,6 +564,7 @@ test('kiosk allows station consultation and speech while hiding report/planning/
 test('a late response from a closed report cannot close or erase a new draft', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   let dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const oldText = 'Observé saturación al abordar en esta estación durante la mañana.';
   await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Saturación al abordar');
@@ -560,6 +574,7 @@ test('a late response from a closed report cannot close or erase a new draft', a
   await waitFor(() => assert.equal(heldRequests.length, 1));
   await closeDialog();
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const newText = 'Este borrador nuevo describe una puerta y todavía no se ha enviado.';
   await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Borrador nuevo');

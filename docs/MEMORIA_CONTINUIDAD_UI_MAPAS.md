@@ -1,5 +1,8 @@
 # Continuidad de RegioMóvil — UI, mapas y cobertura
 
+> Continuación del 27 de octubre: consultar primero [quejas y cobertura actualizada](MEMORIA_QUEJAS_COBERTURA_2026-10-27.md). `feature/queja` integra esta base de `fixes`, 185 rutas de autobús y los reportes revisados.
+
+
 Actualizado: **26 de octubre de 2026**, America/Monterrey.
 
 ## Leer primero

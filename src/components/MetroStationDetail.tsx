@@ -1,7 +1,7 @@
 import { Clock3, Info, Accessibility } from 'lucide-react';
 import { ArrivalCard, Forecast, LineBadge } from './Primitives';
 import StationActions from './StationActions';
-import PublicReports from './PublicReports';
+import PublicReports from './DeferredReports';
 import {
   getMetroServiceWindow,
   getNextMetroOpening,

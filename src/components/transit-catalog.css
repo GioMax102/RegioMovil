@@ -445,3 +445,27 @@
   color: var(--green);
   font-weight: 650;
 }
+
+.service-coverage-summary {
+  padding: 14px 16px;
+  margin-block: 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.service-coverage-summary p {
+  margin: 0 0 8px;
+}
+.service-coverage-summary summary {
+  cursor: pointer;
+  color: var(--dark);
+  font-weight: 650;
+}
+.service-coverage-summary ul {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-inline-start: 20px;
+}

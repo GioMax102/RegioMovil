@@ -175,11 +175,11 @@ test('reports validate payload, resist SQL text, and persist through restart', a
   const body = { stationId: 'padre-mier', category: 'condition', detail: "Una puerta no abre; '); DROP TABLE reports; --" };
   const report = first.store.add(body, date);
   first.close();
-  const { request } = await fixture(t, { databasePath: path });
+  const { request, app } = await fixture(t, { databasePath: path });
   const list = await (await request('/api/reports?station=padre-mier')).json();
-  assert.equal(list.reports[0].id, report.id);
-  assert.equal(list.reports[0].detail, body.detail);
-  assert.equal(list.reports[0].status, 'unverified');
+  assert.equal(list.reports.length, 0, 'Legacy reports have no publication consent and remain private.');
+  assert.equal(app.store.get(report.id).detail, body.detail);
+  assert.equal(app.store.get(report.id).status, 'pending');
   for (const invalid of [{ ...body, detail: 'ab' }, { ...body, detail: 'x'.repeat(501) }, { ...body, category: 'payment' }, { ...body, stationId: '' }]) {
     const response = await request('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(invalid) });
     assert.equal(response.status, 400);
@@ -189,8 +189,8 @@ test('reports validate payload, resist SQL text, and persist through restart', a
   assert.equal((await created.json()).report.stationId, 'padre-mier');
   assert.equal((await request('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' })).status, 400);
   assert.equal((await request('/api/reports', { method: 'POST', body: 'plain' })).status, 415);
-  assert.equal((await request('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, detail: 'x'.repeat(5000) }) })).status, 413);
-  async function* chunkedBody() { yield '{"detail":"'; yield 'x'.repeat(5000); yield '"}'; }
+  assert.equal((await request('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, detail: 'x'.repeat(5000) }) })).status, 400);
+  async function* chunkedBody() { yield '{"detail":"'; yield 'x'.repeat(600_000); yield '"}'; }
   assert.equal((await request('/api/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: chunkedBody(), duplex: 'half' })).status, 413);
 });
 
@@ -201,7 +201,7 @@ test('report rate limiting returns Retry-After and does not store duplicates', a
   const limited = await request('/api/reports', init);
   assert.equal(limited.status, 429);
   assert.equal(limited.headers.get('Retry-After'), '60');
-  assert.equal((await (await request('/api/reports?station=sendero')).json()).reports.length, 1);
+  assert.equal((await (await request('/api/reports?station=sendero')).json()).reports.length, 0);
 });
 
 test('production static server supports SPA navigation and rejects encoded traversal', async t => {
@@ -310,12 +310,12 @@ test('static text compression negotiates gzip/Brotli, preserves HEAD and never c
   assert.equal(brotliDecompressSync(refreshed.body).toString(),changed,'A changed asset must not reuse its previous compressed response.');
 });
 
-test('a public mobility JSON larger than two MiB negotiates gzip and Brotli without caching API reports', async t => {
+test('a public mobility JSON larger than eight MiB negotiates gzip and Brotli with a bounded exception and without caching reports', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'regiomovil-large-network-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const original = JSON.stringify({ version: 1, reference: 'public-network-fixture'.repeat(102_000) });
-  assert.ok(Buffer.byteLength(original) > 2 * 1024 * 1024);
-  assert.ok(Buffer.byteLength(original) < 4 * 1024 * 1024);
+  const original = JSON.stringify({ version: 1, reference: 'public-network-fixture'.repeat(410_000) });
+  assert.ok(Buffer.byteLength(original) > 8 * 1024 * 1024);
+  assert.ok(Buffer.byteLength(original) < 12 * 1024 * 1024);
   await writeFile(join(directory, 'mobility-network.json'), original);
   const { base, request } = await fixture(t, { distPath: directory });
   const raw = encoding => new Promise((resolve, reject) => {
@@ -338,7 +338,23 @@ test('a public mobility JSON larger than two MiB negotiates gzip and Brotli with
     assert.ok(response.body.length < Buffer.byteLength(original));
     assert.equal(response.headers['cache-control'], 'public, max-age=3600');
     assert.match(response.headers.vary, /Accept-Encoding/);
+    const head = await request('/mobility-network.json', { method: 'HEAD', headers: { 'Accept-Encoding': encoding } });
+    assert.equal(head.headers.get('Content-Encoding'), encoding);
+    assert.equal(head.headers.get('Content-Length'), String(response.body.length));
   }
+  // Neither similarly sized ordinary text nor a binary file inherits the
+  // special graph budget. HEAD checks this without transferring large files.
+  for (const filename of ['other.json', 'font.woff2']) {
+    await writeFile(join(directory, filename), original);
+    const head = await request(`/${filename}`, { method: 'HEAD', headers: { 'Accept-Encoding': 'br,gzip' } });
+    assert.equal(head.headers.get('Content-Encoding'), null);
+    assert.equal(head.headers.get('Content-Length'), String(Buffer.byteLength(original)));
+  }
+  const oversized = ' '.repeat(12 * 1024 * 1024 + 1);
+  await writeFile(join(directory, 'mobility-network.json'), oversized);
+  const capped = await request('/mobility-network.json', { method: 'HEAD', headers: { 'Accept-Encoding': 'br,gzip' } });
+  assert.equal(capped.headers.get('Content-Encoding'), null);
+  assert.equal(capped.headers.get('Content-Length'), String(oversized.length));
   const reports = await request('/api/reports', { headers: { 'Accept-Encoding': 'br,gzip' } });
   assert.equal(reports.status, 200);
   assert.equal(reports.headers.get('Cache-Control'), 'no-store');
