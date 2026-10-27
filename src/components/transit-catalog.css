@@ -431,18 +431,6 @@
   }
 }
 @media (max-width: 760px) {
-  .network-section-tabs {
-    gap: 5px;
-    padding-bottom: 12px;
-    margin-bottom: 20px;
-  }
-  .network-section-tabs button {
-    font-size: 12px;
-    padding: 9px 12px;
-  }
-  .network-new-label {
-    font-size: 9px;
-  }
   .service-catalog-heading h2 {
     font-size: 1.55rem;
   }

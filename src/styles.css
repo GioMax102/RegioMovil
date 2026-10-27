@@ -2149,7 +2149,7 @@ strong {
   background: var(--surface);
   padding: 12px;
   font-weight: 400;
-  color: #627b4f;
+  color: var(--dark);
   font-size: 0.81rem;
   resize: vertical;
 }
@@ -2166,14 +2166,15 @@ strong {
   border-radius: 7px;
   background: var(--surface);
   padding: 10px 12px;
-  color: var(--text);
+  color: var(--dark);
   font: inherit;
 }
 .report-form input[type='file'] {
   padding: 8px;
 }
-.report-consent {
+.report-form .report-consent {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: 10px;
   line-height: 1.5;
@@ -2541,4 +2542,15 @@ strong {
   background: var(--soft);
   color: var(--green);
   font-weight: 600;
+}
+@media (max-width: 760px) {
+  .network-section-tabs {
+    gap: 5px;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+  .network-section-tabs button {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
 }

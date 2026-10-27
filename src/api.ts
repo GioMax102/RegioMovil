@@ -59,18 +59,21 @@ export async function loadPlan(
     };
   }
 }
-export async function sendReport(
-  report: {
-    stationId: string;
-    category: string;
-    title: string;
-    detail: string;
-    targetType: 'station' | 'unit';
-    unitReference?: string;
-    photo?: string;
-    publicationConsent: boolean;
-  },
-): Promise<void> {
+export type ReportCategory = 'infrastructure' | 'accessibility' | 'climate' | 'crowding' | 'condition';
+export type ReportPayload = {
+  stationId?: string;
+  routeId?: string;
+  category: ReportCategory;
+  title: string;
+  detail: string;
+  targetType: 'station' | 'unit' | 'route';
+  unitReference?: string;
+  locationReference?: string;
+  photo?: string;
+  publicationConsent: boolean;
+};
+
+export async function sendReport(report: ReportPayload): Promise<void> {
   let result: { ok: boolean; payload: { error?: { message?: string } } | null };
   try {
     result = await withRequestTimeout(async (signal) => {
@@ -84,7 +87,7 @@ export async function sendReport(
         ok: response.ok,
         payload: response.ok ? null : await response.json().catch(() => null),
       };
-    }, 5000);
+    }, 15000);
   } catch {
     throw new Error(
       'No hay conexión con el servidor del piloto. Tu texto sigue aquí; vuelve a intentar.',
@@ -102,14 +105,22 @@ export type PublicReport = {
   title: string;
   detail: string;
   category: string;
-  targetType: 'station' | 'unit';
+  targetType: 'station' | 'unit' | 'route';
   unitReference: string | null;
+  locationReference?: string | null;
   createdAt: string;
   photoMime: string | null;
+  status: 'published' | 'resolved';
 };
-export async function loadPublicReports(target: { stationId?: string; routeId?: string }): Promise<PublicReport[]> {
+export async function loadPublicReports(target: { stationId?: string; routeId?: string }, signal?: AbortSignal): Promise<PublicReport[]> {
+  if (!!target.stationId === !!target.routeId) throw new Error('Elige una estación o una ruta para consultar sus reportes.');
   const query = target.routeId ? `route=${encodeURIComponent(target.routeId)}` : `station=${encodeURIComponent(target.stationId || '')}`;
-  const result = await get<{ reports: PublicReport[] }>(`/reports?${query}`);
+  const result = await withRequestTimeout(async (requestSignal) => {
+    const response = await fetch(`${apiBase}/api/reports?${query}`, { signal: requestSignal, headers: { Accept: 'application/json' }, cache: 'no-store' });
+    if (!response.ok) throw new Error('No pudimos consultar los reportes de este lugar.');
+    return response.json() as Promise<{ reports: PublicReport[] }>;
+  }, 8000, signal);
+  if (!Array.isArray(result.reports)) throw new Error('La respuesta de reportes no tiene un formato válido.');
   return result.reports;
 }
 export const publicReportPhotoUrl = (id: string) => `${apiBase}/api/reports/${encodeURIComponent(id)}/photo`;

@@ -114,6 +114,7 @@ let holdReports = false;
 const heldRequests: (() => void)[] = [];
 const requests: { path: string; method: string }[] = [];
 const completedRequests: { path: string; method: string }[] = [];
+const submittedReports: { id: string; title: string; detail: string }[] = [];
 
 before(async () => {
   const network = JSON.parse(
@@ -138,6 +139,9 @@ before(async () => {
     if (url.pathname === '/api/reports' && method === 'POST' && holdReports)
       await new Promise<void>((resolve) => heldRequests.push(resolve));
     const response = await realFetch(url, init);
+    if (url.pathname === '/api/reports' && method === 'POST' && response.ok) {
+      submittedReports.push((await response.clone().json()).report);
+    }
     completedRequests.push({ path: url.pathname, method });
     return response;
   };
@@ -146,6 +150,7 @@ before(async () => {
 beforeEach(() => {
   requests.length = 0;
   completedRequests.length = 0;
+  submittedReports.length = 0;
   spoken.length = 0;
   failRequests = () => false;
   holdStation = null;
@@ -383,7 +388,7 @@ test('Home offers direct saved and network access while Red opens the system map
   );
 });
 
-test('a report is submitted through the UI and persisted as unverified in SQLite', async () => {
+test('a report is submitted through the UI and stays private and pending in SQLite', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
@@ -392,20 +397,19 @@ test('a report is submitted through the UI and persisted as unverified in SQLite
     'climate',
   );
   const description = 'La ventilación de la unidad estaba apagada durante mi recorrido.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Ventilación apagada');
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), description);
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   await screen.findByRole('status');
   await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
   const response = await realFetch(`${base}/api/reports?station=padre-mier`);
   const payload = await response.json();
-  assert.ok(
-    payload.reports.some(
-      (report: { detail: string; status: string; category: string }) =>
-        report.detail === description &&
-        report.status === 'unverified' &&
-        report.category === 'climate',
-    ),
-  );
+  assert.ok(!payload.reports.some((report: { detail: string }) => report.detail === description));
+  const stored = application.store.get(submittedReports[0].id);
+  assert.equal(stored.detail, description);
+  assert.equal(stored.status, 'pending');
+  assert.equal(stored.category, 'climate');
+  assert.equal(stored.publication_consent, 0);
   assert.ok(
     requests.some((request) => request.path === '/api/reports' && request.method === 'POST'),
   );
@@ -416,6 +420,7 @@ test('failed report submission preserves its text and does not claim success', a
   await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const description = 'La puerta no cerró durante la observación de este viaje.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Puerta con una falla');
   const textarea = within(dialog).getByRole('textbox', {
     name: /Cuéntanos un poco/,
   }) as HTMLTextAreaElement;
@@ -476,6 +481,7 @@ test('a late response from a closed report cannot close or erase a new draft', a
   await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
   let dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const oldText = 'Observé saturación al abordar en esta estación durante la mañana.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Saturación al abordar');
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), oldText);
   holdReports = true;
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
@@ -484,6 +490,7 @@ test('a late response from a closed report cannot close or erase a new draft', a
   await user.click(screen.getByRole('button', { name: /Algo no está bien.*Compártelo/ }));
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const newText = 'Este borrador nuevo describe una puerta y todavía no se ha enviado.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Borrador nuevo');
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), newText);
   await act(async () => {
     holdReports = false;
@@ -512,9 +519,8 @@ test('a late response from a closed report cannot close or erase a new draft', a
       .disabled,
     false,
   );
-  const stored = await (await realFetch(`${base}/api/reports?station=padre-mier`)).json();
-  assert.ok(stored.reports.some((report: { detail: string }) => report.detail === oldText));
-  assert.ok(!stored.reports.some((report: { detail: string }) => report.detail === newText));
+  assert.equal(application.store.get(submittedReports[0].id).detail, oldText);
+  assert.equal(submittedReports.length, 1, 'The new private draft must not have been submitted.');
 });
 
 test('opening the current station from home resets a previous line filter', async () => {

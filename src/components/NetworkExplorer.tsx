@@ -17,7 +17,7 @@ const systems = [
   ['troncales-integradas', 'Integradas'],
 ] as const;
 
-export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: string) => void }) {
+export default function NetworkExplorer({ onPlanLine, onReportRoute }: { onPlanLine: (lineId: string) => void; onReportRoute?: (routeId: string) => void }) {
   const [network, setNetwork] = useState<MobilityNetwork | null>(null);
   const [networkId, setNetworkId] = useState('all');
   const [routeId, setRouteId] = useState('');
@@ -162,6 +162,7 @@ export default function NetworkExplorer({ onPlanLine }: { onPlanLine: (lineId: s
       </section>
       <TransitCatalog
         onPlanLine={onPlanLine}
+        onReportRoute={onReportRoute}
         networkFilter={networkId}
         onNetworkFilterChange={chooseSystem}
       />

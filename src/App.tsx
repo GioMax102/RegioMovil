@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -30,7 +30,7 @@ import {
   Bell,
   X,
 } from 'lucide-react';
-import { loadBoard, network, readStored, sendReport, writeStored, type Transport } from './api';
+import { loadBoard, network, readStored, writeStored, type Transport } from './api';
 import type { Arrival, Board, Page, Preference, Scenario, Station } from './types';
 const loadNetworkExplorer = () => import('./components/NetworkExplorer');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
@@ -43,6 +43,7 @@ import { AppearanceSettings } from './components/AppearanceSettings';
 import { ActionFeedback } from './components/ActionFeedback';
 import { DataPreferencesProvider } from './dataPreferences';
 import PublicReports from './components/PublicReports';
+import ReportDialog from './components/ReportDialog';
 import DeferredSection from './components/DeferredSection';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
@@ -102,6 +103,7 @@ export default function App() {
   const [transport, setTransport] = useState<Transport>('local');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<Modal>(null);
+  const [reportTarget, setReportTarget] = useState<{ stationId?: string; routeId?: string }>({});
   const [arrival, setArrival] = useState<Arrival | null>(null);
   const [toast, setToast] = useState('');
   const [largeText, setLargeText] = useState(readStored('largeText', false));
@@ -136,6 +138,10 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [now, setNow] = useState(new Date());
   const currentStation = network.stations.find((s) => s.id === station)!;
+  function openReport(target: { stationId?: string; routeId?: string }) {
+    setReportTarget(target);
+    setModal('report');
+  }
   const board =
     boardSnapshot?.stationId === station && boardSnapshot.scenario === scenario
       ? boardSnapshot
@@ -434,7 +440,7 @@ export default function App() {
                 </p>
               )}
             </div>
-            {!kiosk && (page === 'home' || (page === 'stations' && networkTab === 'stations')) && (
+            {!kiosk && page === 'home' && (
               <button
                 className="location-button"
                 onClick={() => {
@@ -506,7 +512,7 @@ export default function App() {
                 setLineFilter('all');
                 setStationQuery(currentStation.name);
               }}
-              onReport={() => setModal('report')}
+              onReport={() => openReport({ stationId: station })}
             />
           )}
           {page === 'home' && kiosk && (
@@ -663,7 +669,7 @@ export default function App() {
                   </div>
                 </section>
                 {!kiosk && (
-                  <button className="report-link" onClick={() => setModal('report')}>
+                  <button className="report-link" onClick={() => openReport({ stationId: station })}>
                     <Flag size={15} />
                     ¿Algo no está bien? Compártelo
                     <ArrowUpRight size={14} />
@@ -748,6 +754,7 @@ export default function App() {
                   location.replace(target.href);
                 }}
                 componentProps={{
+                  onReportRoute: (routeId: string) => openReport({ routeId }),
                   onPlanLine: (lineId: string) => {
                     const line = network.lines.find((item) => item.id === lineId);
                     if (!line) return;
@@ -872,7 +879,7 @@ export default function App() {
                     ))}
                   </div>
                 </section>
-                <PublicReports stationId={currentStation.id} />
+                <PublicReports stationId={currentStation.id} onReport={() => openReport({ stationId: currentStation.id })} />
                 <div className="station-detail-grid">
                   {forecastPanel}
                   <section className="panel facilities-panel">
@@ -1261,11 +1268,12 @@ export default function App() {
       )}
       {modal === 'report' && !kiosk && (
         <ReportDialog
-          station={currentStation}
+          initialStationId={reportTarget.stationId}
+          initialRouteId={reportTarget.routeId}
           onClose={() => setModal(null)}
           onSent={() => {
             setModal(null);
-            announce('Reporte guardado para revisión. No cambia el estado oficial del servicio.');
+            announce('Reporte recibido. Queda privado y pendiente de revisión.');
           }}
         />
       )}
@@ -1437,141 +1445,6 @@ function SourcesDialog({
           peatonal.
         </p>
       </div>
-    </Dialog>
-  );
-}
-function ReportDialog({
-  station,
-  onClose,
-  onSent,
-}: {
-  station: Station;
-  onClose: () => void;
-  onSent: () => void;
-}) {
-  const [category, setCategory] = useState('crowding');
-  const [targetType, setTargetType] = useState<'station' | 'unit'>('station');
-  const [title, setTitle] = useState('');
-  const [detail, setDetail] = useState('');
-  const [unitReference, setUnitReference] = useState('');
-  const [publicationConsent, setPublicationConsent] = useState(false);
-  const [photo, setPhoto] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (busy) return;
-    setError('');
-    setBusy(true);
-    try {
-      await sendReport({ stationId: station.id, category, title: title.trim(), detail: detail.trim(), targetType, unitReference: unitReference.trim(), photo: photo || undefined, publicationConsent });
-      if (!mounted.current) return;
-      onSent();
-    } catch (error) {
-      if (!mounted.current) return;
-      setError(
-        error instanceof Error
-          ? error.message
-          : 'No hay conexión con el servidor. Tu texto sigue aquí; vuelve a intentar.',
-      );
-    } finally {
-      if (mounted.current) setBusy(false);
-    }
-  }
-  return (
-    <Dialog title="Tu experiencia cuenta" onClose={onClose}>
-      <p className="dialog-intro">
-        Reporte del piloto en <strong>{station.name}</strong>. Se guarda para revisión; no se envía
-        a autoridades ni cambia las predicciones.
-      </p>
-      <form className="report-form" onSubmit={submit}>
-        <label>
-          ¿Dónde ocurrió?
-          <select value={targetType} onChange={(e) => setTargetType(e.target.value as 'station' | 'unit')}>
-            <option value="station">En la estación</option>
-            <option value="unit">En una unidad</option>
-          </select>
-        </label>
-        {targetType === 'unit' && (
-          <label>
-            Ruta o referencia de unidad (opcional)
-            <input value={unitReference} onChange={(e) => setUnitReference(e.target.value)} maxLength={80} placeholder="Ej. ruta o número económico" />
-          </label>
-        )}
-        <label>
-          ¿Qué observaste?
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="crowding">Saturación de personas</option>
-            <option value="climate">Aire acondicionado</option>
-            <option value="accessibility">Accesibilidad</option>
-            <option value="condition">Condición de la unidad</option>
-          </select>
-        </label>
-        <label>
-          Título
-          <input value={title} onChange={(e) => setTitle(e.target.value)} minLength={3} maxLength={100} required placeholder="Ej. Falta una banca en el andén" />
-        </label>
-        <label>
-          Cuéntanos un poco
-          <textarea
-            value={detail}
-            onChange={(e) => setDetail(e.target.value)}
-            minLength={10}
-            maxLength={500}
-            required
-            placeholder="Describe lo que observaste, sin incluir datos personales."
-            rows={4}
-          />
-          <span className="character-count">{detail.length}/500 · Mínimo 10 caracteres</span>
-        </label>
-        <label>
-          Foto (opcional)
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={async (event) => {
-            const file = event.currentTarget.files?.[0];
-            if (!file) { setPhoto(''); return; }
-            if (file.size > 8_000_000) { setError('La imagen original debe pesar menos de 8 MB.'); event.currentTarget.value = ''; return; }
-            try {
-              const bitmap = await createImageBitmap(file);
-              const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
-              const canvas = document.createElement('canvas');
-              canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
-              canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
-              const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('No pudimos procesar la foto.')), 'image/webp', 0.78));
-              if (blob.size > 400_000) throw new Error('La foto comprimida debe pesar menos de 400 KB.');
-              const reader = new FileReader(); reader.onload = () => setPhoto(String(reader.result)); reader.onerror = () => setError('No pudimos leer la foto.'); reader.readAsDataURL(blob);
-            } catch (cause) { setPhoto(''); setError(cause instanceof Error ? cause.message : 'No pudimos procesar la foto.'); }
-          }} />
-          {photo && <img className="report-photo-preview" src={photo} alt="Vista previa de la foto adjunta" />}
-        </label>
-        <p className="subtle">
-          El reporte queda privado hasta que una persona lo revise. No compartas rostros, placas ni
-          datos personales. No se envía a autoridades ni cambia predicciones.
-        </p>
-        <label className="report-consent">
-          <input type="checkbox" checked={publicationConsent} onChange={(e) => setPublicationConsent(e.target.checked)} />
-          Acepto que, si se aprueba, el reporte y su foto puedan mostrarse públicamente en esta estación.
-        </label>
-        {error && (
-          <p className="inline-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button
-          className="primary-button full-width"
-          type="submit"
-          disabled={busy || title.trim().length < 3 || detail.trim().length < 10}
-        >
-          {busy ? 'Enviando…' : 'Enviar reporte al piloto'}
-          <ArrowRight size={17} />
-        </button>
-      </form>
     </Dialog>
   );
 }

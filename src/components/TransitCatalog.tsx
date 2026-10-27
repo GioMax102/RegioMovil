@@ -45,10 +45,12 @@ export default function TransitCatalog({
   onPlanLine,
   networkFilter,
   onNetworkFilterChange,
+  onReportRoute,
 }: {
   onPlanLine: (lineId: string) => void;
   networkFilter?: string;
   onNetworkFilterChange?: (networkId: string) => void;
+  onReportRoute?: (routeId: string) => void;
 }) {
   const [catalog, setCatalog] = useState<TransitCatalogData | null>(null);
   const [error, setError] = useState('');
@@ -276,6 +278,10 @@ export default function TransitCatalog({
           route={selected}
           catalog={catalog}
           onClose={() => setSelected(null)}
+          onReport={onReportRoute ? () => {
+            setSelected(null);
+            onReportRoute(selected.id);
+          } : undefined}
           onPlanLine={() => {
             setSelected(null);
             onPlanLine(selected.id);
@@ -291,11 +297,13 @@ function ServiceDetails({
   catalog,
   onClose,
   onPlanLine,
+  onReport,
 }: {
   route: TransitRoute;
   catalog: TransitCatalogData;
   onClose: () => void;
   onPlanLine: () => void;
+  onReport?: () => void;
 }) {
   const [pack, setPack] = useState<RoutePack | null>(null);
   const [mapError, setMapError] = useState('');
@@ -411,7 +419,7 @@ function ServiceDetails({
           <p>{route.via.join(' · ')}</p>
         </div>
       )}
-      <PublicReports routeId={route.id} />
+      <PublicReports routeId={route.id} onReport={onReport} />
       {stations.length > 0 && (
         <div className="service-reference-stations">
           <h4>Referencias del mapa oficial</h4>
