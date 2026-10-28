@@ -20,6 +20,12 @@ Continúa la [entrega de producto](ENTREGA_PRODUCTO_2026-10-28.md) sobre `f7ab65
 - Logs temporales: `/tmp/regiomovil-refine-tests.log`, `/tmp/regiomovil-refine-build.log`, `/tmp/regiomovil-refine-android.log`.
 - No había dispositivos en `adb devices -l`. El APK quedó compilado, sin instalación ni prueba física nueva. La revisión visual de navegador continúa pendiente por el bloqueo de URL de CUA ya documentado; no se intentó sortearlo.
 
+### Instalación física posterior solicitada por el usuario
+
+El 28 de octubre se reconstruyó el APK desde `892e386` y se instaló sobre la app existente del Xiaomi M2103K19G mediante USB, conservando sus datos: `adb install -r` respondió **Success**. El hash coincide con el indicado arriba. `am start -W` devolvió **Status: ok / COLD** y Android confirmó `mx.regiomovil.app/.MainActivity` como **RESUMED**.
+
+Se inició la API actual en `127.0.0.1:4173`; `android-connect` comprobó salud/CORS y el túnel USB al dispositivo. Quedó abierta para que el usuario revise los cambios. Esta evidencia confirma instalación y arranque; cámara/galería/Archivos, permisos, recreación y gestos del mapa siguen pendientes de prueba y comentarios del usuario. Mantener USB/API activos para probar envíos a la API local; no hubo despliegue remoto.
+
 ## Continuidad
 
 Conservar los siguientes pendientes del plan: Xiaomi real (cámara/galería/archivos, permisos, cancelación y recreación), revisión de layout/gestos del mapa y guía, y las 18 rutas sin fuente suficiente. Cobertura permanece **191/209 buses + 3 Metro**. T6/T7 siguen siendo propuestas posteriores.
