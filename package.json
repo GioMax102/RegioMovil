@@ -25,6 +25,8 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/camera": "^8.2.6",
     "@capacitor/core": "^8.0.0",
     "@fontsource-variable/inter": "^5.2.0",
     "@fontsource-variable/montserrat": "^5.2.0",
@@ -39,7 +41,9 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "fake-indexeddb": "^6.2.6",
     "jsdom": "^26.1.0",
+    "lightningcss": "^1.33.0",
     "prettier": "^3.9.10",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",

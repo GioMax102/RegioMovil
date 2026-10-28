@@ -1,11 +1,10 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Info, Search, X } from 'lucide-react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { ArrowRight, Info, Maximize2, Search, X } from 'lucide-react';
 import { loadTransitCatalog } from '../api';
 import type { TransitCatalogData } from '../types';
 import { loadMobilityNetwork } from '../mobility/api';
 import LocationMap from '../mobility/LocationMap';
 import type { MobilityNetwork } from '../mobility/types';
-import { Dialog } from './Primitives';
 import TransitCatalog, { serviceColors } from './TransitCatalog';
 import useMapWorkspaceHeight from '../useMapWorkspaceHeight';
 import './networkExplorer.css';
@@ -56,11 +55,79 @@ export default function NetworkExplorer({
     previousDetailId.current = detailId;
   }, [detailId]);
   const [expanded, setExpanded] = useState(false);
+  const mapScreenId = useId();
+  const expandButton = useRef<HTMLButtonElement>(null);
+  const exitButton = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef<Element | null>(null);
+  const overlay = useRef<HTMLDivElement>(null);
+  const [overlayHeight, setOverlayHeight] = useState(118);
+  const [lowerOverlayHeight, setLowerOverlayHeight] = useState(70);
+  const selectedCard = useRef<HTMLButtonElement>(null);
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  function enterMapScreen() {
+    if (expandedRef.current) return;
+    returnFocus.current = document.activeElement;
+    history.pushState({ ...history.state, regioNetworkMap: mapScreenId }, '');
+    setExpanded(true);
+  }
+  function leaveMapScreen() {
+    if (history.state?.regioNetworkMap === mapScreenId) history.back();
+    else setExpanded(false);
+  }
+  useEffect(() => {
+    const onPopState = () => setExpanded(history.state?.regioNetworkMap === mapScreenId);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      if (history.state?.regioNetworkMap === mapScreenId) {
+        const { regioNetworkMap: _mapScreen, ...previous } = history.state;
+        history.replaceState(previous, '');
+      }
+    };
+  }, [mapScreenId]);
+  useLayoutEffect(() => {
+    if (!expanded) {
+      const target = returnFocus.current;
+      if (!target) return;
+      // Restore after DOM mutations: React restores the former button focus
+      // between effect cleanup and setup when the same button changes its role.
+      if (target.isConnected && 'focus' in target && typeof target.focus === 'function')
+        target.focus({ preventScroll: true });
+      else expandButton.current?.focus({ preventScroll: true });
+      returnFocus.current = null;
+      return;
+    }
+    const scroll = { x: window.scrollX, y: window.scrollY };
+    const previous = document.body.dataset.networkMapScreen;
+    const overflow = document.body.style.overflow;
+    document.body.dataset.networkMapScreen = 'true';
+    document.body.style.overflow = 'hidden';
+    exitButton.current?.focus({ preventScroll: true });
+    return () => {
+      if (previous === undefined) delete document.body.dataset.networkMapScreen;
+      else document.body.dataset.networkMapScreen = previous;
+      document.body.style.overflow = overflow;
+      window.scrollTo(scroll.x, scroll.y);
+    };
+  }, [expanded]);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const top = workspace.current?.getBoundingClientRect().top ?? 0;
+      setOverlayHeight(Math.ceil((overlay.current?.getBoundingClientRect().bottom ?? top) - top || 118));
+      setLowerOverlayHeight(Math.ceil(selectedCard.current?.getBoundingClientRect().height || 0) + 70);
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    if (overlay.current) observer?.observe(overlay.current);
+    if (selectedCard.current) observer?.observe(selectedCard.current);
+    return () => observer?.disconnect();
+  }, [expanded, routeId]);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [online, setOnline] = useState(navigator.onLine !== false);
   const workspace = useRef<HTMLDivElement>(null);
-  useMapWorkspaceHeight(workspace);
+  useMapWorkspaceHeight(workspace, expanded);
   const resultId = useId();
   useEffect(() => {
     let active = true;
@@ -195,22 +262,31 @@ export default function NetworkExplorer({
         field={null}
         contextRoutes={displayedRoutes}
         compact
-        inspectStops={false}
-        onExpand={expanded ? undefined : () => setExpanded(true)}
+        inspectStops
+        viewportPadding={{ top: overlayHeight + 20, right: 76, bottom: selectedService ? Math.max(142, lowerOverlayHeight) : 70, left: 28 }}
+        preserveViewportOnResize
+        onExpand={expanded ? undefined : enterMapScreen}
       />
     ) : null;
   return (
-    <div className="network-explorer" ref={workspace}>
+    <div
+      className="network-explorer"
+      ref={workspace}
+      data-map-screen={expanded}
+      style={{ '--network-overlay-height': `${overlayHeight}px` } as CSSProperties}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && expanded && !(event.target as Element).closest('dialog')) {
+          event.preventDefault();
+          leaveMapScreen();
+        }
+      }}
+    >
       <section className="network-overview" aria-label="Mapa de la red de transporte">
         <div className="network-map-stage">
           <div className="network-map-layer">
             {network ? (
               routes.length ? (
-                expanded ? (
-                  <div className="network-map-placeholder" aria-hidden="true" />
-                ) : (
-                  map
-                )
+                map
               ) : (
                 <p className="network-map-empty" role="status">
                   Esta red aún no tiene trazos documentados.
@@ -231,7 +307,18 @@ export default function NetworkExplorer({
               </button>
             )}
           </div>
-          <div className="network-map-overlay">
+          <div className="network-map-overlay" ref={overlay}>
+            <div className="network-map-search-row">
+              <button
+                ref={expanded ? exitButton : expandButton}
+                type="button"
+                className="network-map-screen-toggle"
+                aria-label={expanded ? 'Salir del mapa a pantalla completa' : 'Ampliar mapa a pantalla completa'}
+                aria-pressed={expanded}
+                onClick={expanded ? leaveMapScreen : enterMapScreen}
+              >
+                {expanded ? <X size={19} aria-hidden="true" /> : <Maximize2 size={19} aria-hidden="true" />}
+              </button>
             <div
               className="network-search-wrap"
               onBlur={(event) => {
@@ -262,7 +349,8 @@ export default function NetworkExplorer({
                     setActiveResult(-1);
                   }}
                   onKeyDown={(event) => {
-                    if (event.key === 'Escape') {
+                    if (event.key === 'Escape' && searchOpen) {
+                      event.stopPropagation();
                       setSearching(false);
                       setActiveResult(-1);
                     }
@@ -345,6 +433,7 @@ export default function NetworkExplorer({
                       type="button"
                       className="network-all-matches"
                       onClick={() => {
+                        if (expanded) leaveMapScreen();
                         setSearching(false);
                         setCatalogQuery(query);
                         setCatalogOpen(true);
@@ -356,6 +445,7 @@ export default function NetworkExplorer({
                   )}
                 </div>
               )}
+            </div>
             </div>
             <div
               className="network-system-filters"
@@ -373,6 +463,7 @@ export default function NetworkExplorer({
             <button
               type="button"
               className="network-selected-route"
+              ref={selectedCard}
               onClick={() => setDetailId(selectedService.id)}
               aria-label={`Ver ficha de ${selectedService.code}: ${selectedService.name}`}
             >
@@ -413,6 +504,8 @@ export default function NetworkExplorer({
       </section>
       <section
         className="network-catalog-sheet"
+        hidden={expanded}
+        inert={expanded}
         data-open={catalogOpen}
         aria-label="Catálogo de rutas y sistemas"
         onKeyDown={(event) => {
@@ -482,18 +575,6 @@ export default function NetworkExplorer({
           onDetailClose={() => setDetailId('')}
           detailsOnly
         />
-      )}
-      {expanded && (
-        <Dialog
-          title={
-            selectedRoute ? `${selectedRoute.code} · ${selectedRoute.name}` : 'Red de transporte'
-          }
-          wide
-          className="network-map-dialog"
-          onClose={() => setExpanded(false)}
-        >
-          <div className="network-expanded-map">{map}</div>
-        </Dialog>
       )}
     </div>
   );

@@ -1,5 +1,7 @@
 # Cobertura de trazos · 27 de octubre de 2026
 
+Informe histórico. La [auditoría del 28 de octubre](auditoria-pendientes-2026-10-28.md) recupera seis mapas oficiales y actualiza la cobertura a **191 de 209 rutas de autobús**, con 18 pendientes individualizadas. Los datos y motivos de abajo describen la consulta del día 27.
+
 El catálogo contiene 214 servicios: 209 rutas de autobús y cinco líneas Metro. Se incorporan al mapa y al planificador experimental 185 rutas de autobús y las tres líneas Metro en servicio publicado: 188 recorridos, con 10 794 puntos publicados. Las líneas 4 y 6 en construcción se mantienen fuera del cálculo. La versión anterior del grafo sólo tenía 51 rutas de autobús.
 
 | Red | Trazos de autobús importados | Rutas registradas |

@@ -4,7 +4,7 @@ import { extname, resolve, sep } from 'node:path';
 import { gzip, brotliCompress, constants as zlibConstants } from 'node:zlib';
 import { promisify } from 'node:util';
 import { buildBoard, getModelCard, planJourney, resolveStation, SCENARIOS, PREFERENCES } from './domain.mjs';
-import { createReportStore, REPORT_CATEGORIES } from './storage.mjs';
+import { createReportStore, REPORT_CATEGORIES, validReportDraftId } from './storage.mjs';
 import { parseReportPhoto } from './report-photos.mjs';
 import { findServices, mergeCatalogs } from './catalog.mjs';
 import { createPlaceSearch, PlaceSearchError } from './places.mjs';
@@ -288,10 +288,13 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
         }
       }
       if (request.method === 'POST' && url.pathname === '/api/reports') {
-        limit(request, 'report', reportLimit, date);
+        // Retried receipts do not consume the budget for new reports. Bound all
+        // attempts separately, including invalid payloads and photo parsing.
+        limit(request, 'report-attempt', Math.max(reportLimit, reportLimit * 10), date);
         const body = await readJson(request, 'el reporte', 600_000);
         if (!body || typeof body !== 'object' || Array.isArray(body)) throw new HttpError(400, 'INVALID_REPORT', 'El reporte debe ser un objeto JSON.');
-        if (Object.keys(body).some(key => !['stationId', 'routeId', 'category', 'detail', 'title', 'targetType', 'unitReference', 'locationReference', 'photo', 'publicationConsent'].includes(key))) throw new HttpError(400, 'INVALID_REPORT', 'El reporte contiene campos no permitidos.');
+        if (Object.keys(body).some(key => !['stationId', 'routeId', 'category', 'detail', 'title', 'targetType', 'unitReference', 'locationReference', 'photo', 'publicationConsent', 'draftId'].includes(key))) throw new HttpError(400, 'INVALID_REPORT', 'El reporte contiene campos no permitidos.');
+        if (body.draftId !== undefined && !validReportDraftId(body.draftId)) throw new HttpError(400, 'INVALID_REPORT_DRAFT', 'El identificador del borrador no es válido.');
         const legacy = body.targetType === undefined && body.title === undefined && body.publicationConsent === undefined && body.routeId === undefined;
         const targetType = legacy ? 'station' : body.targetType;
         if (!['station', 'unit', 'route'].includes(targetType)) throw new HttpError(400, 'INVALID_TARGET', 'Elige una estación, unidad o infraestructura del recorrido.');
@@ -323,8 +326,13 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
         }
         if (!legacy && typeof body.publicationConsent !== 'boolean') throw new HttpError(400, 'INVALID_CONSENT', 'Indica si autorizas que el reporte pueda publicarse después de su revisión.');
         let report;
-        try { report = store.add({ stationId: station?.id, routeId: route?.id, category: body.category, detail, title, targetType, unitReference, locationReference, photoMime, photoData, publicationConsent: legacy ? false : body.publicationConsent }, date); }
-        catch (error) { if (error.code === 'REPORT_STORAGE_FULL') throw new HttpError(507, error.code, error.message); throw error; }
+        try { report = store.add({ stationId: station?.id, routeId: route?.id, category: body.category, detail, title, targetType, unitReference, locationReference, photoMime, photoData, publicationConsent: legacy ? false : body.publicationConsent, draftId: body.draftId }, date,
+          { beforeCreate: () => limit(request, 'report', reportLimit, date) }); }
+        catch (error) {
+          if (error.code === 'REPORT_STORAGE_FULL') throw new HttpError(507, error.code, error.message);
+          if (error.code === 'REPORT_DRAFT_CONFLICT') throw new HttpError(409, error.code, error.message);
+          throw error;
+        }
         return send(response, 201, { report, notice: 'Reporte guardado como privado y pendiente de revisión. Sólo se publicará si lo aprueba una persona revisora y diste tu consentimiento.' }, { Location: `/api/reports?${route ? 'route' : 'station'}=${encodeURIComponent(route?.id || station.id)}` });
       }
       if (['/api/health', '/api/network', '/api/model', '/api/board', '/api/plan', '/api/reports', '/api/reports/summary', '/api/services', '/api/places', '/api/places/suggest', '/api/mobility/network', '/api/mobility/plan'].includes(url.pathname) || /^\/api\/services\/[^/]+$/.test(url.pathname) || /^\/api\/reports\/[^/]+\/photo$/.test(url.pathname)) throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');

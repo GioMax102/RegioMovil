@@ -32,7 +32,7 @@ import {
 import { loadBoard, network, readStored, writeStored, type Transport } from './api';
 import type { Arrival, Board, Page, Preference, Scenario } from './types';
 const loadNetworkExplorer = () => import('./components/NetworkExplorer');
-const loadReportDialog = () => import('./components/ReportDialog');
+const loadReportDialog = () => import('./components/ReportEntry');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
 const SavedTripPreview = lazy(() => import('./mobility/SavedTripPreview'));
@@ -109,7 +109,10 @@ export default function App() {
   const [boardSnapshot, setBoard] = useState<Board | null>(null);
   const [transport, setTransport] = useState<Transport>('local');
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<Modal>(null);
+  const [modal, setModal] = useState<Modal>(() => {
+    try { return !kiosk && Number(localStorage.getItem('regiomovil:report-open')) > Date.now() ? 'report' : null; }
+    catch { return null; }
+  });
   const [reportTarget, setReportTarget] = useState<{ stationId?: string; routeId?: string }>({});
   const [arrival, setArrival] = useState<Arrival | null>(null);
   const [toast, setToast] = useState('');

@@ -1,5 +1,7 @@
 # Continuidad de quejas y cobertura · 27 de octubre de 2026
 
+> **Entrega del 28 de octubre:** [cambios de producto y evidencia pendiente](ENTREGA_PRODUCTO_2026-10-28.md). T1–T4 están implementados; cobertura 191/209 buses y 18 pendientes; SQLite v3, borradores y recuperación de guía. El texto restante de esta memoria describe la base anterior. Consultar siempre el estado vivo del plan antes de repetir trabajo.
+
 > **Siguiente iteración, sólo planificada:** leer primero [plan de producto y continuidad de las nueve anotaciones](PLAN_PRODUCTO_COMUNIDAD_2026-10-27.md) y [evaluación de comunidad y visión](MODELO_COMUNIDAD_Y_VISION_2026-10-27.md). Incluyen pérdida de borrador al cancelar Archivos, reportes desde ambas guías, mapa como pantalla, densidad por zoom, etapas de trayecto y auditoría de 24 rutas. Estos pendientes no están implementados; la próxima interacción comienza por T1. El APK de la base `82b455d` sí se compiló, instaló y abrió en Xiaomi por USB después de la validación descrita abajo.
 
 Esta memoria actualiza la continuidad de UI/mapas de `fixes`. El trabajo se realiza en `feature/queja`. La entrega inicial `25950bf` partió por error de `main`; el merge `de7338d` incorporó íntegramente `fixes` hasta `60ea3bc`, conservando mapas, interfaz, guardados y validación previa de Android. No volver a partir de `main` para continuar esta iteración.

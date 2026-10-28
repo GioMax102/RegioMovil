@@ -9,6 +9,7 @@ import {
   Volume2,
   VolumeX,
   SignalLow,
+  MessageSquarePlus,
 } from 'lucide-react';
 import LocationMap from './LocationMap';
 import TransferStationActions from './TransferStationActions';
@@ -23,7 +24,14 @@ import {
   updateGuidance,
 } from './guidance';
 import type { MobilityJourney, MobilityNetwork } from './types';
+import DeferredSection from '../components/DeferredSection';
+import { Dialog } from '../components/Primitives';
+import { clearGuidanceCheckpoint, saveGuidanceCheckpoint } from './guidanceCheckpoint';
+import { journeyStepAccent } from './journeyPresentation';
+import { journeyReportContext } from './journeyReportContext';
 import './activeJourney.css';
+
+const loadReport = () => import('../components/ReportDialog');
 
 /** Foreground guidance only: no location history, background task, or vehicle telemetry. */
 export default function ActiveJourney({
@@ -31,20 +39,32 @@ export default function ActiveJourney({
   network,
   onFinish,
   autoStart = false,
+  initialStepIndex = 0,
+  initialOpenReport = false,
 }: {
   journey: MobilityJourney;
   network: MobilityNetwork;
   onFinish: () => void;
   /** Set only after an explicit user action such as “Iniciar trayecto”. */
   autoStart?: boolean;
+  /** Only a saved manual step is restored; GPS/voice never resume automatically. */
+  initialStepIndex?: number;
+  initialOpenReport?: boolean;
 }) {
   const route = useMemo(() => createGuidanceRoute(journey, network), [journey, network]);
   const [state, setState] = useState(() => ({
     ...initialGuidanceState(),
+    stepIndex: Math.max(0, Math.min(route.legs.length - 1, Math.floor(initialStepIndex) || 0)),
     completed: route.legs.length === 0,
   }));
-  const [running, setRunning] = useState(autoStart && document.visibilityState !== 'hidden');
-  const [started, setStarted] = useState(autoStart);
+  const [running, setRunning] = useState(
+    autoStart && !initialOpenReport && document.visibilityState !== 'hidden',
+  );
+  const [started, setStarted] = useState(autoStart || initialOpenReport);
+  const [reportOpen, setReportOpen] = useState(initialOpenReport);
+  const [reportRevision, setReportRevision] = useState(0);
+  const [reportFeedback, setReportFeedback] = useState('');
+  const reportButton = useRef<HTMLButtonElement>(null);
   const [locationError, setLocationError] = useState('');
   const [pauseReason, setPauseReason] = useState<'user' | 'background' | 'location'>('user');
   const [following, setFollowing] = useState(true);
@@ -182,9 +202,31 @@ export default function ActiveJourney({
     setRunning(true);
   }
   function finish() {
+    clearGuidanceCheckpoint(journey.id);
     setRunning(false);
     if (speechAvailable) window.speechSynthesis.cancel();
     onFinish();
+  }
+  function openReport() {
+    setRunning(false);
+    setVoice(false);
+    setPauseReason('user');
+    setReportFeedback('');
+    if (speechAvailable) window.speechSynthesis.cancel();
+    try {
+      saveGuidanceCheckpoint(journey, network, state.stepIndex);
+    } catch (cause) {
+      setReportFeedback(
+        cause instanceof Error ? cause.message : 'No pudimos guardar el regreso a la guía.',
+      );
+    }
+    setReportOpen(true);
+  }
+  function closeReport(sent = false) {
+    setReportOpen(false);
+    // The guide keeps its selected step, map and progress, but location/voice stay paused.
+    if (sent) setReportFeedback('Gracias por ayudar. Tu observación quedó pendiente de revisión.');
+    window.requestAnimationFrame(() => reportButton.current?.focus({ preventScroll: true }));
   }
   function confirmStep() {
     focusAfterConfirmation.current = true;
@@ -272,6 +314,12 @@ export default function ActiveJourney({
         )}
       </div>
       <div
+        style={
+          {
+            '--journey-stage-color': leg ? journeyStepAccent(leg.step) : 'var(--green)',
+          } as React.CSSProperties
+        }
+        data-stage={leg?.compactTransfer ? 'transfer' : leg?.step.mode === 'walk' ? 'walk' : 'ride'}
         className={`active-journey-instruction ${state.completed ? 'completed' : instruction.kind === 'transfer' || instruction.kind === 'alight' ? 'attention' : ''}`}
       >
         <span className="active-journey-step">
@@ -421,6 +469,23 @@ export default function ActiveJourney({
           <Check size={20} aria-hidden="true" /> Cerrar guía
         </button>
       )}
+      {!state.completed && (
+        <button
+          ref={reportButton}
+          type="button"
+          className="active-journey-report"
+          aria-haspopup="dialog"
+          onClick={openReport}
+        >
+          <MessageSquarePlus size={18} aria-hidden="true" />
+          <span>Reportar algo en este tramo</span>
+        </button>
+      )}
+      {reportFeedback && (
+        <p className="active-journey-report-feedback" role="status">
+          {reportFeedback}
+        </p>
+      )}
       {locationError && !state.completed && (
         <p className="active-journey-warning" role="status">
           {locationError}
@@ -443,6 +508,36 @@ export default function ActiveJourney({
           las señales o el operador.
         </p>
       </details>
+      {reportOpen && (
+        <DeferredSection
+          key={reportRevision}
+          load={loadReport}
+          componentProps={{
+            ...journeyReportContext(journey, network, state.stepIndex),
+            onClose: () => closeReport(),
+            onSent: () => closeReport(true),
+          }}
+          loadingLabel="Abriendo tu observación…"
+          onRetry={() => setReportRevision((value) => value + 1)}
+          loadingFallback={
+            <Dialog title="Tu experiencia cuenta" onClose={() => closeReport()}>
+              <p role="status">Abriendo tu observación…</p>
+            </Dialog>
+          }
+          errorFallback={
+            <Dialog title="Tu experiencia cuenta" onClose={() => closeReport()}>
+              <p role="alert">No pudimos abrir el formulario. Tu guía sigue en el mismo paso.</p>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => setReportRevision((value) => value + 1)}
+              >
+                Volver a intentar
+              </button>
+            </Dialog>
+          }
+        />
+      )}
     </section>
   );
 }

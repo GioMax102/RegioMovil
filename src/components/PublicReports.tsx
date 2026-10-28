@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArrowUpRight, HandHeart, MessageSquare } from 'lucide-react';
 import './reports.css';
 import {
   loadPublicReportFeed,
@@ -62,11 +63,20 @@ export default function PublicReports({
   const summary = result.key === key ? result.summary : undefined;
   return (
     <section className="panel public-reports" aria-label="Reportes comunitarios revisados">
-      <h3>Lo que la comunidad reporta</h3>
-      <p>
-        Experiencias publicadas después de una revisión de contenido; no son avisos oficiales ni
-        acreditan una falla verificada.
-      </p>
+      {onReport ? (
+        <button type="button" className="public-report-invite" onClick={onReport}>
+          <span className="public-report-invite-icon">
+            <HandHeart size={23} aria-hidden="true" />
+          </span>
+          <span>
+            <strong>Ayuda a mejorar este lugar</strong>
+            <span>Compartir observación</span>
+          </span>
+          <ArrowUpRight size={21} aria-hidden="true" />
+        </button>
+      ) : (
+        <h3>Observaciones de la comunidad</h3>
+      )}
       {state === 'loading' && <p role="status">Consultando reportes…</p>}
       {state === 'error' && (
         <div className="inline-error" role="alert">
@@ -80,71 +90,85 @@ export default function PublicReports({
           </button>
         </div>
       )}
-      {state === 'ready' && summary && (
-        <div className="public-report-summary">
-          <p>
-            <strong>{summary.total}</strong>{' '}
-            {summary.total === 1 ? 'reporte público' : 'reportes públicos'} ·{' '}
-            <strong>{summary.open}</strong> {summary.open === 1 ? 'abierto' : 'abiertos'} ·{' '}
-            <strong>{summary.resolved}</strong> {summary.resolved === 1 ? 'resuelto' : 'resueltos'}
+      {state === 'ready' && (
+        <details className="public-reports-detail" key={key}>
+          <summary>
+            <MessageSquare size={17} aria-hidden="true" />
+            <span>Ver reportes</span>
+            {summary && summary.total > 0 && (
+              <small>
+                {summary.total} · {summary.open} abiertos
+              </small>
+            )}
+          </summary>
+          <p className="public-reports-scope">
+            Publicados tras revisión de contenido. No son avisos oficiales ni acreditan una falla
+            verificada.
           </p>
-          {summary.total > 0 && (
-            <ul className="public-report-categories" aria-label="Reportes por categoría">
-              {Object.entries(summary.byCategory)
-                .filter(([, count]) => count.total > 0)
-                .sort(([, a], [, b]) => b.open - a.open || b.total - a.total)
-                .map(([category, count]) => (
-                  <li key={category}>
-                    <strong>{categoryLabels[category] || category}</strong>: {count.open}{' '}
-                    {count.open === 1 ? 'abierto' : 'abiertos'} · {count.resolved}{' '}
-                    {count.resolved === 1 ? 'resuelto' : 'resueltos'}
-                  </li>
-                ))}
-            </ul>
+          {summary && summary.total > 0 && (
+            <div className="public-report-summary">
+              <p>
+                <strong>{summary.total}</strong>{' '}
+                {summary.total === 1 ? 'reporte público' : 'reportes públicos'} ·{' '}
+                <strong>{summary.open}</strong> {summary.open === 1 ? 'abierto' : 'abiertos'} ·{' '}
+                <strong>{summary.resolved}</strong>{' '}
+                {summary.resolved === 1 ? 'resuelto' : 'resueltos'}
+              </p>
+              {summary.total > 0 && (
+                <ul className="public-report-categories" aria-label="Reportes por categoría">
+                  {Object.entries(summary.byCategory)
+                    .filter(([, count]) => count.total > 0)
+                    .sort(([, a], [, b]) => b.open - a.open || b.total - a.total)
+                    .map(([category, count]) => (
+                      <li key={category}>
+                        <strong>{categoryLabels[category] || category}</strong>: {count.open}{' '}
+                        {count.open === 1 ? 'abierto' : 'abiertos'} · {count.resolved}{' '}
+                        {count.resolved === 1 ? 'resuelto' : 'resueltos'}
+                      </li>
+                    ))}
+                </ul>
+              )}
+              {reports.length < summary.total && (
+                <p>
+                  Mostrando los {reports.length} reportes más recientes de {summary.total} públicos.
+                </p>
+              )}
+            </div>
           )}
-          {reports.length < summary.total && (
+          {!summary && (
             <p>
-              Mostrando los {reports.length} reportes más recientes de {summary.total} públicos.
+              Mostrando {reports.length} reportes recientes. El recuento total no está disponible.
             </p>
           )}
-        </div>
-      )}
-      {state === 'ready' && !summary && (
-        <p>Mostrando {reports.length} reportes recientes. El recuento total no está disponible.</p>
-      )}
-      {state === 'ready' && !reports.length && summary?.total === 0 && (
-        <p>Todavía no hay reportes públicos para esta {routeId ? 'ruta' : 'estación'}.</p>
-      )}
-      {state === 'ready' && !reports.length && summary?.total !== 0 && (
-        <p>No hay reportes recientes disponibles para mostrar.</p>
-      )}
-      {state === 'ready' &&
-        reports.map((report) => (
-          <article key={report.id}>
-            <strong>{report.title}</strong>
-            <p>{report.detail}</p>
-            <small>
-              {report.targetType === 'unit'
-                ? `Unidad${report.unitReference ? ` · ${report.unitReference}` : ''}`
-                : report.targetType === 'route'
-                  ? `Parada o recorrido${report.locationReference ? ` · ${report.locationReference}` : ''}`
-                  : 'Estación'}{' '}
-              ·{' '}
-              <time dateTime={report.createdAt}>
-                {new Date(report.createdAt).toLocaleDateString('es-MX')}
-              </time>{' '}
-              ·{' '}
-              {report.status === 'resolved'
-                ? 'Marcado como resuelto'
-                : 'Publicado tras revisión de contenido'}
-            </small>
-            {report.photoMime && <ReportPhoto report={report} />}
-          </article>
-        ))}
-      {onReport && (
-        <button type="button" className="text-button" onClick={onReport}>
-          Reportar una falla aquí
-        </button>
+          {!reports.length && summary?.total === 0 && (
+            <p>Todavía no hay reportes públicos para esta {routeId ? 'ruta' : 'estación'}.</p>
+          )}
+          {!reports.length && summary?.total !== 0 && (
+            <p>No hay reportes recientes disponibles para mostrar.</p>
+          )}
+          {reports.map((report) => (
+            <article key={report.id}>
+              <strong>{report.title}</strong>
+              <p>{report.detail}</p>
+              <small>
+                {report.targetType === 'unit'
+                  ? `Unidad${report.unitReference ? ` · ${report.unitReference}` : ''}`
+                  : report.targetType === 'route'
+                    ? `Parada o recorrido${report.locationReference ? ` · ${report.locationReference}` : ''}`
+                    : 'Estación'}{' '}
+                ·{' '}
+                <time dateTime={report.createdAt}>
+                  {new Date(report.createdAt).toLocaleDateString('es-MX')}
+                </time>{' '}
+                ·{' '}
+                {report.status === 'resolved'
+                  ? 'Marcado como resuelto'
+                  : 'Publicado tras revisión de contenido'}
+              </small>
+              {report.photoMime && <ReportPhoto report={report} />}
+            </article>
+          ))}
+        </details>
       )}
     </section>
   );

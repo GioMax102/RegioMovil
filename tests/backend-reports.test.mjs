@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { spawnSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { createApp } from '../server/app.mjs';
 import { createReportStore, MAX_REPORTS } from '../server/storage.mjs';
 import { sanitizeReportPhoto } from '../server/report-photos.mjs';
@@ -40,12 +41,136 @@ function chunk(type, payload) {
   const result = Buffer.alloc(payload.length + 12); result.writeUInt32BE(payload.length); result.write(type, 4);
   payload.copy(result, 8); result.writeUInt32BE(crc32(result.subarray(4, -4)), result.length - 4); return result;
 }
-function png({ metadata = '', width = 1, height = 1 } = {}) {
+function png({ metadata = '', width = 1, height = 1, pixel = [255, 0, 0] } = {}) {
   const header = Buffer.alloc(13); header.writeUInt32BE(width); header.writeUInt32BE(height, 4); header[8] = 8; header[9] = 2;
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header),
-    ...(metadata ? [chunk('tEXt', Buffer.from(`GPS\0${metadata}`))] : []), chunk('IDAT', deflateSync(Buffer.from([0, 255, 0, 0]))), chunk('IEND', Buffer.alloc(0))]);
+    ...(metadata ? [chunk('tEXt', Buffer.from(`GPS\0${metadata}`))] : []), chunk('IDAT', deflateSync(Buffer.from([0, ...pixel]))), chunk('IEND', Buffer.alloc(0))]);
 }
 const photoUrl = data => `data:image/png;base64,${data.toString('base64')}`;
+
+test('a lost receipt and concurrent taps replay one original report without consuming new-report quota', async t => {
+  const f = await fixture(t, { reportLimit: 1 });
+  const submission = { ...body, draftId: randomUUID(), photo: photoUrl(png()) };
+  // The caller may lose the first response after the write has committed.
+  const received = await f.request('/api/reports', submission);
+  assert.equal(received.status, 201);
+  const original = await received.json();
+  f.advance(1 / 86400);
+  // Stay inside the rate-limit window while retrying after moderation.
+  // The receipt is deliberately the original pending receipt, not private state.
+  assert.equal(f.app.store.publish(original.report.id, reviewer, f.date), true);
+  assert.equal(f.app.store.moderate(original.report.id, 'resolve', reviewer, f.date), true);
+  const retries = await Promise.all(Array.from({ length: 3 }, () => f.request('/api/reports', submission)));
+  for (const retry of retries) {
+    assert.equal(retry.status, 201);
+    assert.deepEqual(await retry.json(), original);
+    assert.equal(retry.headers.get('Location'), received.headers.get('Location'));
+    assert.equal(retry.headers.get('Cache-Control'), 'no-store');
+  }
+  assert.equal(f.app.store.summary({ status: 'all' }, f.date).total, 1);
+  assert.equal(f.app.store.get(original.report.id, f.date).status, 'resolved');
+  assert.equal((await f.request('/api/reports', { ...submission, draftId: randomUUID() })).status, 429);
+  f.advance(1 / 1440);
+  const fresh = await f.request('/api/reports', { ...submission, draftId: randomUUID() });
+  assert.equal(fresh.status, 201);
+  const another = await f.request('/api/reports', { ...submission, draftId: randomUUID() });
+  assert.equal(another.status, 429);
+  const afterLimit = await f.request('/api/reports', submission);
+  assert.equal(afterLimit.status, 201);
+  assert.deepEqual(await afterLimit.json(), original);
+  const feed = await (await f.request('/api/reports?station=a')).json();
+  assert.equal(JSON.stringify(feed).includes(submission.draftId), false);
+  assert.equal(JSON.stringify(feed).includes('submissionHash'), false);
+});
+
+test('draft reuse checks normalized content, target, references, consent and processed photo', async t => {
+  const f = await fixture(t);
+  const submission = { ...body, targetType: 'unit', routeId: 'route-b', unitReference: 'Unidad 27', locationReference: 'Andén norte', draftId: randomUUID(), photo: photoUrl(png({ metadata: 'FIRST-METADATA' })) };
+  const original = await (await f.request('/api/reports', submission)).json();
+  const equivalent = await f.request('/api/reports', { ...submission, draftId: submission.draftId.toUpperCase(), title: `  ${submission.title}  `,
+    photo: photoUrl(png({ metadata: 'OTHER-METADATA' })) });
+  assert.equal(equivalent.status, 201);
+  assert.deepEqual(await equivalent.json(), original);
+  for (const change of [
+    { title: 'Otra observación' }, { detail: 'Ahora cambió la descripción.' }, { category: 'accessibility' },
+    { stationId: 'b' }, { routeId: 'route-a' }, { targetType: 'route', stationId: undefined, unitReference: undefined },
+    { unitReference: 'Unidad 28' }, { locationReference: 'Andén sur' }, { publicationConsent: false },
+    { photo: undefined }, { photo: photoUrl(png({ pixel: [0, 255, 0] })) },
+  ]) {
+    const conflict = await f.request('/api/reports', { ...submission, ...change });
+    assert.equal(conflict.status, 409);
+    assert.equal((await conflict.json()).error.code, 'REPORT_DRAFT_CONFLICT');
+  }
+  assert.equal(f.app.store.summary({ status: 'all' }, f.date).total, 1);
+  assert.equal(f.app.store.get(original.report.id, f.date).detail, body.detail);
+  for (const draftId of [null, '', 'short', '../untrusted', 'a'.repeat(200), 123, {}, '00000000-0000-0000-0000-000000000000']) {
+    const invalid = await f.request('/api/reports', { ...body, draftId });
+    assert.equal(invalid.status, 400);
+    assert.equal((await invalid.json()).error.code, 'INVALID_REPORT_DRAFT');
+  }
+  const legacyA = await (await f.request('/api/reports', body)).json();
+  const legacyB = await (await f.request('/api/reports', body)).json();
+  assert.notEqual(legacyA.report.id, legacyB.report.id, 'A client without a draft key keeps the previous contract.');
+});
+
+test('draft receipts survive restart, remain available at quota and expire with report retention', async t => {
+  const { path } = await temporaryDatabase(t);
+  const date = new Date(), submission = { ...body, draftId: randomUUID(), photoMime: 'image/png', photoData: png() };
+  let store = createReportStore(path);
+  const original = store.add(submission, date);
+  store.publish(original.id, reviewer, date);
+  store.close();
+  const db = new DatabaseSync(path), created = date.toISOString();
+  const insert = db.prepare("INSERT INTO reports(id, station_id, target_type, title, category, detail, created_at) VALUES (?, 'a', 'station', 'Reporte', 'condition', 'Puerta averiada', ?)");
+  db.exec('BEGIN'); for (let i = 1; i < MAX_REPORTS; i++) insert.run(String(i), created); db.exec('COMMIT'); db.close();
+  store = createReportStore(path);
+  try {
+    assert.deepEqual(store.add(submission, date, { beforeCreate() { assert.fail('A replay is not a new submission.'); } }), original);
+    assert.throws(() => store.add({ ...submission, draftId: randomUUID() }, date), { code: 'REPORT_STORAGE_FULL' });
+    const expired = new Date(date.getTime() + 91 * 86400_000);
+    assert.equal(store.get(original.id, expired), undefined);
+    assert.equal(store.moderationHistory(original.id).length, 0);
+    const replacement = store.add(submission, expired);
+    assert.notEqual(replacement.id, original.id);
+    assert.equal(store.summary({ status: 'all' }, expired).total, 1);
+  } finally { store.close(); }
+});
+
+test('version 2 migration adds idempotency without rewriting existing evidence or moderation history', async t => {
+  const { path } = await temporaryDatabase(t);
+  const date = new Date().toISOString(), originalPhoto = png();
+  const db = new DatabaseSync(path);
+  db.exec(`CREATE TABLE reports (
+    id TEXT PRIMARY KEY, station_id TEXT, route_id TEXT, target_type TEXT, title TEXT,
+    category TEXT, detail TEXT, unit_reference TEXT, location_reference TEXT, photo_mime TEXT,
+    photo_data BLOB, publication_consent INTEGER, created_at TEXT, status TEXT
+  );
+  CREATE TABLE report_moderation_events (
+    id INTEGER PRIMARY KEY, report_id TEXT NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+    action TEXT NOT NULL, reviewer TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL
+  ); PRAGMA user_version = 2;`);
+  db.prepare('INSERT INTO reports VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('original', 'a', null, 'station', body.title,
+    body.category, body.detail, null, null, 'image/png', originalPhoto, 1, date, 'published');
+  db.prepare('INSERT INTO report_moderation_events(report_id, action, reviewer, note, created_at) VALUES (?,?,?,?,?)').run('original', 'publish', reviewer.reviewer, reviewer.note, date);
+  db.close();
+  let store = createReportStore(path);
+  assert.equal(store.get('original').status, 'published');
+  assert.deepEqual(Buffer.from(store.get('original').photo_data), originalPhoto);
+  assert.equal(store.get('original').draft_id, null);
+  assert.equal(store.get('original').submission_hash, null);
+  assert.equal(store.moderationHistory('original')[0].note, reviewer.note);
+  const submission = { ...body, draftId: randomUUID() };
+  const receipt = store.add(submission);
+  store.close();
+  store = createReportStore(path);
+  assert.deepEqual(store.add(submission), receipt);
+  assert.equal(store.moderationHistory('original').length, 1);
+  store.close();
+  const check = new DatabaseSync(path);
+  assert.equal(check.prepare('PRAGMA user_version').get().user_version, 3);
+  assert.throws(() => check.prepare('UPDATE reports SET draft_id = ? WHERE id = ?').run(submission.draftId, 'original'), /constraint/i);
+  check.close();
+});
 
 test('explicit route identity separates duplicate route codes and never assigns a default station to units', async t => {
   const f = await fixture(t);
@@ -164,7 +289,7 @@ test('legacy database migration is atomic, idempotent, preserves private reports
   store = createReportStore(path);
   assert.equal(store.get(route.id).category, 'infrastructure'); assert.equal(store.get('old').detail, 'Una puerta averiada.'); store.close();
   const check = new DatabaseSync(path);
-  assert.equal(check.prepare('PRAGMA user_version').get().user_version, 2);
+  assert.equal(check.prepare('PRAGMA user_version').get().user_version, 3);
   assert.equal(check.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE name = 'reports_legacy'").get().count, 0); check.close();
 });
 

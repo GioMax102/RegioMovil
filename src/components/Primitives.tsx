@@ -179,12 +179,14 @@ export function Dialog({
   onClose,
   wide = false,
   className = '',
+  preventDismiss = false,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
   className?: string;
+  preventDismiss?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   // Capture before committing children: a child's autoFocus can run before this effect.
@@ -193,7 +195,9 @@ export function Dialog({
   );
   const titleId = useId();
   const closeRef = useRef(onClose);
-  closeRef.current = onClose;
+  closeRef.current = () => {
+    if (!preventDismiss) onClose();
+  };
   useEffect(() => {
     const dialog = ref.current!;
     const unlockScroll = lockDialogScroll(dialog);
@@ -207,6 +211,9 @@ export function Dialog({
       throw error;
     }
     const onCancel = (event: Event) => {
+      // File inputs also emit a bubbling `cancel` when their picker is dismissed.
+      // That event is not a request to close this dialog.
+      if (event.target !== dialog) return;
       event.preventDefault();
       closeRef.current();
     };
@@ -246,12 +253,18 @@ export function Dialog({
       className={`dialog ${wide ? 'wide' : ''} ${className}`}
       aria-labelledby={titleId}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) closeRef.current();
       }}
     >
       <div className="dialog-heading">
         <h2 id={titleId}>{title}</h2>
-        <button type="button" className="icon-button" onClick={onClose} aria-label="Cerrar ventana">
+        <button
+          type="button"
+          className="icon-button"
+          onClick={() => closeRef.current()}
+          disabled={preventDismiss}
+          aria-label="Cerrar ventana"
+        >
           <X size={21} />
         </button>
       </div>

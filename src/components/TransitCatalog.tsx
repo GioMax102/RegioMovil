@@ -193,24 +193,7 @@ export default function TransitCatalog({
           verifica el orden de las paradas o sus condiciones. Las obras quedan fuera del
           planificador.
         </p>
-      </details>
-      {loading && !catalog && (
-        <div className="panel empty-state" role="status">
-          <Route size={28} />
-          <h3>Abriendo las redes de Nuevo León…</h3>
-        </div>
-      )}
-      {error && (
-        <div className="service-load-error" role="alert">
-          <p>{error}</p>
-          <button className="primary-button" onClick={() => setRevision((value) => value + 1)}>
-            <RefreshCw size={16} />
-            Volver a intentar
-          </button>
-        </div>
-      )}
-      {catalog && (
-        <>
+        {catalog && (
           <div className="service-coverage-summary">
             <p>
               {busRoutes.length - missingGeometry.length} de {busRoutes.length} rutas de autobús
@@ -234,6 +217,25 @@ export default function TransitCatalog({
               </details>
             )}
           </div>
+        )}
+      </details>
+      {loading && !catalog && (
+        <div className="panel empty-state" role="status">
+          <Route size={28} />
+          <h3>Abriendo las redes de Nuevo León…</h3>
+        </div>
+      )}
+      {error && (
+        <div className="service-load-error" role="alert">
+          <p>{error}</p>
+          <button className="primary-button" onClick={() => setRevision((value) => value + 1)}>
+            <RefreshCw size={16} />
+            Volver a intentar
+          </button>
+        </div>
+      )}
+      {catalog && (
+        <>
           <div className="service-toolbar">
             <label className="search-field">
               <Search size={18} />

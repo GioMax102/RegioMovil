@@ -107,6 +107,8 @@ const steps = [
   {
     mode: 'bus',
     lineId: 'bus-a',
+    fromId: 'museum',
+    toId: 'bus-stop',
     from: 'Museo',
     to: 'Parada',
     geometry: [
@@ -118,6 +120,8 @@ const steps = [
   {
     mode: 'walk',
     lineId: 'walk',
+    fromId: 'bus-stop',
+    toId: 'metro:boarding',
     from: 'Parada',
     to: 'Metro',
     geometry: [
@@ -128,6 +132,8 @@ const steps = [
   {
     mode: 'metro',
     lineId: 'L2',
+    fromId: 'metro:boarding',
+    toId: 'metro:universidad',
     from: 'Metro',
     to: 'Universidad',
     geometry: [

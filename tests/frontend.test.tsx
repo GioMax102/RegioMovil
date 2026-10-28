@@ -7,6 +7,8 @@ import { readFile } from 'node:fs/promises';
 import { registerHooks } from 'node:module';
 import { JSDOM } from 'jsdom';
 import React from 'react';
+import 'fake-indexeddb/auto';
+import { readReportDraft, clearReportDraft } from '../src/reportDraft';
 import { createApp } from '../server/app.mjs';
 
 const realFetch = globalThis.fetch;
@@ -155,7 +157,9 @@ before(async () => {
   };
 });
 
-beforeEach((context) => {
+beforeEach(async (context) => {
+  const prior = await readReportDraft();
+  if (prior) await clearReportDraft(prior.draftId);
   // The UI clock and API board refer to the same operating-hour fixture.
   context.mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-15T18:00:00Z') });
   requests.length = 0;
@@ -485,7 +489,7 @@ test('a report is submitted through the UI and stays private and pending in SQLi
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), description);
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   await screen.findByRole('status');
-  await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
   const response = await realFetch(`${base}/api/reports?station=padre-mier`);
   const payload = await response.json();
   assert.ok(!payload.reports.some((report: { detail: string }) => report.detail === description));
@@ -514,10 +518,10 @@ test('failed report submission preserves its text and does not claim success', a
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   assert.match(
     (await within(dialog).findByRole('alert')).textContent || '',
-    /No pudimos confirmar la recepción.*Puede haberse guardado.*Tu texto sigue aquí/,
+    /No pudimos confirmar la recepción.*Puede haberse guardado.*Tu borrador sigue aquí/,
   );
   assert.equal(textarea.value, description);
-  assert.equal(screen.queryByRole('status'), null);
+  assert.ok(!screen.queryByText('Reporte recibido. Queda privado y pendiente de revisión.'));
   assert.equal(
     (within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }) as HTMLButtonElement)
       .disabled,
@@ -573,6 +577,12 @@ test('a late response from a closed report cannot close or erase a new draft', a
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   await waitFor(() => assert.equal(heldRequests.length, 1));
   await closeDialog();
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
+  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
+  dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
+  await user.click(within(dialog).getByRole('button', { name: 'Descartar borrador' }));
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
   await screen.findByRole('textbox', { name: 'Título' });
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
@@ -597,8 +607,8 @@ test('a late response from a closed report cannot close or erase a new draft', a
     newText,
   );
   assert.equal(
-    screen.queryByRole('status'),
-    null,
+    !!screen.queryByText('Reporte recibido. Queda privado y pendiente de revisión.'),
+    false,
     'A previous report must not announce success for the new draft.',
   );
   assert.equal(

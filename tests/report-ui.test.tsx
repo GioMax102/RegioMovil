@@ -2,6 +2,7 @@ import test, { after, afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import React from 'react';
+import 'fake-indexeddb/auto';
 import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
@@ -10,6 +11,7 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 });
 const names = [
   'window',
+  'localStorage',
   'document',
   'navigator',
   'HTMLElement',
@@ -59,6 +61,8 @@ const styles = registerHooks({
       : next(url, context);
   },
 });
+const { readReportDraft, clearReportDraft, REPORT_OPEN_KEY } = await import('../src/reportDraft');
+const { Dialog } = await import('../src/components/Primitives');
 const { default: ReportDialog } = await import('../src/components/ReportDialog');
 const { default: PublicReports } = await import('../src/components/PublicReports');
 styles.deregister();
@@ -122,7 +126,10 @@ dom.window.HTMLCanvasElement.prototype.toBlob = function (callback, type) {
     new dom.window.Blob([canvasImages.get(this) || 'photo'], { type: type || 'image/jpeg' }),
   );
 };
-beforeEach(() => {
+beforeEach(async () => {
+  const previousDraft = await readReportDraft();
+  if (previousDraft) await clearReportDraft(previousDraft.draftId);
+  localStorage.clear();
   sent.length = 0;
   onSent = 0;
   deferDecode = false;
@@ -150,7 +157,13 @@ beforeEach(() => {
         : Promise.resolve(bitmap(file.name)),
   });
 });
-afterEach(() => cleanup());
+afterEach(async () => {
+  cleanup();
+  await act(async () => {
+    await readReportDraft();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
 after(() => {
   globalThis.fetch = realFetch;
   dom.window.close();
@@ -173,7 +186,7 @@ function dialogProps() {
   };
 }
 async function fillText() {
-  await user.type(screen.getByRole('textbox', { name: 'Título' }), 'Falla observada');
+  await user.type(await screen.findByRole('textbox', { name: 'Título' }), 'Falla observada');
   await user.type(
     screen.getByRole('textbox', { name: /Cuéntanos un poco/ }),
     'Una descripción suficientemente clara del problema.',
@@ -231,7 +244,7 @@ test('processing blocks submission and the latest selected photo wins even when 
   deferDecode = true;
   render(<ReportDialog {...dialogProps()} />);
   await fillText();
-  const input = screen.getByLabelText('Foto (opcional)');
+  const input = screen.getByLabelText('Elegir archivo');
   await user.upload(input, new dom.window.File(['original-a'], 'a.jpg', { type: 'image/jpeg' }));
   assert.equal(submitButton().disabled, true);
   await user.click(submitButton());
@@ -253,7 +266,7 @@ test('removing a processing photo cancels it and a later completion cannot reatt
   render(<ReportDialog {...dialogProps()} />);
   await fillText();
   await user.upload(
-    screen.getByLabelText('Foto (opcional)'),
+    screen.getByLabelText('Elegir archivo'),
     new dom.window.File(['original'], 'late.jpg', { type: 'image/jpeg' }),
   );
   await user.click(screen.getByRole('button', { name: 'Quitar foto' }));
@@ -270,7 +283,7 @@ test('a photo failure is explicit, blocks an accidental text-only send and permi
   render(<ReportDialog {...dialogProps()} />);
   await fillText();
   await user.upload(
-    screen.getByLabelText('Foto (opcional)'),
+    screen.getByLabelText('Elegir archivo'),
     new dom.window.File(['original'], 'retry.jpg', { type: 'image/jpeg' }),
   );
   assert.match((await screen.findByRole('alert')).textContent || '', /no pudo procesar/);
@@ -330,7 +343,7 @@ test('public report errors do not masquerade as empty results and retain a conte
     /Esto no indica que no existan/,
   );
   assert.equal(screen.queryByText(/Todavía no hay reportes/), null);
-  await user.click(screen.getByRole('button', { name: 'Reportar una falla aquí' }));
+  await user.click(screen.getByRole('button', { name: /Ayuda a mejorar este lugar/ }));
   assert.equal(clicked, 1);
   fail = false;
   await user.click(screen.getByRole('button', { name: 'Reintentar reportes' }));
@@ -419,7 +432,7 @@ test('a lost submission response preserves the draft and warns that it may have 
   await user.click(submitButton());
   assert.match(
     (await screen.findByRole('alert')).textContent || '',
-    /No pudimos confirmar la recepción.*Puede haberse guardado.*evita reenviarlo/,
+    /No pudimos confirmar la recepción.*Puede haberse guardado.*reintentar este mismo envío/,
   );
   assert.equal(onSent, 0);
   assert.equal(sent.length, 1);
@@ -430,5 +443,124 @@ test('a lost submission response preserves the draft and warns that it may have 
   assert.equal(
     (screen.getByRole('textbox', { name: /Cuéntanos un poco/ }) as HTMLTextAreaElement).value,
     'Una descripción suficientemente clara del problema.',
+  );
+});
+
+test('cancel bubbling from a file picker never closes the surrounding dialog', () => {
+  let closes = 0;
+  render(
+    <Dialog title="Prueba de archivos" onClose={() => closes++}>
+      <input type="file" aria-label="Archivo de prueba" />
+    </Dialog>,
+  );
+  const file = screen.getByLabelText('Archivo de prueba');
+  fireEvent(file, new dom.window.Event('cancel', { bubbles: true, cancelable: true }));
+  assert.equal(closes, 0);
+  fireEvent(
+    screen.getByRole('dialog'),
+    new dom.window.Event('cancel', { bubbles: true, cancelable: true }),
+  );
+  assert.equal(closes, 1, 'Escape on the dialog itself still closes it.');
+});
+
+test('cancelling each web photo source preserves text and the previously processed photo', async () => {
+  let closes = 0;
+  render(<ReportDialog {...dialogProps()} onClose={() => closes++} />);
+  await fillText();
+  await user.upload(
+    screen.getByLabelText('Elegir archivo'),
+    new dom.window.File(['original'], 'saved.jpg', { type: 'image/jpeg' }),
+  );
+  await screen.findByRole('img', { name: 'Vista previa de la foto adjunta' });
+  const previous = screen.getByRole('img').getAttribute('src');
+  for (const source of ['Tomar foto', 'Elegir de galería', 'Elegir archivo']) {
+    await user.click(screen.getByRole('button', { name: source }));
+    await waitFor(() =>
+      assert.equal(
+        (screen.getByRole('button', { name: 'Cerrar ventana' }) as HTMLButtonElement).disabled,
+        true,
+      ),
+    );
+    fireEvent(
+      screen.getByLabelText(source),
+      new dom.window.Event('cancel', { bubbles: true, cancelable: true }),
+    );
+    await waitFor(() =>
+      assert.equal(
+        (screen.getByRole('button', { name: 'Cerrar ventana' }) as HTMLButtonElement).disabled,
+        false,
+      ),
+    );
+    assert.equal(closes, 0);
+    assert.equal(
+      (screen.getByRole('textbox', { name: 'Título' }) as HTMLInputElement).value,
+      'Falla observada',
+    );
+    assert.equal(screen.getByRole('img').getAttribute('src'), previous);
+  }
+});
+
+test('a remounted form restores processed photo, fields and the same draft id; success removes the local draft', async () => {
+  render(<ReportDialog {...dialogProps()} />);
+  await fillText();
+  await user.upload(
+    screen.getByLabelText('Elegir archivo'),
+    new dom.window.File(['original'], 'restore.jpg', { type: 'image/jpeg' }),
+  );
+  await screen.findByRole('img', { name: 'Vista previa de la foto adjunta' });
+  await waitFor(async () => assert.ok((await readReportDraft())?.photo));
+  const saved = await readReportDraft();
+  assert.ok(saved);
+  assert.ok(Number(localStorage.getItem(REPORT_OPEN_KEY)) > Date.now());
+  cleanup();
+  render(<ReportDialog {...dialogProps()} />);
+  await screen.findByRole('textbox', { name: 'Título' });
+  assert.equal(
+    (screen.getByRole('textbox', { name: 'Título' }) as HTMLInputElement).value,
+    'Falla observada',
+  );
+  assert.equal(screen.getByRole('img').getAttribute('src'), saved.photo);
+  await user.click(submitButton());
+  await waitFor(() => assert.equal(onSent, 1));
+  assert.equal(sent[0].draftId, saved.draftId);
+  assert.equal(await readReportDraft(), null);
+  assert.equal(localStorage.getItem(REPORT_OPEN_KEY), null);
+});
+
+test('a failed photo replacement leaves the last valid photo intact until explicitly removed', async () => {
+  render(<ReportDialog {...dialogProps()} />);
+  await fillText();
+  await user.upload(
+    screen.getByLabelText('Elegir archivo'),
+    new dom.window.File(['original'], 'valid.jpg', { type: 'image/jpeg' }),
+  );
+  const image = await screen.findByRole('img', { name: 'Vista previa de la foto adjunta' });
+  const src = image.getAttribute('src');
+  noCanvas = true;
+  await user.upload(
+    screen.getByLabelText('Elegir archivo'),
+    new dom.window.File(['other'], 'failed.jpg', { type: 'image/jpeg' }),
+  );
+  await screen.findByRole('alert');
+  assert.equal(screen.getByRole('img').getAttribute('src'), src);
+  assert.equal(submitButton().disabled, true);
+});
+
+test('required marks match the selected destination and consent stays optional', async () => {
+  render(<ReportDialog {...dialogProps()} />);
+  await screen.findByRole('textbox', { name: 'Título' });
+  assert.equal(
+    (screen.getByRole('combobox', { name: 'Estación de Metro' }) as HTMLSelectElement).required,
+    true,
+  );
+  assert.equal((screen.getByRole('checkbox') as HTMLInputElement).required, false);
+  assert.equal(document.body.textContent?.includes('(opcional)'), false);
+  await user.selectOptions(screen.getByRole('combobox', { name: '¿Dónde ocurrió?' }), 'unit');
+  const route = await screen.findByRole('combobox', { name: 'Ruta o línea observada' });
+  assert.equal((route as HTMLSelectElement).required, true);
+  assert.equal(
+    (screen.getByRole('combobox', { name: 'Estación de observación' }) as HTMLSelectElement)
+      .required,
+    false,
   );
 });

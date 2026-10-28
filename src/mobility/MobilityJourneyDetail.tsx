@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import MobilityMap from './MobilityMap';
 import { networkLabel } from './networks';
-import { presentJourneySteps } from './journeyPresentation';
+import { journeyStepAccent, presentJourneySteps } from './journeyPresentation';
 import { journeyTransfers } from './transferStations';
 import TransferStationActions from './TransferStationActions';
 import type { MobilityJourney, MobilityNetwork } from './types';
@@ -110,7 +110,7 @@ export default function MobilityJourneyDetail({
           if (entry.kind === 'transfer')
             return (
               <li
-                className="journey-detail-transfer"
+                className="journey-detail-transfer journey-stage-transfer"
                 key={`transfer:${step.fromId}:${step.toId}:${index}`}
               >
                 <span className="mobility-step-icon transfer">
@@ -125,7 +125,11 @@ export default function MobilityJourneyDetail({
               </li>
             );
           return (
-            <li key={`${step.lineId}:${step.fromId}:${step.toId}:${index}`}>
+            <li
+              key={`${step.lineId}:${step.fromId}:${step.toId}:${index}`}
+              className={`journey-stage-${step.mode === 'walk' ? 'walk' : 'ride'}`}
+              style={{ '--journey-stage-color': journeyStepAccent(step) } as React.CSSProperties}
+            >
               <span className={`mobility-step-icon ${step.mode}`}>
                 {step.mode === 'walk' ? (
                   <Footprints size={16} aria-hidden="true" />

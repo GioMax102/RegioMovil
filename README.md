@@ -2,7 +2,7 @@
 
 **Tu ciudad, a tu ritmo.** Aplicación Android, PWA y pantalla de consulta para paradas, con frontend y backend en un solo repositorio. Un piloto funcional para decidir con menos incertidumbre, sin crear cuenta y sin descargar un motor de mapas.
 
-**Continuidad vigente (27 de octubre):** [plan de las nueve anotaciones de mapas, trayectos y comunidad](docs/PLAN_PRODUCTO_COMUNIDAD_2026-10-27.md), con estado y criterios de aceptación, y [evaluación de administración comunitaria y visión computacional](docs/MODELO_COMUNIDAD_Y_VISION_2026-10-27.md). Son trabajo planificado para la siguiente iteración; no funcionalidades ya entregadas.
+**Continuidad vigente (28 de octubre):** [entrega de borradores, reportes desde la guía, mapa completo y cobertura](docs/ENTREGA_PRODUCTO_2026-10-28.md), [plan de las nueve anotaciones](docs/PLAN_PRODUCTO_COMUNIDAD_2026-10-27.md) y [evaluación de administración comunitaria y visión](docs/MODELO_COMUNIDAD_Y_VISION_2026-10-27.md). T1–T4 implementados; prueba física/visual pendiente. Cobertura actual: 191/209 buses; las cifras históricas siguientes describen entregas anteriores.
 
 El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aquí en una experiencia verificable: red de transporte pública documentada, planeación sobre conexiones reales, escenarios de unidades, afluencia y condiciones, y fuentes visibles desde la interfaz.
 

@@ -132,3 +132,31 @@ test('published Ruta 130 stops cover Río Missouri near Punto Valle without usin
     assert.ok(meters < 250, 'Published existing stop must actually be close to Punto Valle.');
   }
 });
+
+test('October 28 recovery uses exact official variants and only their published boarding points', async () => {
+  const audit = await readJson('data/route-pending-audit-2026-10-28.json');
+  const graph = await readJson('data/mobility-network.json');
+  assert.equal(audit.routes.length, 24);
+  const imported = audit.routes.filter(row => row.result === 'imported');
+  assert.equal(imported.length, 6);
+  assert.equal(audit.routes.filter(row => row.result === 'pending').length, 18);
+  for (const item of imported) {
+    const route = catalog.routes.find(route => route.id === item.id);
+    const pack = await readJson(`public/route-packs/${route.geometryPack}.json`);
+    assert.equal(pack.mapTitle, item.pageHeading, 'A shared route code cannot identify a different variant.');
+    assert.equal(pack.originalKmlSha256, item.kmlSha256);
+    assert.equal(new URL(pack.sourceUrl).searchParams.get('mid'), item.mapId);
+    assert.equal(pack.stops.length, 2, 'Line vertices are geometry, not additional boarding stops.');
+    const networkRoute = graph.routes.find(route => route.id === item.id);
+    assert.equal(networkRoute.segments.length, 1);
+    assert.equal(networkRoute.segments[0].stopIds.length, 2);
+    for (const stopId of networkRoute.segments[0].stopIds) {
+      const stop = graph.stops.find(stop => stop.id === stopId);
+      assert.ok(pack.stops.some(point => point.lat === stop.lat && point.lng === stop.lng));
+    }
+  }
+  for (const id of ['ima-50-mas-palomas-san-angel', 'ima-38-310-troncal-lincoln-ruiz-cortines-centro']) {
+    assert.equal(catalog.routes.find(route => route.id === id).geometryPack, null);
+    assert.ok(!graph.routes.some(route => route.id === id), 'An outdated or mismatched map must remain outside planning.');
+  }
+});

@@ -22,8 +22,8 @@ export default function DeferredReports(props: {
             consultarlos.
           </p>
           {props.onReport && (
-            <button type="button" className="text-button" onClick={props.onReport}>
-              Reportar una falla aquí
+            <button type="button" className="primary-button" onClick={props.onReport}>
+              Compartir observación
             </button>
           )}
         </section>

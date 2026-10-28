@@ -25,3 +25,20 @@ export function presentJourneySteps(steps: readonly MobilityStep[]) {
       : { kind: 'leg' as const, step, index },
   );
 }
+
+/** These accents identify stages and networks, without claiming an official vehicle color. */
+export function journeyStepAccent(step: MobilityStep): string {
+  if (step.mode === 'walk') return '#9a7137';
+  if (step.mode === 'metro' && /^#[a-f\d]{6}$/i.test(step.color || '')) return step.color!;
+  return (
+    (
+      {
+        transmetro: '#00816e',
+        regioruta: '#46794d',
+        ecovia: '#a54545',
+        'muevo-leon': '#4975a4',
+        'troncales-integradas': '#4975a4',
+      } as Record<string, string>
+    )[step.networkId || ''] || '#197467'
+  );
+}

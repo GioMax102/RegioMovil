@@ -291,3 +291,46 @@
     border: 2px solid ButtonText;
   }
 }
+
+.active-journey-instruction {
+  border-left: 5px solid var(--journey-stage-color, var(--green));
+}
+.active-journey-instruction[data-stage='transfer'] {
+  border-left-color: var(--muted);
+  border-left-style: dashed;
+}
+.active-journey-report {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--green);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.active-journey-report:hover {
+  background: var(--soft);
+}
+.active-journey-report-feedback {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+@media (max-height: 540px) and (min-width: 640px) {
+  .active-journey-report,
+  .active-journey-report-feedback {
+    grid-column: 1 / -1;
+  }
+}
+@media (forced-colors: active) {
+  .active-journey-instruction {
+    border-left-color: CanvasText;
+  }
+}

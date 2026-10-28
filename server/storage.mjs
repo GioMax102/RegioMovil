@@ -1,13 +1,14 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { sanitizeReportPhoto } from './report-photos.mjs';
 
 export const REPORT_CATEGORIES = ['crowding', 'climate', 'accessibility', 'condition', 'infrastructure'];
 export const REPORT_RETENTION_DAYS = 90;
 export const MAX_REPORTS = 5000;
 export const MAX_STORED_PHOTO_BYTES = 50_000_000;
+export const validReportDraftId = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const cutoff = date => new Date(date.getTime() - REPORT_RETENTION_DAYS * 86400_000).toISOString();
 const boundedLimit = limit => Math.min(100, Math.max(1, Math.trunc(Number(limit)) || 20));
 const columns = `id, station_id AS stationId, route_id AS routeId, title, category, detail,
@@ -33,44 +34,53 @@ const schema = `CREATE TABLE reports (
 
 function migrate(db) {
   const version = db.prepare('PRAGMA user_version').get().user_version;
-  if (version > 2) throw new Error('La base de reportes requiere una versión más reciente del servidor.');
-  if (version === 2) return;
+  if (version > 3) throw new Error('La base de reportes requiere una versión más reciente del servidor.');
+  if (version === 3) return;
   db.exec('BEGIN IMMEDIATE');
   try {
-    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'reports'").get();
-    if (exists) db.exec('ALTER TABLE reports RENAME TO reports_legacy');
-    db.exec(schema);
-    if (exists) {
-      const insert = db.prepare(`INSERT INTO reports(id, station_id, route_id, target_type, title, category, detail,
-        unit_reference, location_reference, photo_mime, photo_data, publication_consent, created_at, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-      for (const row of db.prepare('SELECT * FROM reports_legacy').iterate()) {
-        let photo = null;
-        if (row.photo_data && row.photo_mime) {
-          try { photo = sanitizeReportPhoto(row.photo_mime, row.photo_data); } catch { /* Invalid legacy attachments are discarded and the report stays private. */ }
+    if (version < 2) {
+      const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'reports'").get();
+      if (exists) db.exec('ALTER TABLE reports RENAME TO reports_legacy');
+      db.exec(schema);
+      if (exists) {
+        const insert = db.prepare(`INSERT INTO reports(id, station_id, route_id, target_type, title, category, detail,
+          unit_reference, location_reference, photo_mime, photo_data, publication_consent, created_at, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+        for (const row of db.prepare('SELECT * FROM reports_legacy').iterate()) {
+          let photo = null;
+          if (row.photo_data && row.photo_mime) {
+            try { photo = sanitizeReportPhoto(row.photo_mime, row.photo_data); } catch { /* Invalid legacy attachments are discarded and the report stays private. */ }
+          }
+          let consent = row.publication_consent === 1 ? 1 : 0;
+          const category = REPORT_CATEGORIES.includes(row.category) ? row.category : 'condition';
+          const target = row.target_type === 'unit' || (row.target_type === 'route' && row.route_id) ? row.target_type : 'station';
+          const title = [...(row.title?.trim() || row.detail || 'Reporte comunitario').replace(/\s+/g, ' ')].slice(0, 100).join('');
+          let status = ['published', 'resolved', 'rejected'].includes(row.status) ? row.status : 'pending';
+          // Old versions accepted unassigned units. Preserve their meaning, but
+          // never guess a route or turn an observation into a station complaint.
+          if (target === 'unit' && !row.route_id) { consent = 0; status = 'pending'; }
+          if ((status === 'published' || status === 'resolved') && (!consent || (row.photo_data && !photo))) status = 'pending';
+          insert.run(row.id, row.station_id || null, row.route_id || null, target, title.length >= 3 ? title : 'Reporte comunitario', category, row.detail,
+            row.unit_reference || null, row.location_reference || null, photo ? row.photo_mime : null, photo, consent, row.created_at, status);
         }
-        let consent = row.publication_consent === 1 ? 1 : 0;
-        const category = REPORT_CATEGORIES.includes(row.category) ? row.category : 'condition';
-        const target = row.target_type === 'unit' || (row.target_type === 'route' && row.route_id) ? row.target_type : 'station';
-        const title = [...(row.title?.trim() || row.detail || 'Reporte comunitario').replace(/\s+/g, ' ')].slice(0, 100).join('');
-        let status = ['published', 'resolved', 'rejected'].includes(row.status) ? row.status : 'pending';
-        // Old versions accepted unassigned units. Preserve their meaning, but
-        // never guess a route or turn an observation into a station complaint.
-        if (target === 'unit' && !row.route_id) { consent = 0; status = 'pending'; }
-        if ((status === 'published' || status === 'resolved') && (!consent || (row.photo_data && !photo))) status = 'pending';
-        insert.run(row.id, row.station_id || null, row.route_id || null, target, title.length >= 3 ? title : 'Reporte comunitario', category, row.detail,
-          row.unit_reference || null, row.location_reference || null, photo ? row.photo_mime : null, photo, consent, row.created_at, status);
+        db.exec('DROP TABLE reports_legacy');
       }
-      db.exec('DROP TABLE reports_legacy');
+      db.exec(`CREATE INDEX reports_station_status_created ON reports(station_id, status, created_at DESC);
+        CREATE INDEX reports_route_status_created ON reports(route_id, status, created_at DESC);
+        CREATE INDEX reports_status_created ON reports(status, created_at DESC);
+        CREATE TABLE report_moderation_events (
+          id INTEGER PRIMARY KEY, report_id TEXT NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+          action TEXT NOT NULL, reviewer TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE INDEX moderation_report ON report_moderation_events(report_id, created_at);
+        PRAGMA user_version = 2;`);
     }
-    db.exec(`CREATE INDEX reports_station_status_created ON reports(station_id, status, created_at DESC);
-      CREATE INDEX reports_route_status_created ON reports(route_id, status, created_at DESC);
-      CREATE INDEX reports_status_created ON reports(status, created_at DESC);
-      CREATE TABLE report_moderation_events (
-        id INTEGER PRIMARY KEY, report_id TEXT NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
-        action TEXT NOT NULL, reviewer TEXT NOT NULL, note TEXT NOT NULL, created_at TEXT NOT NULL
-      );
-      CREATE INDEX moderation_report ON report_moderation_events(report_id, created_at);
-      PRAGMA user_version = 2; COMMIT;`);
+    // Nullable keys keep old clients and existing private evidence compatible.
+    // Keep keys with their report so retention removes both in the same action.
+    db.exec(`ALTER TABLE reports ADD COLUMN submission_hash TEXT CHECK(submission_hash IS NULL OR length(submission_hash) = 64);
+      ALTER TABLE reports ADD COLUMN draft_id TEXT CHECK(draft_id IS NULL OR length(draft_id) = 36)
+        CHECK((draft_id IS NULL) = (submission_hash IS NULL));
+      CREATE UNIQUE INDEX reports_draft_id ON reports(draft_id) WHERE draft_id IS NOT NULL;
+      PRAGMA user_version = 3; COMMIT;`);
   } catch (error) { db.exec('ROLLBACK'); throw error; }
 }
 
@@ -88,7 +98,7 @@ export function createReportStore(path = ':memory:') {
     migrate(db);
   } catch (error) { db.close(); throw error; }
   const insert = db.prepare(`INSERT INTO reports(id, station_id, route_id, target_type, title, category, detail,
-    unit_reference, location_reference, photo_mime, photo_data, publication_consent, created_at, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'pending')`);
+    unit_reference, location_reference, photo_mime, photo_data, publication_consent, created_at, draft_id, submission_hash, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending')`);
   const pruneAge = db.prepare('DELETE FROM reports WHERE created_at < ?');
   const publicCondition = "status IN ('published','resolved') AND publication_consent = 1 AND created_at >= ?";
   const prune = date => pruneAge.run(cutoff(date));
@@ -98,7 +108,10 @@ export function createReportStore(path = ':memory:') {
       ORDER BY created_at DESC, rowid DESC LIMIT ?`).all(id, cutoff(date), boundedLimit(limit));
   }
   const store = {
-    add({ stationId, routeId, category, detail, title, targetType = 'station', unitReference, locationReference, photoMime, photoData, publicationConsent = false }, date = new Date()) {
+    add({ stationId, routeId, category, detail, title, targetType = 'station', unitReference, locationReference, photoMime, photoData, publicationConsent = false, draftId }, date = new Date(), { beforeCreate } = {}) {
+      if (draftId !== undefined && !validReportDraftId(draftId)) {
+        const error = new RangeError('El identificador del borrador no es válido.'); error.code = 'INVALID_REPORT_DRAFT'; throw error;
+      }
       if (['unit', 'route'].includes(targetType) && !routeId) throw new RangeError('Una unidad o recorrido requiere un identificador de ruta explícito.');
       // Older clients sent only station/category/detail. Preserve those reports
       // privately; all public consent must be explicit in the new contract.
@@ -107,16 +120,38 @@ export function createReportStore(path = ':memory:') {
       const report = { id: randomUUID(), stationId: stationId || null, routeId: routeId || null, category, detail, title,
         targetType, unitReference: unitReference || null, locationReference: locationReference || null,
         photoMime: sanitizedPhoto ? photoMime : null, createdAt: date.toISOString(), status: 'pending' };
+      const key = draftId?.toLowerCase() || null;
+      const submissionHash = key ? createHash('sha256').update(JSON.stringify([
+        report.stationId, report.routeId, targetType, title, category, detail, report.unitReference,
+        report.locationReference, report.photoMime,
+        sanitizedPhoto ? createHash('sha256').update(sanitizedPhoto).digest('hex') : null,
+        publicationConsent ? 1 : 0,
+      ])).digest('hex') : null;
       db.exec('BEGIN IMMEDIATE');
       try {
         prune(date);
+        if (key) {
+          const previous = db.prepare(`SELECT ${columns}, submission_hash AS submissionHash FROM reports WHERE draft_id = ?`).get(key);
+          if (previous) {
+            if (previous.submissionHash !== submissionHash) {
+              const error = new Error('Este borrador ya fue recibido con otro contenido. Conserva el borrador y crea una observación nueva si deseas enviar los cambios.');
+              error.code = 'REPORT_DRAFT_CONFLICT'; throw error;
+            }
+            const { submissionHash: _hash, ...receipt } = previous;
+            // This acknowledges the original submission, not its current private
+            // moderation state. No key or hash enters public query responses.
+            receipt.status = 'pending';
+            db.exec('COMMIT'); return receipt;
+          }
+        }
+        beforeCreate?.();
         const usage = db.prepare('SELECT COUNT(*) AS count, COALESCE(SUM(length(photo_data)),0) AS bytes FROM reports').get();
         if (usage.count >= MAX_REPORTS || usage.bytes + (sanitizedPhoto?.length || 0) > MAX_STORED_PHOTO_BYTES) {
           const error = new Error('El almacenamiento de reportes está lleno. Intenta más tarde.');
           error.code = 'REPORT_STORAGE_FULL'; throw error;
         }
         insert.run(report.id, report.stationId, report.routeId, targetType, title, category, detail,
-          report.unitReference, report.locationReference, report.photoMime, sanitizedPhoto, publicationConsent ? 1 : 0, report.createdAt);
+          report.unitReference, report.locationReference, report.photoMime, sanitizedPhoto, publicationConsent ? 1 : 0, report.createdAt, key, submissionHash);
         db.exec('COMMIT');
       } catch (error) { db.exec('ROLLBACK'); throw error; }
       return report;

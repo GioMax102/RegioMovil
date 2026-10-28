@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { JSDOM } from 'jsdom';
 import React from 'react';
+import 'fake-indexeddb/auto';
 import type { MobilityJourney, MobilityNetwork, MobilityStep } from '../src/mobility/types';
 
 const styles = registerHooks({
@@ -113,6 +114,10 @@ const { act, cleanup, fireEvent, render, screen, waitFor } = await import('@test
 const { createRoot } = await import('react-dom/client');
 const { flushSync } = await import('react-dom');
 const ActiveJourney = (await import('../src/mobility/ActiveJourney')).default;
+const ReportEntry = (await import('../src/components/ReportEntry')).default;
+const { saveGuidanceCheckpoint } = await import('../src/mobility/guidanceCheckpoint');
+const { readReportDraft, clearReportDraft, saveReportDraft, newReportDraftId, REPORT_DRAFT_TTL } =
+  await import('../src/reportDraft');
 const walk = {
   mode: 'walk',
   lineId: 'walk',
@@ -157,7 +162,9 @@ const network = {
   assumptions: [],
 } as MobilityNetwork;
 let finished = 0;
-beforeEach(() => {
+beforeEach(async () => {
+  const draft = await readReportDraft();
+  if (draft) await clearReportDraft(draft.draftId);
   localStorage.clear();
   watches.length = 0;
   cleared.length = 0;
@@ -639,4 +646,205 @@ test('transfer photos and shared station bookmarks preserve a paused guide, its 
   );
   assert.match(screen.getByText(/Paso 2 de/).textContent!, /Paso 2 de/);
   assert.equal(watches.length, 1);
+});
+
+test('a contextual observation pauses an active guide and returns to the same step without restarting GPS', async () => {
+  const { within } = await import('@testing-library/react');
+  const guideJourney: MobilityJourney = {
+    ...journey,
+    title: 'Una prueba',
+    durationMinutes: 20,
+    walkingMinutes: 3,
+    walkingMeters: 200,
+    transfers: 0,
+    occupancy: 20,
+    etaRange: [18, 22],
+    score: 20,
+    source: 'simulation',
+    accessibility: 'unknown',
+    steps: [
+      walk,
+      { ...ride, toId: 'rail:last', to: 'Universidad', stopIds: ['station', 'rail:last'] },
+    ],
+  };
+  const guideNetwork: MobilityNetwork = {
+    ...network,
+    stops: [
+      {
+        id: 'station',
+        stationId: 'talleres',
+        name: 'Talleres',
+        lng: -100.368,
+        lat: 25.75,
+        mode: 'metro',
+        routeIds: ['L1'],
+        sourceIds: [],
+        official: true,
+      },
+      {
+        id: 'rail:last',
+        stationId: 'universidad',
+        name: 'Universidad',
+        lng: -100.36,
+        lat: 25.74,
+        mode: 'metro',
+        routeIds: ['L1'],
+        sourceIds: [],
+        official: true,
+      },
+    ],
+  };
+  render(
+    <ActiveJourney
+      journey={guideJourney}
+      network={guideNetwork}
+      autoStart
+      onFinish={() => finished++}
+    />,
+  );
+  await waitFor(() => assert.equal(watches.length, 1));
+  fireEvent.click(screen.getByRole('button', { name: 'Ya llegué a Talleres' }));
+  assert.ok(screen.getByText(/Paso 2 de 2/));
+  const map = document.querySelector('.location-map-canvas');
+  fireEvent.click(screen.getByRole('button', { name: 'Reportar algo en este tramo' }));
+  const title = await screen.findByRole('textbox', { name: /^Título/ });
+  await waitFor(() => assert.deepEqual(cleared, [1]));
+  const report = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
+  const station = within(report).getByRole('combobox', { name: /^Estación de Metro/ });
+  assert.equal(
+    (station as HTMLSelectElement).value,
+    '',
+    'The place must be confirmed, not inferred from the guide.',
+  );
+  fireEvent.change(station, { target: { value: 'universidad' } });
+  fireEvent.change(title, { target: { value: 'Banca dañada' } });
+  fireEvent.change(within(report).getByRole('textbox', { name: /^Cuéntanos un poco/ }), {
+    target: { value: 'Una banca dañada en el andén.' },
+  });
+  fireEvent.click(within(report).getByRole('button', { name: 'Cerrar ventana' }));
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
+  assert.ok(screen.getByText(/Paso 2 de 2/));
+  assert.ok(screen.getByText('En pausa'));
+  assert.ok(
+    document.querySelector('.location-map-canvas') === map,
+    'Opening a report never remounts the guidance map.',
+  );
+  assert.equal(watches.length, 1, 'Closing an observation does not resume location.');
+  assert.equal(finished, 0);
+});
+
+test('recovering a report on a later guide step keeps location and speech paused', async () => {
+  render(
+    <ActiveJourney
+      journey={journey}
+      network={network}
+      autoStart
+      initialStepIndex={1}
+      initialOpenReport
+      onFinish={() => finished++}
+    />,
+  );
+  await screen.findByRole('textbox', { name: /^Título/ });
+  assert.ok(screen.getByText(/Paso 2 de 2/));
+  assert.equal(watches.length, 0);
+  assert.equal(spoken.length, 0);
+  assert.ok(screen.getByRole('heading', { name: 'Viaja hasta Destino' }));
+});
+
+async function prepareRecovery(stepIndex = 1, draftStepIndex = stepIndex) {
+  const completeJourney: MobilityJourney = {
+    ...journey,
+    title: 'Un trayecto para recuperar',
+    durationMinutes: 20,
+    walkingMinutes: 3,
+    walkingMeters: 200,
+    transfers: 0,
+    occupancy: 20,
+    etaRange: [18, 22],
+    score: 20,
+    source: 'simulation',
+    accessibility: 'unknown',
+  };
+  saveGuidanceCheckpoint(completeJourney, network, stepIndex);
+  await saveReportDraft({
+    version: 1,
+    draftId: newReportDraftId(),
+    expiresAt: Date.now() + REPORT_DRAFT_TTL,
+    context: {
+      journeyId: journey.id,
+      stepIndex: draftStepIndex,
+      source: 'journey',
+      returnTo: 'guidance',
+    },
+    targetType: 'station',
+    stationId: 'universidad',
+    routeId: '',
+    title: 'Una banca dañada',
+    detail: 'La banca tiene un asiento roto en el andén.',
+    category: 'infrastructure',
+    unitReference: '',
+    locationReference: '',
+    publicationConsent: false,
+    photo: '',
+  });
+}
+
+test('recovered report entry closes and sends back into the same paused guide step', async () => {
+  const { within } = await import('@testing-library/react');
+  await prepareRecovery();
+  const realFetch = globalThis.fetch;
+  const sent: Record<string, unknown>[] = [];
+  globalThis.fetch = async (_input, init) => {
+    assert.equal(init?.method, 'POST');
+    sent.push(JSON.parse(String(init.body)));
+    return Response.json({ report: { id: 'test-report', status: 'pending' } }, { status: 201 });
+  };
+  try {
+    render(<ReportEntry onClose={() => finished++} onSent={() => finished++} />);
+    const title = await screen.findByRole('textbox', { name: /^Título/ });
+    assert.equal((title as HTMLInputElement).value, 'Una banca dañada');
+    assert.ok(screen.getByText(/Paso 2 de 2/));
+    assert.equal(watches.length, 0);
+    assert.equal(spoken.length, 0);
+    const report = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
+    fireEvent.click(within(report).getByRole('button', { name: 'Cerrar ventana' }));
+    await waitFor(() =>
+      assert.ok(!screen.queryByRole('dialog', { name: 'Tu experiencia cuenta' })),
+    );
+    assert.ok(screen.getByRole('dialog', { name: 'Sigue tu ruta' }));
+    assert.ok(screen.getByText('En pausa'));
+    assert.ok(screen.getByRole('heading', { name: 'Viaja hasta Destino' }));
+    assert.equal(finished, 0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reportar algo en este tramo' }));
+    await screen.findByRole('textbox', { name: /^Título/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte al piloto' }));
+    await waitFor(() =>
+      assert.ok(!screen.queryByRole('dialog', { name: 'Tu experiencia cuenta' })),
+    );
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].stationId, 'universidad');
+    assert.ok(screen.getByText(/Tu observación quedó pendiente de revisión/));
+    assert.ok(screen.getByText(/Paso 2 de 2/));
+    assert.ok(screen.getByText('En pausa'));
+    assert.equal(watches.length, 0);
+    assert.equal(spoken.length, 0);
+    assert.equal(finished, 0);
+    assert.equal(await readReportDraft(), null);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('a checkpoint for another step recovers the draft without inventing a guide return', async () => {
+  await prepareRecovery(0, 1);
+  render(<ReportEntry onClose={() => finished++} onSent={() => finished++} />);
+  // Standalone entry asks before importing a draft from a journey; the text remains recoverable.
+  await screen.findByRole('button', { name: 'Retomar borrador' });
+  assert.ok(!screen.queryByRole('dialog', { name: 'Sigue tu ruta' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Retomar borrador' }));
+  const title = await screen.findByRole('textbox', { name: /^Título/ });
+  assert.equal((title as HTMLInputElement).value, 'Una banca dañada');
+  assert.equal(watches.length, 0);
+  assert.equal(spoken.length, 0);
 });

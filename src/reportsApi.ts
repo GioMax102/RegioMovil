@@ -4,6 +4,7 @@ const apiBase = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
 export type ReportCategory =
   'infrastructure' | 'accessibility' | 'climate' | 'crowding' | 'condition';
 export type ReportPayload = {
+  draftId?: string;
   stationId?: string;
   routeId?: string;
   category: ReportCategory;
@@ -17,8 +18,9 @@ export type ReportPayload = {
 };
 
 export async function sendReport(report: ReportPayload): Promise<void> {
-  const uncertainReceipt =
-    'No pudimos confirmar la recepción del reporte. Puede haberse guardado aunque la respuesta no haya llegado. Tu texto sigue aquí; evita reenviarlo de inmediato para no duplicarlo.';
+  const uncertainReceipt = report.draftId
+    ? 'No pudimos confirmar la recepción del reporte. Puede haberse guardado aunque la respuesta no haya llegado. Tu borrador sigue aquí; puedes reintentar este mismo envío sin duplicarlo.'
+    : 'No pudimos confirmar la recepción del reporte. Puede haberse guardado aunque la respuesta no haya llegado. Tu texto sigue aquí; evita reenviarlo de inmediato para no duplicarlo.';
   let result: { ok: boolean; status: number; payload: { error?: { message?: string } } | null };
   try {
     result = await withRequestTimeout(async (signal) => {

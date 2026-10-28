@@ -1,16 +1,16 @@
 @font-face {
   font-family: 'Inter Variable';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 300 750;
   font-display: swap;
-  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2');
+  src: url('./assets/fonts/inter-latin-300-750.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Montserrat Variable';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 300 750;
   font-display: swap;
-  src: url('@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2')
+  src: url('./assets/fonts/montserrat-latin-300-750.woff2')
     format('woff2');
 }
 :root {

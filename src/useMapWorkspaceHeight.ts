@@ -1,7 +1,7 @@
 import { useLayoutEffect, type RefObject } from 'react';
 
 /** Fits a map below its actual header/tabs, including a resized virtual keyboard viewport. */
-export default function useMapWorkspaceHeight(ref: RefObject<HTMLElement | null>) {
+export default function useMapWorkspaceHeight(ref: RefObject<HTMLElement | null>, fullScreen = false) {
   useLayoutEffect(() => {
     const workspace = ref.current;
     if (!workspace) return;
@@ -12,20 +12,25 @@ export default function useMapWorkspaceHeight(ref: RefObject<HTMLElement | null>
     let lastHeight = -1;
     const previousHeight = workspace.style.getPropertyValue('--map-workspace-height');
     const previousKeyboard = workspace.dataset.keyboard;
+    const previousViewport = ['--map-workspace-top', '--map-workspace-left', '--map-workspace-width']
+      .map((name) => [name, workspace.style.getPropertyValue(name)] as const);
 
     const measure = () => {
       frame = 0;
       const height = viewport?.height || window.innerHeight;
       const top = viewport?.offsetTop || 0;
       const bottom = top + height;
-      const start = Math.max(top, workspace.getBoundingClientRect().top);
+      const start = fullScreen ? top : Math.max(top, workspace.getBoundingClientRect().top);
       const nav = navigation?.getBoundingClientRect();
       // A fixed navigation bar can stay below the visual viewport while the keyboard is open.
       const obstruction =
-        nav && nav.height > 0 && nav.top < bottom && nav.bottom > start
+        !fullScreen && nav && nav.height > 0 && nav.top < bottom && nav.bottom > start
           ? Math.max(0, Math.min(bottom, nav.bottom) - Math.max(start, nav.top))
           : 0;
       const available = Math.max(0, bottom - start - obstruction);
+      workspace.style.setProperty('--map-workspace-top', `${top}px`);
+      workspace.style.setProperty('--map-workspace-left', `${viewport?.offsetLeft || 0}px`);
+      workspace.style.setProperty('--map-workspace-width', `${viewport?.width || window.innerWidth}px`);
       if (Math.abs(available - lastHeight) > 0.5) {
         workspace.style.setProperty('--map-workspace-height', `${available}px`);
         lastHeight = available;
@@ -73,8 +78,12 @@ export default function useMapWorkspaceHeight(ref: RefObject<HTMLElement | null>
       document.removeEventListener('focusout', schedule);
       if (previousHeight) workspace.style.setProperty('--map-workspace-height', previousHeight);
       else workspace.style.removeProperty('--map-workspace-height');
+      for (const [name, value] of previousViewport) {
+        if (value) workspace.style.setProperty(name, value);
+        else workspace.style.removeProperty(name);
+      }
       if (previousKeyboard === undefined) delete workspace.dataset.keyboard;
       else workspace.dataset.keyboard = previousKeyboard;
     };
-  }, [ref]);
+  }, [ref, fullScreen]);
 }

@@ -1,11 +1,11 @@
 # Plan de desarrollo y continuidad · mapas, trayectos y comunidad
 
 Fecha: 27 de octubre de 2026. Rama de continuidad: `feature/queja`.
-Base inspeccionada: `82b455d`. Estado de esta entrega: **planificación; cambios de producto pendientes**.
+Base inspeccionada: `82b455d`. **Actualización del 28 de octubre:** T1–T4 implementados y en validación; T5 amplía a 191/209 buses, con 18 pendientes. Leer [entrega y límites de verificación](ENTREGA_PRODUCTO_2026-10-28.md). Las anotaciones no se consideran cerradas físicamente por pasar pruebas DOM.
 
 ## 1. Instrucción del usuario y alcance
 
-En esta interacción se documentan las nueve anotaciones de la revisión en `http://localhost:4173/`, se evalúan la operación social de reportes y un sistema aledaño de visión computacional. La implementación comienza en la siguiente interacción. No confundir recomendaciones de este documento con funcionalidades entregadas.
+La interacción del 27 de octubre documentó las nueve anotaciones de la revisión en `http://localhost:4173/` y evaluó la operación social de reportes y un sistema aledaño de visión computacional. La implementación posterior y su evidencia están en la entrega del 28 de octubre. No confundir recomendaciones de administración/visión con funcionalidades entregadas.
 
 La referencia anterior sigue siendo [memoria de quejas y cobertura](MEMORIA_QUEJAS_COBERTURA_2026-10-27.md). Este documento manda sobre ella para los nuevos pendientes, sin invalidar su historial. No volver a crear la rama desde `main`; conservar la integración de `fixes`. Commit y push normales están autorizados por el usuario. Un push no instala un APK ni despliega la API.
 
@@ -148,11 +148,11 @@ No iniciar otro servidor en el mismo puerto sin revisar si ya está activo. ADB 
 
 | Trabajo | Estado al crear este plan | Bloqueo / siguiente acción |
 | --- | --- | --- |
-| T1 | Pendiente | Reproducir cancelación Archivos en Xiaomi; diseñar borrador recuperable antes de modificar cámara. |
-| T2 | Pendiente | Contrato de contexto y coordinación de capas de guía/formulario; después nueva tarjeta. |
-| T3 | Pendiente | Reemplazar ampliación en diálogo y definir reglas de puntos por escala. |
-| T4 | Pendiente | Revisar presentación actual de etapas y franja compacta accesible. |
-| T5 | Pendiente | Nueva consulta de las 24 variantes; no hay fuentes nuevas verificadas en esta interacción. |
+| T1 | Implementado; prueba física pendiente | Cancelación aislada, IndexedDB 24 h, cámara/galería/archivos e idempotencia. Verificar Xiaomi real. |
+| T2 | Implementado; revisión física/visual pendiente | Formulario contextual y retorno pausado en guía nueva/guardada; checkpoint probado. |
+| T3 | Implementado; revisión visual/gestos pendiente | Mismo mapa, pantalla completa, puntos por zoom; pruebas de interacción pasan. |
+| T4 | Implementado; revisión visual pendiente | Franjas/etapas compactas sin cambios al cálculo. |
+| T5 | Parcial: 191/209 buses | Seis geometrías nuevas oficiales; tarjeta dentro de información. Seguir [18 fuentes restantes](auditoria-pendientes-2026-10-28.md). |
 | T6 | Propuesta posterior | No hay panel web de administración ni autenticación implementados. |
 | T7 | Evaluación posterior | No hay modelo entrenado, cámaras conectadas ni acuerdos con operadores. |
 
@@ -160,4 +160,4 @@ Actualizar tras cada interacción: fecha, commit, comentarios cerrados, pruebas 
 
 ### Mensaje listo para continuar
 
-> Continúa en la rama vigente con docs/PLAN_PRODUCTO_COMUNIDAD_2026-10-27.md y docs/MODELO_COMUNIDAD_Y_VISION_2026-10-27.md. Revisa git y el estado vivo antes de editar. Empieza por T1: reproducir pérdida de formulario al cancelar Archivos, conservar borrador y ofrecer cámara/galería/archivos. Después integra reportes contextuales en ambas guías (T2), mapa de pantalla completa (T3), etapas claras (T4) y auditoría de 24 rutas (T5). Preserva comentarios C1–C9, moderación/consentimiento y mapas guardados offline. No implementes aún el panel admin ni visión salvo nueva instrucción. Actualiza evidencia, memoria y commit/push al cerrar.
+> Continúa en la rama vigente. Lee docs/ENTREGA_PRODUCTO_2026-10-28.md, este plan y el estado de git. T1–T4 ya están implementados: no rehacerlos. Empieza por validar y corregir en Xiaomi cámara/galería/archivos y retorno a la guía; después revisión visual de mapa completo/densidad y etapas. CUA estuvo bloqueado por política de URL y no hubo celular conectado. Continúa las 18 rutas pendientes desde docs/auditoria-pendientes-2026-10-28.md; cobertura actual 191/209 buses. Conserva moderación, consentimiento, idempotencia y offline. No construir panel admin/visión todavía. Actualiza pruebas/evidencia/memoria y commit/push al cerrar.
