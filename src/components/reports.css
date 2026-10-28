@@ -1,10 +1,10 @@
 .report-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 .report-required {
-  color: #b42318;
+  color: var(--app-danger-text);
   font-weight: 700;
 }
 .report-required-note,
@@ -13,22 +13,68 @@
   line-height: 1.5;
 }
 .report-required-note {
-  margin-block: 0 16px;
+  margin-block: 0 14px;
+  color: var(--muted);
+}
+.report-draft-status {
+  margin-block: 12px 4px;
+  color: var(--muted);
 }
 .report-photo-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .report-photo-actions button {
+  display: flex;
+  flex-direction: column;
   min-height: 44px;
-  gap: 8px;
-  flex: 1 1 130px;
+  gap: 6px;
+  padding: 10px 6px;
+  align-items: center;
   justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--dark);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+.report-photo-actions button > svg {
+  flex-shrink: 0;
+  color: var(--green);
+}
+.report-photo-actions button:not(:disabled):hover {
+  border-color: var(--green);
+  background: var(--soft);
 }
 .report-draft-choice {
   display: grid;
   gap: 12px;
+}
+.report-discard-confirmation {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--dark);
+  line-height: 1.5;
+}
+.report-discard-confirmation p {
+  font-size: 0.85rem;
+}
+.report-discard-confirmation > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.report-discard-confirmation button {
+  min-height: 44px;
+}
+.report-discard-confirmation .text-button {
+  color: var(--app-danger-text);
 }
 .high-contrast .report-required {
   color: var(--dark);
@@ -36,25 +82,26 @@
 .report-form label {
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-weight: 550;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--dark);
+  font-weight: 600;
 }
-.report-form select,
-.report-form textarea {
+.report-form label > select,
+.report-form label > textarea {
   width: 100%;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
   padding: 12px;
   font-weight: 400;
   color: var(--dark);
-  font-size: 0.81rem;
+  font-size: max(1rem, 16px);
   resize: vertical;
 }
 .report-form textarea {
-  line-height: 1.8;
+  line-height: 1.55;
 }
 .report-form textarea::placeholder {
   color: var(--muted);
@@ -71,13 +118,33 @@
 
 .report-form input:not([type='checkbox']) {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
   padding: 10px 12px;
   color: var(--dark);
   font: inherit;
+  font-size: max(1rem, 16px);
+  font-weight: 400;
+}
+.report-form label > small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.report-form :is(input, select, textarea)[aria-invalid='true'] {
+  border-color: var(--app-danger-text);
+}
+.report-form .report-field-error {
+  color: var(--app-danger-text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.report-form .text-button {
+  min-height: 44px;
 }
 .report-form input[type='file'] {
   padding: 8px;
@@ -87,16 +154,25 @@
   flex-direction: row;
   align-items: flex-start;
   gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-weight: 400;
   line-height: 1.5;
+  cursor: pointer;
 }
 .report-form .report-consent > input {
   margin: 3px 0 0;
   flex-shrink: 0;
   width: 18px;
   height: 18px;
+  accent-color: var(--app-primary);
 }
 .report-target-summary {
+  margin: 0;
   padding: 12px;
+  border-inline-start: 3px solid var(--green);
   border-radius: 10px;
   background: var(--soft);
   line-height: 1.5;
@@ -104,6 +180,13 @@
 .report-photo-field {
   display: grid;
   gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.report-photo-field > strong {
+  font-size: 0.85rem;
 }
 .report-photo-field > small {
   color: var(--muted);

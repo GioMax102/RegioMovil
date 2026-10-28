@@ -17,11 +17,25 @@ export type ReportPayload = {
   publicationConsent: boolean;
 };
 
+export class ReportSubmissionError extends Error {
+  constructor(
+    message: string,
+    readonly receipt: 'uncertain' | 'rejected' | 'conflict',
+  ) {
+    super(message);
+    this.name = 'ReportSubmissionError';
+  }
+}
+
 export async function sendReport(report: ReportPayload): Promise<void> {
   const uncertainReceipt = report.draftId
     ? 'No pudimos confirmar la recepción del reporte. Puede haberse guardado aunque la respuesta no haya llegado. Tu borrador sigue aquí; puedes reintentar este mismo envío sin duplicarlo.'
     : 'No pudimos confirmar la recepción del reporte. Puede haberse guardado aunque la respuesta no haya llegado. Tu texto sigue aquí; evita reenviarlo de inmediato para no duplicarlo.';
-  let result: { ok: boolean; status: number; payload: { error?: { message?: string } } | null };
+  let result: {
+    ok: boolean;
+    status: number;
+    payload: { error?: { message?: string; code?: string } } | null;
+  };
   try {
     result = await withRequestTimeout(async (signal) => {
       const response = await fetch(`${apiBase}/api/reports`, {
@@ -37,12 +51,14 @@ export async function sendReport(report: ReportPayload): Promise<void> {
       };
     }, 15000);
   } catch {
-    throw new Error(uncertainReceipt);
+    throw new ReportSubmissionError(uncertainReceipt, 'uncertain');
   }
   if (!result.ok) {
-    if (result.status >= 500) throw new Error(uncertainReceipt);
-    throw new Error(
+    if (result.status >= 500 || result.status === 408 || !result.payload?.error?.code)
+      throw new ReportSubmissionError(uncertainReceipt, 'uncertain');
+    throw new ReportSubmissionError(
       result.payload?.error?.message || 'No pudimos enviar el reporte. Intenta de nuevo.',
+      result.status === 409 ? 'conflict' : 'rejected',
     );
   }
 }

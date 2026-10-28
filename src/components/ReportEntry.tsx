@@ -14,15 +14,21 @@ export default function ReportEntry(props: ReportDialogProps) {
   };
   const [ready, setReady] = useState(false);
   const [checkpoint, setCheckpoint] = useState<GuidanceCheckpoint | null>(null);
+  const [recovery, setRecovery] = useState(false);
+  const [missingGuide, setMissingGuide] = useState(false);
   useEffect(() => {
     let active = true;
     void (async () => {
       if (!props.initialRouteId && !props.initialStationId) {
         const draft = await readReportDraft();
+        if (active && draft) setRecovery(true);
         if (draft?.context) {
           const { readGuidanceCheckpoint } = await import('../mobility/guidanceCheckpoint');
           const saved = readGuidanceCheckpoint(draft.context.journeyId);
-          if (active && saved?.stepIndex === draft.context.stepIndex) setCheckpoint(saved);
+          if (active) {
+            if (saved?.stepIndex === draft.context.stepIndex) setCheckpoint(saved);
+            else setMissingGuide(true);
+          }
         }
       }
     })()
@@ -52,5 +58,5 @@ export default function ReportEntry(props: ReportDialogProps) {
         <RecoveredGuidance checkpoint={checkpoint} onClose={close} />
       </Suspense>
     );
-  return <ReportDialog {...props} />;
+  return <ReportDialog {...props} recoverDraft={recovery} recoveredWithoutGuide={missingGuide} />;
 }

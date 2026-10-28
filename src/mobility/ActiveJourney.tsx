@@ -10,6 +10,7 @@ import {
   VolumeX,
   SignalLow,
   MessageSquarePlus,
+  ArrowLeft,
 } from 'lucide-react';
 import LocationMap from './LocationMap';
 import TransferStationActions from './TransferStationActions';
@@ -232,6 +233,24 @@ export default function ActiveJourney({
     focusAfterConfirmation.current = true;
     setStarted(true);
     setState((previous) => advanceGuidance(route, previous));
+  }
+  function previousStep() {
+    if (!route.legs.length || (!state.completed && state.stepIndex === 0)) return;
+    // Correct an accidental confirmation without bringing an old GPS fix or
+    // arrival evidence into the restored leg. Location and voice are opt-in again.
+    setRunning(false);
+    setVoice(false);
+    setStarted(true);
+    setPauseReason('user');
+    setLocationError('');
+    setReportFeedback('');
+    if (speechAvailable) window.speechSynthesis.cancel();
+    clearGuidanceCheckpoint(journey.id);
+    focusAfterConfirmation.current = true;
+    setState((previous) => ({
+      ...initialGuidanceState(),
+      stepIndex: previous.completed ? previous.stepIndex : Math.max(0, previous.stepIndex - 1),
+    }));
   }
   const status = state.completed
     ? 'Trayecto completado'
@@ -458,16 +477,26 @@ export default function ActiveJourney({
               {speechAvailable ? 'Voz' : 'Sin voz'}
             </button>
           </div>
-          <p className="active-journey-manual-hint">Confirma sólo cuando estés en esa parada.</p>
+          <div className="active-journey-step-help">
+            <p className="active-journey-manual-hint">Confirma sólo cuando estés en esa parada.</p>
+            {state.stepIndex > 0 && (
+              <button type="button" className="active-journey-previous" onClick={previousStep}>
+                <ArrowLeft size={16} aria-hidden="true" /> Volver al paso anterior
+              </button>
+            )}
+          </div>
         </div>
       ) : (
-        <button
-          type="button"
-          className="active-journey-manual active-journey-close"
-          onClick={finish}
-        >
-          <Check size={20} aria-hidden="true" /> Cerrar guía
-        </button>
+        <div className="active-journey-controls active-journey-close">
+          <button type="button" className="active-journey-manual" onClick={finish}>
+            <Check size={20} aria-hidden="true" /> Cerrar guía
+          </button>
+          {route.legs.length > 0 && (
+            <button type="button" className="active-journey-previous" onClick={previousStep}>
+              <ArrowLeft size={16} aria-hidden="true" /> Volver al último paso
+            </button>
+          )}
+        </div>
       )}
       {!state.completed && (
         <button

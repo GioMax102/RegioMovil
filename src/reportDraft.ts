@@ -128,15 +128,40 @@ export function saveReportDraft(draft: ReportDraft): Promise<void> {
     await transaction('readwrite', (store) => store.put(draft, 'current'));
   });
 }
-export function clearReportDraft(draftId: string, expected?: ReportDraft): Promise<void> {
+function changeCurrentDraft(
+  draftId: string,
+  expected?: ReportDraft,
+  replacement?: ReportDraft,
+): Promise<void> {
   return serialized(async () => {
-    const current = await transaction('readonly', (store) => store.get('current'));
-    if (
-      current?.draftId === draftId &&
-      (!expected || JSON.stringify(current) === JSON.stringify(expected))
-    )
-      await transaction('readwrite', (store) => store.delete('current'));
+    const db = await openDatabase();
+    await new Promise<void>((resolve, reject) => {
+      // Compare and change in one transaction: another tab cannot replace the
+      // current draft between our check and the delete/update.
+      const tx = db.transaction('drafts', 'readwrite');
+      const store = tx.objectStore('drafts');
+      const request = store.get('current');
+      request.onsuccess = () => {
+        const current = request.result;
+        if (
+          current?.draftId === draftId &&
+          (!expected || JSON.stringify(current) === JSON.stringify(expected))
+        ) {
+          if (replacement) store.put(replacement, 'current');
+          else store.delete('current');
+        }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = tx.onabort = () =>
+        reject(tx.error || new Error('No pudimos actualizar el borrador.'));
+    });
   });
+}
+export function clearReportDraft(draftId: string, expected?: ReportDraft): Promise<void> {
+  return changeCurrentDraft(draftId, expected);
+}
+export function unlockRejectedReportDraft(expected: ReportDraft): Promise<void> {
+  return changeCurrentDraft(expected.draftId, expected, { ...expected, attempted: false });
 }
 export function markReportOpen(open: boolean) {
   try {

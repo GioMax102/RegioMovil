@@ -582,6 +582,7 @@ test('a late response from a closed report cannot close or erase a new draft', a
   await screen.findByRole('textbox', { name: 'Título' });
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   await user.click(within(dialog).getByRole('button', { name: 'Descartar borrador' }));
+  await user.click(screen.getByRole('button', { name: 'Descartar definitivamente' }));
   await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
   await screen.findByRole('textbox', { name: 'Título' });

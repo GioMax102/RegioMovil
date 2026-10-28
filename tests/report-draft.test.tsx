@@ -8,6 +8,7 @@ import {
   clearReportDraft,
   REPORT_DRAFT_TTL,
   validReportDraft,
+  unlockRejectedReportDraft,
   type ReportDraft,
 } from '../src/reportDraft';
 
@@ -29,6 +30,23 @@ const draft = (): ReportDraft => ({
 afterEach(async () => {
   const saved = await readReportDraft();
   if (saved) await clearReportDraft(saved.draftId);
+});
+
+test('a definitive rejection unlocks only its exact draft without losing evidence', async () => {
+  const value = { ...draft(), attempted: true, photo: 'data:image/jpeg;base64,YWJj' };
+  await saveReportDraft(value);
+  await unlockRejectedReportDraft(value);
+  assert.deepEqual(await readReportDraft(), { ...value, attempted: false });
+});
+
+test('a rejection from an older form cannot overwrite the draft currently open elsewhere', async () => {
+  const old = { ...draft(), attempted: true };
+  const newer = { ...draft(), title: 'Otro reporte' };
+  await saveReportDraft(old);
+  await saveReportDraft(newer);
+  await unlockRejectedReportDraft(old);
+  await clearReportDraft(old.draftId, old);
+  assert.deepEqual(await readReportDraft(), newer);
 });
 
 test('draft recovery preserves exact target, processed evidence and context without original files', async () => {

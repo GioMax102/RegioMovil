@@ -1,6 +1,8 @@
 # Plan de desarrollo y continuidad · mapas, trayectos y comunidad
 
 Fecha: 27 de octubre de 2026. Rama de continuidad: `feature/queja`.
+
+Última revisión: [mejoras de formulario y guía del 28 de octubre](MEJORAS_USABILIDAD_2026-10-28.md). No repetir las correcciones ya implementadas; continuar con la validación física/visual y las 18 fuentes pendientes.
 Base inspeccionada: `82b455d`. **Actualización del 28 de octubre:** T1–T4 implementados y en validación; T5 amplía a 191/209 buses, con 18 pendientes. Leer [entrega y límites de verificación](ENTREGA_PRODUCTO_2026-10-28.md). Las anotaciones no se consideran cerradas físicamente por pasar pruebas DOM.
 
 ## 1. Instrucción del usuario y alcance

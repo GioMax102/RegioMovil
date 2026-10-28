@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { ArrowRight, RefreshCw, Trash2, Camera, ImagePlus, FolderOpen } from 'lucide-react';
 import { loadTransitCatalog, network } from '../api';
-import { sendReport, type ReportCategory } from '../reportsApi';
+import { ReportSubmissionError, sendReport, type ReportCategory } from '../reportsApi';
 import { prepareReportPhoto } from '../reportPhoto';
 import {
   clearReportDraft,
@@ -9,6 +9,7 @@ import {
   newReportDraftId,
   readReportDraft,
   saveReportDraft,
+  unlockRejectedReportDraft,
   REPORT_DRAFT_TTL,
   type ReportContext,
   type ReportDraft,
@@ -31,6 +32,8 @@ export type ReportDialogProps = {
   initialLocationReference?: string;
   initialStationIds?: string[];
   context?: ReportContext;
+  recoverDraft?: boolean;
+  recoveredWithoutGuide?: boolean;
   onClose: () => void;
   onSent: () => void;
 };
@@ -48,6 +51,8 @@ export default function ReportDialog({
   initialLocationReference,
   initialStationIds,
   context,
+  recoverDraft = false,
+  recoveredWithoutGuide = false,
   onClose,
   onSent,
 }: ReportDialogProps) {
@@ -89,6 +94,53 @@ export default function ReportDialog({
   const completed = useRef(false);
   const closing = useRef(false);
   const [attempted, setAttempted] = useState(false);
+  const [discardChoice, setDiscardChoice] = useState<'current' | 'previous' | 'leave' | null>(null);
+  const [discardBusy, setDiscardBusy] = useState(false);
+  const keepButton = useRef<HTMLButtonElement>(null);
+  const discardTrigger = useRef<HTMLElement | null>(null);
+  const discardDescriptionId = useId();
+  useEffect(() => {
+    if (discardChoice) keepButton.current?.focus();
+  }, [discardChoice]);
+  function keepDraft() {
+    setDiscardChoice(null);
+    discardTrigger.current?.focus({ preventScroll: true });
+  }
+  async function discardDraft() {
+    if (closing.current || !discardChoice) return;
+    if (discardChoice === 'leave') {
+      closing.current = true;
+      completed.current = true;
+      markReportOpen(false);
+      onClose();
+      return;
+    }
+    const previous = discardChoice === 'previous';
+    const id = previous ? savedElsewhere?.draftId : draftId;
+    if (!id) return;
+    closing.current = true;
+    setDiscardBusy(true);
+    if (!previous) completed.current = true;
+    try {
+      await clearReportDraft(id);
+      if (mounted.current) {
+        if (previous) {
+          setSavedElsewhere(null);
+          setDiscardChoice(null);
+          closing.current = false;
+        } else {
+          markReportOpen(false);
+          onClose();
+        }
+      }
+    } catch {
+      closing.current = false;
+      completed.current = false;
+      if (mounted.current) setStorageStatus('No pudimos descartar el borrador. Intenta de nuevo.');
+    } finally {
+      if (mounted.current) setDiscardBusy(false);
+    }
+  }
   useEffect(() => {
     const inputs = [cameraInput.current, galleryInput.current, fileInput.current];
     const cancelled = (event: Event) => {
@@ -130,7 +182,7 @@ export default function ReportDialog({
           const sameTarget = initialRouteId
             ? draft.routeId === initialRouteId
             : !initialStationId || draft.stationId === initialStationId;
-          if (sameJourney && sameTarget) restore(draft);
+          if (recoverDraft || (sameJourney && sameTarget)) restore(draft);
           else setSavedElsewhere(draft);
         }
       })
@@ -327,22 +379,36 @@ export default function ReportDialog({
   }
   async function close() {
     if (pickerOpen.current || closing.current) return;
+    if (discardChoice) {
+      keepDraft();
+      return;
+    }
     closing.current = true;
-    markReportOpen(false);
     if (ready && !savedElsewhere && !completed.current) {
       try {
         await saveReportDraft(draftRef.current!);
       } catch {
-        /* Kept in memory until the caller closes. */
+        closing.current = false;
+        if (mounted.current) {
+          discardTrigger.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setStorageStatus('No pudimos guardar los cambios. El formulario sigue abierto.');
+          setDiscardChoice('leave');
+        }
+        return;
       }
     }
-    if (mounted.current) onClose();
+    if (mounted.current) {
+      markReportOpen(false);
+      onClose();
+    }
   }
   const validTarget = targetType === 'station' ? !!selectedStation : !!selectedRoute;
   const cannotSubmit =
     busy ||
     !ready ||
     picking ||
+    !!discardChoice ||
     !!savedElsewhere ||
     processingPhoto ||
     !!photoError ||
@@ -353,6 +419,7 @@ export default function ReportDialog({
     event.preventDefault();
     if (sending.current || cannotSubmit) return;
     sending.current = true;
+    const previousAttempt = attempted;
     const submittedDraft = { ...draftRef.current!, attempted: true };
     setAttempted(true);
     setError('');
@@ -381,6 +448,17 @@ export default function ReportDialog({
         onSent();
       }
     } catch (cause) {
+      // A first, explicit validation/rate-limit rejection hasn't stored a
+      // report. It must remain editable. Once receipt was uncertain we keep
+      // its immutable payload, even if a later retry is rate-limited.
+      if (
+        cause instanceof ReportSubmissionError &&
+        cause.receipt === 'rejected' &&
+        !previousAttempt
+      ) {
+        await unlockRejectedReportDraft(submittedDraft).catch(() => {});
+        if (mounted.current) setAttempted(false);
+      }
       if (mounted.current)
         setError(
           cause instanceof Error
@@ -393,14 +471,24 @@ export default function ReportDialog({
     }
   }
   return (
-    <Dialog title="Tu experiencia cuenta" onClose={() => void close()} preventDismiss={picking}>
+    <Dialog
+      title="Tu experiencia cuenta"
+      onClose={() => void close()}
+      preventDismiss={picking || discardBusy}
+    >
       <p className="dialog-intro">
         Comparte lo que observaste para mejorar este lugar. Lo recibimos en privado para revisión.
       </p>
+      {recoveredWithoutGuide && (
+        <p className="report-target-summary">
+          Recuperamos tu borrador. La guía anterior ya no está disponible; puedes terminar el
+          reporte aquí.
+        </p>
+      )}
       {!ready ? (
         <p role="status">Recuperando tu borrador…</p>
       ) : savedElsewhere ? (
-        <div className="report-draft-choice">
+        <div className="report-draft-choice" inert={!!discardChoice}>
           <p>Tienes un borrador de otra estación, ruta o trayecto. ¿Quieres retomarlo?</p>
           <button
             className="primary-button"
@@ -415,17 +503,9 @@ export default function ReportDialog({
           <button
             className="text-button"
             type="button"
-            onClick={() => {
-              void clearReportDraft(savedElsewhere.draftId)
-                .then(() => {
-                  if (mounted.current) setSavedElsewhere(null);
-                })
-                .catch(() => {
-                  if (mounted.current)
-                    setStorageStatus(
-                      'No pudimos descartar el borrador anterior. Intenta de nuevo.',
-                    );
-                });
+            onClick={(event) => {
+              discardTrigger.current = event.currentTarget;
+              setDiscardChoice('previous');
             }}
           >
             Descartar anterior y empezar aquí
@@ -442,7 +522,12 @@ export default function ReportDialog({
               otra observación, descarta este borrador y abre uno nuevo.
             </p>
           )}
-          <form className="report-form" onSubmit={submit} aria-busy={busy || processingPhoto}>
+          <form
+            className="report-form"
+            onSubmit={submit}
+            aria-busy={busy || processingPhoto}
+            inert={!!discardChoice}
+          >
             <label>
               <span>
                 ¿Dónde ocurrió?
@@ -795,30 +880,59 @@ export default function ReportDialog({
           <button
             type="button"
             className="text-button"
-            disabled={busy || picking}
-            onClick={() => {
-              if (closing.current) return;
-              completed.current = true;
-              closing.current = true;
-              void clearReportDraft(draftId)
-                .then(() => {
-                  if (mounted.current) {
-                    markReportOpen(false);
-                    onClose();
-                  }
-                })
-                .catch(() => {
-                  closing.current = false;
-                  completed.current = false;
-                  if (mounted.current)
-                    setStorageStatus('No pudimos descartar el borrador. Intenta de nuevo.');
-                });
+            disabled={busy || picking || !!discardChoice}
+            onClick={(event) => {
+              discardTrigger.current = event.currentTarget;
+              setDiscardChoice('current');
             }}
           >
             <Trash2 size={16} />
             Descartar borrador
           </button>
         </>
+      )}
+      {discardChoice && (
+        <div
+          className="report-discard-confirmation"
+          role="alertdialog"
+          aria-modal="true"
+          aria-label={discardChoice === 'leave' ? 'Cerrar sin guardar' : 'Descartar este borrador'}
+          aria-describedby={discardDescriptionId}
+        >
+          <strong>
+            {discardChoice === 'leave'
+              ? 'No pudimos guardar los cambios'
+              : '¿Descartar este borrador?'}
+          </strong>
+          <p id={discardDescriptionId}>
+            {discardChoice === 'leave'
+              ? 'Si cierras, perderás los cambios sin guardar. El borrador guardado anteriormente no se elimina.'
+              : 'Se borrarán el texto y la foto guardados en este dispositivo. Esta acción no retira un reporte que ya se haya enviado.'}
+          </p>
+          <div>
+            <button
+              ref={keepButton}
+              className="primary-button"
+              type="button"
+              disabled={discardBusy}
+              onClick={keepDraft}
+            >
+              {discardChoice === 'leave' ? 'Seguir editando' : 'Conservar borrador'}
+            </button>
+            <button
+              className="text-button"
+              type="button"
+              disabled={discardBusy}
+              onClick={() => void discardDraft()}
+            >
+              {discardBusy
+                ? 'Descartando…'
+                : discardChoice === 'leave'
+                  ? 'Cerrar sin guardar'
+                  : 'Descartar definitivamente'}
+            </button>
+          </div>
+        </div>
       )}
     </Dialog>
   );

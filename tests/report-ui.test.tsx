@@ -83,6 +83,7 @@ let onSent = 0;
 let deferDecode = false;
 let noCanvas = false;
 let loseSubmitResponse = false;
+let submissionResponse: Response | null = null;
 let closedBitmaps: string[] = [];
 const decodes = new Map<string, (bitmap: unknown) => void>();
 const canvasImages = new WeakMap<HTMLCanvasElement, string>();
@@ -135,6 +136,7 @@ beforeEach(async () => {
   deferDecode = false;
   noCanvas = false;
   loseSubmitResponse = false;
+  submissionResponse = null;
   closedBitmaps = [];
   decodes.clear();
   user = userEvent.setup({ document: dom.window.document, delay: null });
@@ -145,6 +147,7 @@ beforeEach(async () => {
     if (url.pathname === '/api/reports' && init?.method === 'POST') {
       sent.push(JSON.parse(String(init.body)));
       if (loseSubmitResponse) throw new TypeError('The response was lost after storage.');
+      if (submissionResponse) return submissionResponse.clone();
       return Response.json({ report: { id: 'created', status: 'pending' } }, { status: 201 });
     }
     return handler(url);
@@ -563,4 +566,114 @@ test('required marks match the selected destination and consent stays optional',
       .required,
     false,
   );
+});
+
+test('an explicit first rejection keeps fields and the same draft editable for correction', async () => {
+  submissionResponse = Response.json(
+    { error: { code: 'INVALID_TITLE', message: 'Corrige el título.' } },
+    { status: 400 },
+  );
+  render(<ReportDialog {...dialogProps()} />);
+  await fillText();
+  await user.click(submitButton());
+  await screen.findByRole('alert');
+  const title = screen.getByRole('textbox', { name: 'Título' }) as HTMLInputElement;
+  assert.equal(title.disabled, false);
+  assert.equal(title.value, 'Falla observada');
+  assert.equal((await persistedDraft())?.attempted, false);
+  await user.clear(title);
+  await user.type(title, 'Banca dañada');
+  submissionResponse = null;
+  await user.click(submitButton());
+  await waitFor(() => assert.equal(onSent, 1));
+  assert.equal(sent[0].draftId, sent[1].draftId);
+  assert.equal(sent[1].title, 'Banca dañada');
+});
+
+test('a rate-limited retry after uncertain receipt keeps the original immutable payload', async () => {
+  loseSubmitResponse = true;
+  render(<ReportDialog {...dialogProps()} />);
+  await fillText();
+  await user.click(submitButton());
+  await screen.findByRole('alert');
+  loseSubmitResponse = false;
+  submissionResponse = Response.json(
+    { error: { code: 'RATE_LIMITED', message: 'Espera antes de reintentar.' } },
+    { status: 429 },
+  );
+  await user.click(submitButton());
+  await screen.findByText('Espera antes de reintentar.');
+  assert.equal(
+    (screen.getByRole('textbox', { name: 'Título' }) as HTMLInputElement).disabled,
+    true,
+  );
+  assert.equal((await persistedDraft())?.attempted, true);
+  assert.deepEqual(sent[0], sent[1]);
+});
+
+test('discarding requires confirmation; keeping or Escape preserves text and processed evidence', async () => {
+  let closes = 0;
+  render(<ReportDialog {...dialogProps()} onClose={() => closes++} />);
+  await fillText();
+  await user.upload(
+    screen.getByLabelText('Elegir archivo'),
+    new dom.window.File(['original'], 'keep.jpg', { type: 'image/jpeg' }),
+  );
+  await screen.findByRole('img', { name: 'Vista previa de la foto adjunta' });
+  const before = await persistedDraft();
+  assert.ok(before?.photo);
+  await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
+  const confirmation = await screen.findByRole('alertdialog', { name: 'Descartar este borrador' });
+  assert.ok(confirmation);
+  assert.ok(document.activeElement === screen.getByRole('button', { name: 'Conservar borrador' }));
+  await user.click(screen.getByRole('button', { name: 'Conservar borrador' }));
+  assert.equal(closes, 0);
+  assert.equal((await persistedDraft())?.photo, before.photo);
+  await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
+  fireEvent(
+    screen.getByRole('dialog'),
+    new dom.window.Event('cancel', { bubbles: true, cancelable: true }),
+  );
+  assert.ok(!screen.queryByRole('alertdialog'));
+  assert.equal(closes, 0);
+  assert.equal((await persistedDraft())?.title, before.title);
+  await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
+  await user.click(screen.getByRole('button', { name: 'Descartar definitivamente' }));
+  await waitFor(() => assert.equal(closes, 1));
+  assert.equal(await persistedDraft(), null);
+});
+
+async function persistedDraft() {
+  let draft: Awaited<ReturnType<typeof readReportDraft>> = null;
+  await act(async () => {
+    draft = await readReportDraft();
+  });
+  return draft;
+}
+
+test('closing with unavailable storage asks before losing edits and permits continuing', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB');
+  Object.defineProperty(globalThis, 'indexedDB', { configurable: true, value: undefined });
+  let closes = 0;
+  try {
+    render(<ReportDialog {...dialogProps()} onClose={() => closes++} />);
+    await fillText();
+    await user.click(screen.getByRole('button', { name: 'Cerrar ventana' }));
+    let warning = await screen.findByRole('alertdialog', { name: 'Cerrar sin guardar' });
+    assert.equal(closes, 0);
+    await user.click(within(warning).getByRole('button', { name: 'Seguir editando' }));
+    assert.equal(
+      (screen.getByRole('textbox', { name: 'Título' }) as HTMLInputElement).value,
+      'Falla observada',
+    );
+    await user.click(screen.getByRole('button', { name: 'Cerrar ventana' }));
+    warning = await screen.findByRole('alertdialog', { name: 'Cerrar sin guardar' });
+    await user.click(within(warning).getByRole('button', { name: 'Cerrar sin guardar' }));
+    assert.equal(closes, 1);
+    assert.equal(sent.length, 0);
+  } finally {
+    cleanup();
+    if (descriptor) Object.defineProperty(globalThis, 'indexedDB', descriptor);
+    else Reflect.deleteProperty(globalThis, 'indexedDB');
+  }
 });

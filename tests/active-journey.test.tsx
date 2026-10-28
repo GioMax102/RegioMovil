@@ -402,6 +402,82 @@ test('manual steps distinguish alighting from a short transfer and can complete 
   assert.equal(finished, 1);
 });
 
+test('an accidental confirmation can return to the previous leg with GPS and voice paused', async () => {
+  mount(true);
+  await waitFor(() => assert.equal(watches.length, 1));
+  assert.equal(screen.queryByRole('button', { name: 'Volver al paso anterior' }), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Avisos por voz' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Ya llegué a Talleres' }));
+  await act(async () =>
+    watches[0].success({
+      coords: {
+        latitude: 25.75,
+        longitude: -100.368,
+        accuracy: 8,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: Date.now(),
+    }),
+  );
+  assert.ok(screen.getByRole('img', { name: /^Tu ubicación,/ }));
+  const spokenBeforeReturn = spoken.length;
+  fireEvent.click(screen.getByRole('button', { name: 'Volver al paso anterior' }));
+  await waitFor(() => assert.deepEqual(cleared, [1]));
+  const instruction = screen.getByRole('heading', { name: 'Camina hasta Talleres' });
+  assert.equal(document.activeElement, instruction);
+  assert.ok(screen.getByText(/Paso 1 de 2/));
+  assert.ok(screen.getByText('En pausa'));
+  assert.equal(screen.getByRole('progressbar').getAttribute('value'), '0');
+  assert.equal(screen.queryByRole('img', { name: /^Tu ubicación,/ }), null);
+  assert.equal(document.querySelector('polyline[data-mode="walk"]') !== null, true);
+  assert.equal(document.querySelector('polyline[data-line="L1"]'), null);
+  assert.equal(
+    screen.getByRole('button', { name: 'Avisos por voz' }).getAttribute('aria-pressed'),
+    'false',
+  );
+  assert.equal(spoken.length, spokenBeforeReturn);
+  assert.equal(watches.length, 1);
+  // A callback queued before unsubscribe cannot move the restored step or reveal a stale fix.
+  await act(async () =>
+    watches[0].success({
+      coords: { latitude: 25.74, longitude: -100.36, accuracy: 8 },
+      timestamp: Date.now(),
+    } as GeolocationPosition),
+  );
+  assert.ok(screen.getByRole('heading', { name: 'Camina hasta Talleres' }));
+  assert.equal(screen.queryByRole('img', { name: /^Tu ubicación,/ }), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Reanudar ubicación' }));
+  await waitFor(() => assert.equal(watches.length, 2));
+  assert.ok(screen.getByText('Buscando GPS'));
+  assert.equal(spoken.length, spokenBeforeReturn, 'Voice stays disabled after correcting a step.');
+  assert.equal(finished, 0);
+});
+
+test('an accidental final confirmation restores the last leg, including a single-step offline journey', () => {
+  render(
+    <ActiveJourney
+      journey={{ ...journey, steps: [ride] }}
+      network={network}
+      onFinish={() => finished++}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Ya bajé en Destino' }));
+  assert.ok(screen.getByRole('heading', { name: 'Llegaste a tu destino' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Volver al último paso' }));
+  const instruction = screen.getByRole('heading', { name: 'Viaja hasta Destino' });
+  assert.equal(document.activeElement, instruction);
+  assert.ok(screen.getByText(/Paso 1 de 1/));
+  assert.ok(screen.getByText('En pausa'));
+  assert.equal(screen.queryByRole('button', { name: 'Cerrar guía' }), null);
+  assert.ok(screen.getByRole('button', { name: 'Ya bajé en Destino' }));
+  assert.equal(watches.length, 0);
+  assert.equal(spoken.length, 0);
+  assert.equal(finished, 0);
+});
+
 test('next-stop guidance only appears with a verified stop order and a usable current GPS fix', async () => {
   render(
     <ActiveJourney
@@ -839,10 +915,9 @@ test('recovered report entry closes and sends back into the same paused guide st
 test('a checkpoint for another step recovers the draft without inventing a guide return', async () => {
   await prepareRecovery(0, 1);
   render(<ReportEntry onClose={() => finished++} onSent={() => finished++} />);
-  // Standalone entry asks before importing a draft from a journey; the text remains recoverable.
-  await screen.findByRole('button', { name: 'Retomar borrador' });
+  // Recovery opens the saved form directly even when the guide is unavailable.
+  await screen.findByText(/La guía anterior ya no está disponible/);
   assert.ok(!screen.queryByRole('dialog', { name: 'Sigue tu ruta' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Retomar borrador' }));
   const title = await screen.findByRole('textbox', { name: /^Título/ });
   assert.equal((title as HTMLInputElement).value, 'Una banca dañada');
   assert.equal(watches.length, 0);

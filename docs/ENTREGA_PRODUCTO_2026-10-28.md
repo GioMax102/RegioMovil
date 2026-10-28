@@ -1,5 +1,7 @@
 # Entrega de mapas, trayectos y comunidad · 28 de octubre de 2026
 
+> **Revisión posterior:** [mejoras de usabilidad del formulario y guía](MEJORAS_USABILIDAD_2026-10-28.md), con confirmación antes de descartar, rechazos corregibles, recuperación directa y regreso al paso anterior. Consultar allí la huella del APK más reciente; el APK y las cifras de pruebas de abajo pertenecen a la entrega original.
+
 Continúa el [plan de las nueve anotaciones](PLAN_PRODUCTO_COMUNIDAD_2026-10-27.md) en `feature/queja`, sobre `082e920`. No incorpora el panel de administración ni visión computacional; esas propuestas permanecen en el documento de modelo social.
 
 ## Cambios entregados
