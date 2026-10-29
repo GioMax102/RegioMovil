@@ -1,16 +1,16 @@
 @font-face {
   font-family: 'Inter Variable';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 300 750;
   font-display: swap;
-  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2');
+  src: url('./assets/fonts/inter-latin-300-750.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Montserrat Variable';
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 300 750;
   font-display: swap;
-  src: url('@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2')
+  src: url('./assets/fonts/montserrat-latin-300-750.woff2')
     format('woff2');
 }
 :root {
@@ -1746,46 +1746,6 @@ strong {
   line-height: 1.85;
   color: var(--muted);
 }
-.report-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.report-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-weight: 550;
-}
-.report-form select,
-.report-form textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
-  padding: 12px;
-  font-weight: 400;
-  color: #627b4f;
-  font-size: 0.81rem;
-  resize: vertical;
-}
-.report-form textarea {
-  line-height: 1.8;
-}
-.report-form textarea::placeholder {
-  color: var(--muted);
-}
-.character-count {
-  text-align: right;
-  font-size: max(0.62rem, 12px);
-  color: var(--muted);
-  font-weight: 400;
-}
-.report-form > .subtle {
-  font-size: max(0.7rem, 12px);
-}
 .notice {
   display: flex;
   align-items: flex-start;
@@ -1984,12 +1944,14 @@ strong {
   margin: 0 0 23px;
   border-bottom: 1px solid var(--line);
   padding-bottom: 13px;
-  flex-wrap: wrap;
 }
 .network-section-tabs button {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 44px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 16px;
   border-radius: 7px;

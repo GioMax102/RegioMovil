@@ -193,6 +193,13 @@ export function snapshotMobilityPlan(
       };
     throw new Error('No pudimos guardar los puntos de este viaje.');
   };
+  const stops = network.stops.filter((stop) => stopIds.has(stop.id));
+  // Selected steps already carry their geometry. A saved journey needs its
+  // stops and provenance, not the complete city's import audit or graph.
+  const routes = network.routes
+    .filter((route) => routeIds.has(route.id))
+    .map((route) => ({ ...route, segments: [] }));
+  const sourceIds = new Set([...stops, ...routes].flatMap((item) => item.sourceIds));
   return structuredClone({
     version: 1,
     id: `trip-${now.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -204,12 +211,15 @@ export function snapshotMobilityPlan(
     preference: plan.preference,
     journeys,
     network: {
-      ...network,
-      stops: network.stops.filter((stop) => stopIds.has(stop.id)),
-      // Journey steps already contain their complete selected geometry.
-      routes: network.routes
-        .filter((route) => routeIds.has(route.id))
-        .map((route) => ({ ...route, segments: [] })),
+      version: network.version,
+      mode: network.mode,
+      assumptions: network.assumptions,
+      coverage: { snapshot: true, routeCount: routes.length, stopCount: stops.length },
+      stops,
+      routes,
+      ...(network.sources
+        ? { sources: network.sources.filter((source) => sourceIds.has(source.id)) }
+        : {}),
     },
   });
 }

@@ -44,3 +44,7 @@ dist/
 output/
 test-results/
 *.tsbuildinfo
+
+# Python import tooling and tests
+__pycache__/
+*.py[cod]

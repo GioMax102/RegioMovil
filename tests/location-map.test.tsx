@@ -436,6 +436,10 @@ test('network context draws only selected services and keeps exploration across 
   assert.equal(dense.length, 1001, 'The source network geometry stays intact.');
 });
 
+async function zoomTo(svg: SVGSVGElement, level: number) {
+  while (Number(svg.dataset.mapZoom) < level) await act(async () => key(svg, '+'));
+}
+
 test('el mapa general distingue las tres líneas del Metro y sus estaciones publicadas', async () => {
   const metro = publishedNetwork.routes.filter((route) => route.mode === 'metro');
   const { container, svg } = await mount({
@@ -459,11 +463,10 @@ test('el mapa general distingue las tres líneas del Metro y sus estaciones publ
     assert.equal(trace.getAttribute('opacity'), '1');
     assert.ok(Number(trace.getAttribute('stroke-width')) >= 4.5);
   }
+  assert.equal(svg.querySelectorAll('[data-stop]').length, 0, 'La vista regional conserva sólo los trazos.');
+  await zoomTo(svg, 14);
   const markers = [...svg.querySelectorAll<SVGCircleElement>('circle.location-transit-stop')];
-  assert.ok(
-    markers.length >= 25,
-    'Las estaciones son visibles sin entrar a elegir origen/destino.',
-  );
+  assert.ok(markers.length > 0 && markers.length <= 180, 'Acercarse revela las estaciones próximas.');
   const metroStopIds = new Set(
     publishedNetwork.stops.filter((stop) => stop.mode === 'metro').map((stop) => stop.id),
   );
@@ -491,6 +494,7 @@ test('el filtro de red muestra bolitas únicamente de paradas asociadas a las ru
     online: false,
     field: null,
   });
+  await zoomTo(svg, 14);
   const stopsById = new Map(publishedNetwork.stops.map((stop) => [stop.id, stop]));
   const markers = [...svg.querySelectorAll('[data-stop]')];
   assert.ok(markers.length > 0);
@@ -507,28 +511,23 @@ test('el filtro de red muestra bolitas únicamente de paradas asociadas a las ru
   assert.ok(Number(trace.getAttribute('stroke-width')) >= 3.5);
 });
 
-test('todas las redes limitan la densidad de paradas y conservan estaciones de Metro', async () => {
+test('todas las redes ocultan paradas regionales y revelan puntos próximos con densidad limitada', async () => {
   const { svg } = await mount({
     network: publishedNetwork,
     contextRoutes: publishedNetwork.routes,
     online: true,
     field: null,
   });
+  assert.equal(svg.querySelectorAll('[data-stop]').length, 0);
+  assert.equal(svg.querySelectorAll('.location-station-labels text').length, 0);
+  await zoomTo(svg, 14);
   const markers = [...svg.querySelectorAll('[data-stop]')];
-  assert.ok(markers.length > 38);
-  assert.ok(markers.length <= 240, 'La red de 3417 paradas no genera miles de nodos SVG.');
+  assert.ok(markers.length > 0);
+  assert.ok(markers.length <= 180, 'La red no genera miles de nodos SVG ni blancos invisibles.');
   assert.equal(
     new Set(markers.map((marker) => marker.getAttribute('data-stop'))).size,
     markers.length,
     'Una misma parada no se repite para cada línea que la sirve.',
-  );
-  const metroIds = new Set(
-    publishedNetwork.stops.filter((stop) => stop.mode === 'metro').map((stop) => stop.id),
-  );
-  const metroMarkers = markers.filter((marker) => metroIds.has(marker.getAttribute('data-stop')!));
-  assert.ok(
-    metroMarkers.length >= 25,
-    'Las estaciones de Metro tienen prioridad sobre la densidad de autobuses.',
   );
   assert.equal(svg.querySelector('image[href^="https://tile.openstreetmap.org/"]'), null);
 });
@@ -565,12 +564,22 @@ test('Planear conserva las calles en línea con un fondo atenuado para distingui
   assert.ok(tile.closest('.location-map-basemap'), 'Sólo el fondo recibe la atenuación visual.');
 });
 
+async function centerOnCuauhtemoc() {
+  const stop = publishedNetwork.stops.find((item) => item.id === 'metro:cuauhtemoc')!;
+  await act(async () => activeRoot!.render(<LocationMap
+    network={publishedNetwork} online={false} field={null}
+    contextRoutes={publishedNetwork.routes.filter((route) => route.mode === 'metro')}
+    focus={stop}
+  />));
+}
+
 test('tocar una estación consulta sus conexiones sin cambiar origen ni destino', async () => {
   const { svg, container, picks, stops } = await mount({
     network: publishedNetwork,
     contextRoutes: publishedNetwork.routes.filter((route) => route.mode === 'metro'),
     field: null,
   });
+  await centerOnCuauhtemoc();
   const marker = svg.querySelector<SVGCircleElement>('[data-stop="metro:cuauhtemoc"]')!;
   assert.ok(marker);
   const x = Number(marker.getAttribute('cx')),
@@ -597,6 +606,7 @@ test('arrastrar o cancelar el mapa no abre fichas y la selección también funci
     contextRoutes: publishedNetwork.routes.filter((route) => route.mode === 'metro'),
     field: null,
   });
+  await centerOnCuauhtemoc();
   const marker = svg.querySelector<SVGCircleElement>('[data-stop="metro:cuauhtemoc"]')!;
   const x = Number(marker.getAttribute('cx')),
     y = Number(marker.getAttribute('cy'));
@@ -791,4 +801,45 @@ test('journey geometry gaps stay disconnected and resizing a sheet refits a rout
     rect.height = 420;
     rect.bottom = 420;
   }
+});
+
+
+test('una parada seleccionada sigue visible al alejarse sin revelar todas las demás', async () => {
+  const { svg, container } = await mount({
+    network: publishedNetwork,
+    contextRoutes: publishedNetwork.routes.filter((route) => route.id === 'L1'),
+    field: null,
+  });
+  const select = container.querySelector<HTMLSelectElement>('select')!;
+  await act(async () => {
+    select.value = 'metro:cuauhtemoc';
+    select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  });
+  while (Number(svg.dataset.mapZoom) >= 13) await act(async () => key(svg, '-'));
+  assert.deepEqual([...svg.querySelectorAll('[data-stop]')].map((point) => point.getAttribute('data-stop')), ['metro:cuauhtemoc']);
+  assert.match(container.querySelector('.location-station-card')!.textContent!, /Cuauhtémoc/);
+});
+
+test('cambiar de tamaño preserva la cámara explorada de la red y centrar respeta el área útil', async () => {
+  const routes = publishedNetwork.routes.filter((route) => route.id === 'L1');
+  const { svg, container } = await mount({
+    network: publishedNetwork, contextRoutes: routes, field: null,
+    viewportPadding: { top: 125, bottom: 50, left: 12, right: 70 },
+    preserveViewportOnResize: true,
+  });
+  const original = { zoom: svg.dataset.mapZoom, center: svg.dataset.mapCenter };
+  await act(async () => key(svg, 'ArrowRight'));
+  const explored = { zoom: svg.dataset.mapZoom, center: svg.dataset.mapCenter };
+  assert.notDeepEqual(explored, original);
+  try {
+    rect.height = 600; rect.bottom = 600;
+    await act(async () => window.dispatchEvent(new dom.window.Event('resize')));
+    assert.deepEqual({ zoom: svg.dataset.mapZoom, center: svg.dataset.mapCenter }, explored);
+    await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Centrar mapa en las rutas"]')!.click());
+    const positions = svg.querySelector('[data-line="L1"]')!.getAttribute('points')!.split(' ').map((pair) => pair.split(',').map(Number));
+    for (const [x, y] of positions) {
+      assert.ok(x >= 12 && x <= rect.width - 70, `x=${x} está en el área libre.`);
+      assert.ok(y >= 125 && y <= rect.height - 50, `y=${y} está debajo del buscador.`);
+    }
+  } finally { rect.height = 420; rect.bottom = 420; }
 });

@@ -142,7 +142,10 @@ function buildRuntime(network) {
   }
   const reverseAdjacency = new Map(network.stops.map(stop => [stop.id, []]));
   for (const edges of adjacency.values()) for (const edge of edges) reverseAdjacency.get(edge.to).push(edge);
-  const runtime = { stops, routes, adjacency, reverseAdjacency };
+  const boardingRoutes = new Map([...adjacency].map(([stopId, edges]) => [stopId,
+    [...new Set(edges.map(edge => edge.routeId).filter(Boolean))].map(id =>
+      ({ id, minutes: routes.get(id).mode === 'metro' ? 4 : 8 }))]));
+  const runtime = { stops, routes, adjacency, reverseAdjacency, boardingRoutes };
   cache.set(network, runtime);
   return runtime;
 }
@@ -188,30 +191,58 @@ class MinHeap {
 const continued = (network, stopId, from, to) => (network.throughServices || []).some(service => service.stationId === stopId && service.lineIds.includes(from) && service.lineIds.includes(to));
 const occupancyFor = (routeId, scenario) => clamp(25 + Number.parseInt(hash(routeId), 36) % 35 + ({ normal: 0, peak: 28, rain: 13, disruption: 19 }[scenario]), 5, 98);
 
-// Optimistic travel costs guide each bounded search toward its destination.
-// They omit waiting, transfers, crowding, and diversification penalties and do
-// not add a different ranking objective to the search. Reverse edges
-// matter: retained walking transfers need not be symmetric.
-function remainingCosts(runtime, ends, factor, walkingWeight, allowedRouteIds) {
+// A relaxed onboard/offboard graph gives an admissible lower bound. Boarding
+// waits matter after walking to another service, but changes of line at one
+// station are free in the relaxation. Transfer penalties, walking limits and
+// path-history restrictions are also omitted. This preserves through services
+// and keeps dense bus coverage from exhausting the bounded search.
+function remainingCosts(runtime, ends, factor, walkingWeight, allowedRouteIds, options) {
   const remaining = new Map();
+  const endCosts = new Map();
+  const waits = new Map();
   const heap = new MinHeap();
+  const waitAt = stopId => {
+    if (!waits.has(stopId)) {
+      let minutes = Infinity;
+      for (const route of runtime.boardingRoutes.get(stopId) || []) {
+        if (allowedRouteIds.has(route.id)) minutes = Math.min(minutes, route.minutes);
+      }
+      waits.set(stopId, minutes * factor);
+    }
+    return waits.get(stopId);
+  };
+  const admit = (stopId, cost) => {
+    if (cost >= (remaining.get(stopId) ?? Infinity)) return;
+    remaining.set(stopId, cost);
+    heap.push({ stopId, cost });
+  };
   for (const candidate of ends) {
     const cost = candidate.distanceMeters / 75 * walkingWeight;
-    remaining.set(candidate.stop.id, cost);
-    heap.push({ stopId: candidate.stop.id, cost });
+    endCosts.set(candidate.stop.id, cost);
+    admit(candidate.stop.id, cost);
+    // Alighting and a final connector do not incur another boarding wait.
+    // Letting two walking connectors touch is optimistic; the real search
+    // still enforces its stricter walking and path-history constraints.
+    for (const edge of runtime.reverseAdjacency.get(candidate.stop.id) || []) {
+      if (edge.mode === 'walk') admit(edge.from, cost + edge.minutes * walkingWeight);
+    }
   }
   while (heap.length) {
     const state = heap.pop();
     if (state.cost !== remaining.get(state.stopId)) continue;
     for (const edge of runtime.reverseAdjacency.get(state.stopId) || []) {
       if (edge.routeId && !allowedRouteIds.has(edge.routeId)) continue;
-      const cost = state.cost + edge.minutes * (edge.mode === 'walk' ? walkingWeight : factor);
-      if (cost >= (remaining.get(edge.from) ?? Infinity)) continue;
-      remaining.set(edge.from, cost);
-      heap.push({ stopId: edge.from, cost });
+      let cost = edge.minutes * (edge.mode === 'walk' ? walkingWeight : factor);
+      if (edge.mode === 'walk') cost += waitAt(state.stopId);
+      if (options.preference === 'comfortable' && edge.routeId) cost += edge.minutes * occupancyFor(edge.routeId, options.scenario) / 100 * 0.7;
+      admit(edge.from, state.cost + cost);
     }
   }
-  return remaining;
+  // Onboard and offboard labels share the expensive reverse traversal. An
+  // offboard label must still board once, unless it can take the final walk.
+  const offboard = new Map([...remaining].map(([stopId, cost]) =>
+    [stopId, Math.min(endCosts.get(stopId) ?? Infinity, cost + waitAt(stopId))]));
+  return { onboard: remaining, offboard };
 }
 
 function search(network, runtime, origin, destination, options, penalties) {
@@ -227,7 +258,8 @@ function search(network, runtime, origin, destination, options, penalties) {
   const labels = new Map();
   const factor = { normal: 1, peak: 1.12, rain: 1.2, disruption: 1.35 }[options.scenario];
   const walkingWeight = options.preference === 'accessible' ? 1.6 : 1;
-  const remaining = remainingCosts(runtime, ends, factor, walkingWeight, allowedRouteIds);
+  const remaining = remainingCosts(runtime, ends, factor, walkingWeight, allowedRouteIds, options);
+  const potential = state => (state.walkedLast || !state.line ? remaining.offboard : remaining.onboard).get(state.stopId);
   const requiredModes = options.requiredModes || 0;
   const key = state => `${state.stopId}|${state.line || ''}|${Number(state.walkedLast)}|${state.transfers}|${state.usedModes & requiredModes}`;
   // Cost and walking are independent resources. A cheaper label may consume too
@@ -249,8 +281,9 @@ function search(network, runtime, origin, destination, options, penalties) {
     const edge = candidate.distanceMeters > 0 || candidate.stop.id !== origin.id ? walkEdge(origin, candidate.stop, candidate.distanceMeters) : null;
     const state = { stopId: candidate.stop.id, line: null, walkedLast: !!edge, walking: candidate.distanceMeters,
       transfers: 0, usedModes: 0, cost: edge ? edge.minutes * walkingWeight : 0, baseCost: edge ? edge.minutes * walkingWeight : 0, parent: null, edge };
-    if (!remaining.has(state.stopId)) continue;
-    state.priority = state.cost + remaining.get(state.stopId);
+    const lowerBound = potential(state);
+    if (lowerBound === undefined) continue;
+    state.priority = state.cost + lowerBound;
     state.key = key(state);
     if (admit(state)) heap.push(state);
   }
@@ -303,8 +336,9 @@ function search(network, runtime, origin, destination, options, penalties) {
       const next = { stopId: edge.to, line: edge.routeId || state.line, walkedLast: edge.mode === 'walk', walking, transfers,
         usedModes: state.usedModes | (edge.mode === 'metro' ? 1 : edge.mode === 'bus' ? 2 : 0),
         cost: state.cost + cost + (penalties.get(edge.id) || 0), baseCost: state.baseCost + cost, edge, parent: state };
-      if (!remaining.has(next.stopId)) continue;
-      next.priority = next.cost + remaining.get(next.stopId);
+      const lowerBound = potential(next);
+      if (lowerBound === undefined) continue;
+      next.priority = next.cost + lowerBound;
       next.key = key(next);
       if (admit(next)) heap.push(next);
     }

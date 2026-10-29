@@ -127,6 +127,26 @@ summary:focus-visible {
   padding: 10px 66px 10px 16px;
   min-height: 64px;
 }
+.network-page .workspace > main {
+  padding: 0;
+  max-inline-size: none;
+  margin: 0;
+}
+.network-page .workspace > main > .page-heading {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  margin: 0;
+}
+.network-page .stations-layout {
+  margin: 0;
+  padding: 8px 16px calc(90px + var(--app-safe-bottom));
+}
+.network-page .page-footer {
+  display: none;
+}
 .page-heading h1 {
   font-size: clamp(1.4rem, 3vw, 1.85rem);
   letter-spacing: -0.6px;

@@ -1,5 +1,8 @@
 # Plan de desarrollo y continuidad — UI y cobertura de RegioMóvil
 
+> Continuación del 27 de octubre: consultar primero [quejas y cobertura actualizada](MEMORIA_QUEJAS_COBERTURA_2026-10-27.md). `feature/queja` integra esta base de `fixes`, 185 rutas de autobús y los reportes revisados.
+
+
 Fecha: 25 de octubre de 2026. Rama: `fixes`. Base comprobada: `14afba358145f2026e17c6959e6cc73e4310b96d`.
 
 ## Estado de la entrega — 26 de octubre de 2026

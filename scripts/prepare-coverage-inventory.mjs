@@ -9,10 +9,24 @@ const [catalog, graph, audit] = await Promise.all([
   read('data/mobility-network.json'),
   read('data/coverage-source-audit-20261025.json'),
 ]);
+let publicMapAudit = { verifiedAt: audit.checkedAt, routes: [] };
+try {
+  publicMapAudit = await read('data/ima-map-sources.json');
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
+const checkedAt = [audit.checkedAt, publicMapAudit.verifiedAt].sort().at(-1);
 const graphRoutes = new Map(graph.routes.map((route) => [route.id, route]));
 const exclusions = new Map(graph.coverage.excludedRoutes.map((row) => [row.id, row.reason]));
 const sources = new Map(catalog.sources.map((source) => [source.id, source]));
-const checked = new Map(audit.routes.map((row) => [row.routeId, row]));
+const checked = new Map([
+  ...audit.routes.map((row) => [row.routeId, row]),
+  ...publicMapAudit.routes.map((row) => [row.id, {
+    ...row, checkedAt: row.verifiedAt || publicMapAudit.verifiedAt,
+    result: row.status === 'imported' ? 'imported-experimental' : row.reason,
+    sha256: row.originalKmlSha256,
+  }]),
+]);
 const inventory = [];
 for (const route of catalog.routes) {
   const graphRoute = graphRoutes.get(route.id);
@@ -30,6 +44,7 @@ for (const route of catalog.routes) {
   const metadataOnly = !mapInDetail;
   let pendingReason = null;
   if (route.mode === 'metro' && !graphRoute) pendingReason = 'rail-status-not-enabled';
+  else if (metadataOnly && inspection?.reason) pendingReason = inspection.reason;
   else if (metadataOnly && hasLinkedMap)
     pendingReason = 'linked-map-not-imported-or-inspected-this-batch';
   else if (metadataOnly) pendingReason = 'metadata-without-individual-geometry-link';
@@ -64,7 +79,9 @@ for (const route of catalog.routes) {
     sourceAudit: inspection
       ? {
           checkedAt: inspection.checkedAt,
-          scope: 'downloaded-kml-and-validated-coordinates',
+          scope: inspection.status === 'pending'
+            ? 'official-source-inspected-no-usable-matching-geometry'
+            : 'downloaded-kml-and-validated-coordinates',
           result: inspection.result,
           sourceSha256: inspection.sha256,
           liveOperationVerified: false,
@@ -105,14 +122,14 @@ const counts = (rows) => ({
 });
 const data = {
   version: 1,
-  inventoryCheckedAt: audit.checkedAt,
+  inventoryCheckedAt: checkedAt,
   catalogVerifiedAt: catalog.verifiedAt,
   catalogSha256: createHash('sha256')
     .update(await readFile(new URL('data/transit-catalog.json', root)))
     .digest('hex'),
   graphRevision: graph.revision,
   scope:
-    'Local catalog/geometry/graph inventory by exact service ID. Source freshness and live operation are not certified. Only the five KMLs listed in coverage-source-audit-20261025.json were downloaded in this batch.',
+    'Local catalog/geometry/graph inventory by exact service ID. The comprehensive IMA source audit is in ima-map-sources.json; the earlier five-map audit remains historical. Geometry availability does not certify current operation, directions, boarding order or pedestrian connections.',
   totals: counts(inventory),
   byNetwork: catalog.networks.map((network) => ({
     id: network.id,
@@ -145,7 +162,7 @@ const csv =
   ].join('\n') + '\n';
 const outputs = [
   ['data/route-coverage-inventory.json', JSON.stringify(data, null, 2) + '\n'],
-  ['docs/inventario-rutas-2026-10-25.csv', csv],
+  [`docs/inventario-rutas-${checkedAt}.csv`, csv],
 ];
 for (const [path, contents] of outputs) {
   if (process.argv.includes('--check')) {

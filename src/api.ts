@@ -59,36 +59,6 @@ export async function loadPlan(
     };
   }
 }
-export async function sendReport(
-  stationId: string,
-  category: string,
-  detail: string,
-): Promise<void> {
-  let result: { ok: boolean; payload: { error?: { message?: string } } | null };
-  try {
-    result = await withRequestTimeout(async (signal) => {
-      const response = await fetch(`${apiBase}/api/reports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stationId, category, detail }),
-        signal,
-      });
-      return {
-        ok: response.ok,
-        payload: response.ok ? null : await response.json().catch(() => null),
-      };
-    }, 5000);
-  } catch {
-    throw new Error(
-      'No hay conexión con el servidor del piloto. Tu texto sigue aquí; vuelve a intentar.',
-    );
-  }
-  if (!result.ok) {
-    throw new Error(
-      result.payload?.error?.message || 'No pudimos enviar el reporte. Intenta de nuevo.',
-    );
-  }
-}
 export function readStored<T>(key: string, fallback: T): T {
   try {
     const value = localStorage.getItem(`regiomovil:${key}`);

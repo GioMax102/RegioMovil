@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "verifiedAt": "2026-10-27",
+  "method": "Rendered official IMA page: heading and iframe src read from public DOM after waiting for embedded map. No private application state or APIs accessed.",
+  "routes": [
+    {
+      "id": "ima-214-directa-vistas-del-rio-terranova",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-of-projects-5/enchanted-echoes",
+      "renderedHeading": "Ruta 214 Directa Vistas del Río Terranova",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_b91f06379431c7ecb88cf73297eb7899.html"
+    },
+    {
+      "id": "ima-218-directa-santa-maria-rosita-fleteros",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-2-of-projects-4/enchanted-echoes",
+      "renderedHeading": "Ruta 218 Directa Santa María - Rosita - Fleteros",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_121b699f66e595bdf29fafd5fc9dc255.html",
+      "verifiedAt": "2026-10-28",
+      "readinessEvidence": "iframe attached after deferred Wix render; public DOM heading and iframe src inspected"
+    },
+    {
+      "id": "ima-223-directa-hector-caballero",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-9-of-projects-2-1/enchanted-echoes",
+      "renderedHeading": "Ruta 223 Directa Héctor Caballero",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_a6a2106bbc97da6e090ec0b0522318a4.html",
+      "verifiedAt": "2026-10-28",
+      "readinessEvidence": "iframe attached after deferred Wix render; public DOM heading and iframe src inspected"
+    },
+    {
+      "id": "ima-223-directa-san-francisco-h-caballero",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-8-of-projects-2-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 223 Directa San Francisco H. Caballero",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_1a28e4891759c3937020908ebed8fdef.html"
+    },
+    {
+      "id": "ima-223-directa-teofilo-salinas-abastos",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-10-of-projects-2-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 223 Directa Teófilo Salinas - Abastos",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_bf7d7bd86e63127b53c80f871e56c518.html"
+    },
+    {
+      "id": "ima-224-remanente-arboledas-monte-cristal",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-14-of-projects-2-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 224 Remanente Arboledas - Monte Cristal",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_725873a028f77e7f0eafd3d908031866.html"
+    },
+    {
+      "id": "ima-226-alimentadora-palmiras-estacion-sendero",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 226 Alimentadora Palmiras - Estación Sendero",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_b720c1e37147f742761037028da6a26b.html",
+      "verifiedAt": "2026-10-28",
+      "readinessEvidence": "iframe attached after deferred Wix render; public DOM heading and iframe src inspected"
+    },
+    {
+      "id": "ima-228-remanente-santa-isabel-estacion-felix-u-gomez",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 228 Remanente Santa Isabel - Estación Félix U. Gómez",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_dfe3440214d07b52495c43b3374238c7.html",
+      "verifiedAt": "2026-10-28",
+      "readinessEvidence": "iframe attached after deferred Wix render; public DOM heading and iframe src inspected"
+    },
+    {
+      "id": "ima-233-remanente-raul-salinas-fome-35-uanl",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-21-of-projects-2-1-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 233 Remanente Raúl Salinas - Fome 35 - UANL",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_21e092a8e277de10cbd640c6e975aada.html",
+      "verifiedAt": "2026-10-28",
+      "readinessEvidence": "iframe attached after deferred Wix render; public DOM heading and iframe src inspected"
+    },
+    {
+      "id": "ima-301-revolucion-uanl",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-25-of-projects-2-1-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 301 Remanente Revolución - UANL",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_445ef8517182f45502153a8325a72cdf.html"
+    },
+    {
+      "id": "ima-310-remanente-valle-de-lincoln-estacion-san-bernabe",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-28-of-projects-2-1-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 310 Remanente Valle de Lincoln - Estación San Bernabe",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_58498e3f2b57733efaa02f5e567068d8.html"
+    },
+    {
+      "id": "ima-527-alimentadora-mision-de-san-javier-san-pablo",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-33-of-projects-2-1-1-1-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 527 Alimentadora Misión de San Javier San Pablo",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_ae4befa5c10d2dc28a82ca0f78e088f4.html",
+      "verifiedAt": "2026-10-28",
+      "readinessEvidence": "iframe attached after deferred Wix render; public DOM heading and iframe src inspected"
+    },
+    {
+      "id": "ima-685-remanente-mision-salinas-por-campo",
+      "officialPageUrl": "https://www.imanuevoleon.mx/copy-35-of-projects-2-1-1-1-1/enchanted-echoes",
+      "renderedHeading": "Ruta 685 Remanente Misión Salinas por Campo",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_5bbb0eb80d0cb97f7fe62e060dadf978.html"
+    },
+    {
+      "id": "ima-38-310-troncal-lincoln-ruiz-cortines-centro",
+      "officialPageUrl": "https://www.imanuevoleon.mx/projects/enchanted-echoes",
+      "renderedHeading": "Ruta 213 Directa Soriana Sendero Quinta Colonial",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_9ed525122f8b83535c43ea68071e8108.html"
+    }
+  ],
+  "lastUpdatedAt": "2026-10-28"
+}

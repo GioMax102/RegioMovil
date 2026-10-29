@@ -21,8 +21,7 @@
 }
 .network-map-layer,
 .network-map-layer > .location-map,
-.network-map-layer .location-map-canvas,
-.network-map-placeholder {
+.network-map-layer .location-map-canvas {
   width: 100%;
   height: 100%;
 }
@@ -38,11 +37,11 @@
   display: none;
 }
 .network-map-layer .location-map-controls {
-  top: 128px;
+  top: calc(var(--network-overlay-height, 118px) + 18px);
 }
 .network-map-overlay {
   position: absolute;
-  inset: 14px 14px auto;
+  inset: 8px 12px auto;
   z-index: 3;
   pointer-events: none;
 }
@@ -56,7 +55,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 52px;
+  min-height: 46px;
   padding: 0 48px 0 16px;
   border-radius: 16px;
   background: var(--surface);
@@ -73,7 +72,7 @@
   outline: none;
   font: inherit;
   font-size: 0.9rem;
-  min-height: 48px;
+  min-height: 44px;
 }
 .network-route-search:focus-within {
   outline: 3px solid var(--green);
@@ -91,7 +90,7 @@
   display: flex;
   gap: 7px;
   overflow-x: auto;
-  padding: 10px 0 4px;
+  padding: 7px 0 3px;
   scrollbar-width: none;
 }
 .network-system-filters button {
@@ -303,20 +302,12 @@
   outline: 3px solid var(--focus);
   outline-offset: -3px;
 }
-.network-map-dialog {
-  padding: 14px;
-}
-.network-expanded-map .location-map-canvas {
-  height: max(150px, calc(100dvh - 180px - var(--app-safe-top) - var(--app-safe-bottom)));
-  min-height: 0;
-  border-radius: 16px;
-}
 @media (max-width: 760px) {
   .network-explorer {
     margin: 0;
   }
   .network-map-overlay {
-    inset: 12px 12px auto;
+    inset: 8px 10px auto;
   }
   .network-system-filters button {
     padding-inline: 13px;
@@ -342,5 +333,87 @@
     bottom: 25px;
     min-height: 44px;
     padding-block: 6px;
+  }
+}
+
+/* The same canvas becomes the screen; it is never moved into a second dialog. */
+.network-map-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.network-map-search-row > .network-search-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.network-map-screen-toggle {
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  color: var(--dark);
+  box-shadow: 0 3px 16px #132e2920;
+}
+.network-map-screen-toggle:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.network-explorer[data-map-screen='true'] {
+  position: fixed;
+  z-index: 200;
+  top: var(--map-workspace-top, 0px);
+  left: var(--map-workspace-left, 0px);
+  width: var(--map-workspace-width, 100vw);
+  height: var(--map-workspace-height, 100dvh);
+  margin: 0;
+  grid-template-rows: minmax(0, 1fr);
+  background: var(--surface);
+}
+.network-explorer[data-map-screen='true'] .network-map-overlay {
+  top: calc(8px + var(--app-safe-top, 0px));
+  left: calc(10px + var(--app-safe-left, 0px));
+  right: calc(10px + var(--app-safe-right, 0px));
+}
+.network-explorer[data-map-screen='true'] .network-catalog-sheet {
+  display: none;
+}
+.network-explorer[data-map-screen='true'] .location-map-credit {
+  bottom: var(--app-safe-bottom, 0px);
+  right: var(--app-safe-right, 0px);
+}
+.network-explorer[data-map-screen='true'] .network-coverage-info {
+  bottom: calc(9px + var(--app-safe-bottom, 0px));
+}
+body[data-network-map-screen='true'] .app-shell :is(.sidebar, .topbar, .mobile-nav, .network-section-tabs, .page-footer, .skip-link),
+body[data-network-map-screen='true'] .app-shell::before {
+  display: none;
+}
+.network-map-layer .single-route-map .location-map-info {
+  display: block;
+  inset: auto auto 9px 64px;
+}
+.network-map-layer .single-route-map .location-map-info > div {
+  position: absolute;
+  bottom: 50px;
+  left: -52px;
+  width: min(330px, calc(100vw - 84px));
+}
+.network-map-stage:has(.location-station-card) .network-selected-route {
+  display: none;
+}
+.network-map-layer .location-station-card {
+  bottom: 68px;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .network-explorer[data-map-screen='true'] .network-map-overlay {
+    right: calc(76px + var(--app-safe-right, 0px));
+  }
+  .network-explorer[data-map-screen='true'] .location-map-controls {
+    top: calc(8px + var(--app-safe-top, 0px));
   }
 }

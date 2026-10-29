@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { JSDOM } from 'jsdom';
 import React from 'react';
+import 'fake-indexeddb/auto';
 import type { MobilityJourney, MobilityNetwork, MobilityStep } from '../src/mobility/types';
 
 const styles = registerHooks({
@@ -113,6 +114,10 @@ const { act, cleanup, fireEvent, render, screen, waitFor } = await import('@test
 const { createRoot } = await import('react-dom/client');
 const { flushSync } = await import('react-dom');
 const ActiveJourney = (await import('../src/mobility/ActiveJourney')).default;
+const ReportEntry = (await import('../src/components/ReportEntry')).default;
+const { saveGuidanceCheckpoint } = await import('../src/mobility/guidanceCheckpoint');
+const { readReportDraft, clearReportDraft, saveReportDraft, newReportDraftId, REPORT_DRAFT_TTL } =
+  await import('../src/reportDraft');
 const walk = {
   mode: 'walk',
   lineId: 'walk',
@@ -157,7 +162,9 @@ const network = {
   assumptions: [],
 } as MobilityNetwork;
 let finished = 0;
-beforeEach(() => {
+beforeEach(async () => {
+  const draft = await readReportDraft();
+  if (draft) await clearReportDraft(draft.draftId);
   localStorage.clear();
   watches.length = 0;
   cleared.length = 0;
@@ -393,6 +400,82 @@ test('manual steps distinguish alighting from a short transfer and can complete 
   assert.equal(screen.queryByRole('button', { name: 'Terminar guía' }), null);
   fireEvent.click(screen.getByRole('button', { name: 'Cerrar guía' }));
   assert.equal(finished, 1);
+});
+
+test('an accidental confirmation can return to the previous leg with GPS and voice paused', async () => {
+  mount(true);
+  await waitFor(() => assert.equal(watches.length, 1));
+  assert.equal(screen.queryByRole('button', { name: 'Volver al paso anterior' }), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Avisos por voz' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Ya llegué a Talleres' }));
+  await act(async () =>
+    watches[0].success({
+      coords: {
+        latitude: 25.75,
+        longitude: -100.368,
+        accuracy: 8,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: Date.now(),
+    }),
+  );
+  assert.ok(screen.getByRole('img', { name: /^Tu ubicación,/ }));
+  const spokenBeforeReturn = spoken.length;
+  fireEvent.click(screen.getByRole('button', { name: 'Volver al paso anterior' }));
+  await waitFor(() => assert.deepEqual(cleared, [1]));
+  const instruction = screen.getByRole('heading', { name: 'Camina hasta Talleres' });
+  assert.equal(document.activeElement, instruction);
+  assert.ok(screen.getByText(/Paso 1 de 2/));
+  assert.ok(screen.getByText('En pausa'));
+  assert.equal(screen.getByRole('progressbar').getAttribute('value'), '0');
+  assert.equal(screen.queryByRole('img', { name: /^Tu ubicación,/ }), null);
+  assert.equal(document.querySelector('polyline[data-mode="walk"]') !== null, true);
+  assert.equal(document.querySelector('polyline[data-line="L1"]'), null);
+  assert.equal(
+    screen.getByRole('button', { name: 'Avisos por voz' }).getAttribute('aria-pressed'),
+    'false',
+  );
+  assert.equal(spoken.length, spokenBeforeReturn);
+  assert.equal(watches.length, 1);
+  // A callback queued before unsubscribe cannot move the restored step or reveal a stale fix.
+  await act(async () =>
+    watches[0].success({
+      coords: { latitude: 25.74, longitude: -100.36, accuracy: 8 },
+      timestamp: Date.now(),
+    } as GeolocationPosition),
+  );
+  assert.ok(screen.getByRole('heading', { name: 'Camina hasta Talleres' }));
+  assert.equal(screen.queryByRole('img', { name: /^Tu ubicación,/ }), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Reanudar ubicación' }));
+  await waitFor(() => assert.equal(watches.length, 2));
+  assert.ok(screen.getByText('Buscando GPS'));
+  assert.equal(spoken.length, spokenBeforeReturn, 'Voice stays disabled after correcting a step.');
+  assert.equal(finished, 0);
+});
+
+test('an accidental final confirmation restores the last leg, including a single-step offline journey', () => {
+  render(
+    <ActiveJourney
+      journey={{ ...journey, steps: [ride] }}
+      network={network}
+      onFinish={() => finished++}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Ya bajé en Destino' }));
+  assert.ok(screen.getByRole('heading', { name: 'Llegaste a tu destino' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Volver al último paso' }));
+  const instruction = screen.getByRole('heading', { name: 'Viaja hasta Destino' });
+  assert.equal(document.activeElement, instruction);
+  assert.ok(screen.getByText(/Paso 1 de 1/));
+  assert.ok(screen.getByText('En pausa'));
+  assert.equal(screen.queryByRole('button', { name: 'Cerrar guía' }), null);
+  assert.ok(screen.getByRole('button', { name: 'Ya bajé en Destino' }));
+  assert.equal(watches.length, 0);
+  assert.equal(spoken.length, 0);
+  assert.equal(finished, 0);
 });
 
 test('next-stop guidance only appears with a verified stop order and a usable current GPS fix', async () => {
@@ -639,4 +722,204 @@ test('transfer photos and shared station bookmarks preserve a paused guide, its 
   );
   assert.match(screen.getByText(/Paso 2 de/).textContent!, /Paso 2 de/);
   assert.equal(watches.length, 1);
+});
+
+test('a contextual observation pauses an active guide and returns to the same step without restarting GPS', async () => {
+  const { within } = await import('@testing-library/react');
+  const guideJourney: MobilityJourney = {
+    ...journey,
+    title: 'Una prueba',
+    durationMinutes: 20,
+    walkingMinutes: 3,
+    walkingMeters: 200,
+    transfers: 0,
+    occupancy: 20,
+    etaRange: [18, 22],
+    score: 20,
+    source: 'simulation',
+    accessibility: 'unknown',
+    steps: [
+      walk,
+      { ...ride, toId: 'rail:last', to: 'Universidad', stopIds: ['station', 'rail:last'] },
+    ],
+  };
+  const guideNetwork: MobilityNetwork = {
+    ...network,
+    stops: [
+      {
+        id: 'station',
+        stationId: 'talleres',
+        name: 'Talleres',
+        lng: -100.368,
+        lat: 25.75,
+        mode: 'metro',
+        routeIds: ['L1'],
+        sourceIds: [],
+        official: true,
+      },
+      {
+        id: 'rail:last',
+        stationId: 'universidad',
+        name: 'Universidad',
+        lng: -100.36,
+        lat: 25.74,
+        mode: 'metro',
+        routeIds: ['L1'],
+        sourceIds: [],
+        official: true,
+      },
+    ],
+  };
+  render(
+    <ActiveJourney
+      journey={guideJourney}
+      network={guideNetwork}
+      autoStart
+      onFinish={() => finished++}
+    />,
+  );
+  await waitFor(() => assert.equal(watches.length, 1));
+  fireEvent.click(screen.getByRole('button', { name: 'Ya llegué a Talleres' }));
+  assert.ok(screen.getByText(/Paso 2 de 2/));
+  const map = document.querySelector('.location-map-canvas');
+  fireEvent.click(screen.getByRole('button', { name: 'Reportar algo en este tramo' }));
+  const title = await screen.findByRole('textbox', { name: /^Título/ });
+  await waitFor(() => assert.deepEqual(cleared, [1]));
+  const report = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
+  const station = within(report).getByRole('combobox', { name: /^Estación de Metro/ });
+  assert.equal(
+    (station as HTMLSelectElement).value,
+    '',
+    'The place must be confirmed, not inferred from the guide.',
+  );
+  fireEvent.change(station, { target: { value: 'universidad' } });
+  fireEvent.change(title, { target: { value: 'Banca dañada' } });
+  fireEvent.change(within(report).getByRole('textbox', { name: /^Cuéntanos un poco/ }), {
+    target: { value: 'Una banca dañada en el andén.' },
+  });
+  fireEvent.click(within(report).getByRole('button', { name: 'Cerrar ventana' }));
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
+  assert.ok(screen.getByText(/Paso 2 de 2/));
+  assert.ok(screen.getByText('En pausa'));
+  assert.ok(
+    document.querySelector('.location-map-canvas') === map,
+    'Opening a report never remounts the guidance map.',
+  );
+  assert.equal(watches.length, 1, 'Closing an observation does not resume location.');
+  assert.equal(finished, 0);
+});
+
+test('recovering a report on a later guide step keeps location and speech paused', async () => {
+  render(
+    <ActiveJourney
+      journey={journey}
+      network={network}
+      autoStart
+      initialStepIndex={1}
+      initialOpenReport
+      onFinish={() => finished++}
+    />,
+  );
+  await screen.findByRole('textbox', { name: /^Título/ });
+  assert.ok(screen.getByText(/Paso 2 de 2/));
+  assert.equal(watches.length, 0);
+  assert.equal(spoken.length, 0);
+  assert.ok(screen.getByRole('heading', { name: 'Viaja hasta Destino' }));
+});
+
+async function prepareRecovery(stepIndex = 1, draftStepIndex = stepIndex) {
+  const completeJourney: MobilityJourney = {
+    ...journey,
+    title: 'Un trayecto para recuperar',
+    durationMinutes: 20,
+    walkingMinutes: 3,
+    walkingMeters: 200,
+    transfers: 0,
+    occupancy: 20,
+    etaRange: [18, 22],
+    score: 20,
+    source: 'simulation',
+    accessibility: 'unknown',
+  };
+  saveGuidanceCheckpoint(completeJourney, network, stepIndex);
+  await saveReportDraft({
+    version: 1,
+    draftId: newReportDraftId(),
+    expiresAt: Date.now() + REPORT_DRAFT_TTL,
+    context: {
+      journeyId: journey.id,
+      stepIndex: draftStepIndex,
+      source: 'journey',
+      returnTo: 'guidance',
+    },
+    targetType: 'station',
+    stationId: 'universidad',
+    routeId: '',
+    title: 'Una banca dañada',
+    detail: 'La banca tiene un asiento roto en el andén.',
+    category: 'infrastructure',
+    unitReference: '',
+    locationReference: '',
+    publicationConsent: false,
+    photo: '',
+  });
+}
+
+test('recovered report entry closes and sends back into the same paused guide step', async () => {
+  const { within } = await import('@testing-library/react');
+  await prepareRecovery();
+  const realFetch = globalThis.fetch;
+  const sent: Record<string, unknown>[] = [];
+  globalThis.fetch = async (_input, init) => {
+    assert.equal(init?.method, 'POST');
+    sent.push(JSON.parse(String(init.body)));
+    return Response.json({ report: { id: 'test-report', status: 'pending' } }, { status: 201 });
+  };
+  try {
+    render(<ReportEntry onClose={() => finished++} onSent={() => finished++} />);
+    const title = await screen.findByRole('textbox', { name: /^Título/ });
+    assert.equal((title as HTMLInputElement).value, 'Una banca dañada');
+    assert.ok(screen.getByText(/Paso 2 de 2/));
+    assert.equal(watches.length, 0);
+    assert.equal(spoken.length, 0);
+    const report = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
+    fireEvent.click(within(report).getByRole('button', { name: 'Cerrar ventana' }));
+    await waitFor(() =>
+      assert.ok(!screen.queryByRole('dialog', { name: 'Tu experiencia cuenta' })),
+    );
+    assert.ok(screen.getByRole('dialog', { name: 'Sigue tu ruta' }));
+    assert.ok(screen.getByText('En pausa'));
+    assert.ok(screen.getByRole('heading', { name: 'Viaja hasta Destino' }));
+    assert.equal(finished, 0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reportar algo en este tramo' }));
+    await screen.findByRole('textbox', { name: /^Título/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte al piloto' }));
+    await waitFor(() =>
+      assert.ok(!screen.queryByRole('dialog', { name: 'Tu experiencia cuenta' })),
+    );
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].stationId, 'universidad');
+    assert.ok(screen.getByText(/Tu observación quedó pendiente de revisión/));
+    assert.ok(screen.getByText(/Paso 2 de 2/));
+    assert.ok(screen.getByText('En pausa'));
+    assert.equal(watches.length, 0);
+    assert.equal(spoken.length, 0);
+    assert.equal(finished, 0);
+    assert.equal(await readReportDraft(), null);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('a checkpoint for another step recovers the draft without inventing a guide return', async () => {
+  await prepareRecovery(0, 1);
+  render(<ReportEntry onClose={() => finished++} onSent={() => finished++} />);
+  // Recovery opens the saved form directly even when the guide is unavailable.
+  await screen.findByText(/La guía anterior ya no está disponible/);
+  assert.ok(!screen.queryByRole('dialog', { name: 'Sigue tu ruta' }));
+  const title = await screen.findByRole('textbox', { name: /^Título/ });
+  assert.equal((title as HTMLInputElement).value, 'Una banca dañada');
+  assert.equal(watches.length, 0);
+  assert.equal(spoken.length, 0);
 });

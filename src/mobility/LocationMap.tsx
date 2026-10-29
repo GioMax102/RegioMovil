@@ -34,6 +34,8 @@ export default function LocationMap({
   navigationMode = false,
   inspectStops = true,
   compact = false,
+  viewportPadding,
+  preserveViewportOnResize = false,
   onExpand,
   onPick,
   onStopSelect,
@@ -51,6 +53,8 @@ export default function LocationMap({
   navigationMode?: boolean;
   inspectStops?: boolean;
   compact?: boolean;
+  viewportPadding?: { top?: number; right?: number; bottom?: number; left?: number };
+  preserveViewportOnResize?: boolean;
   onExpand?: () => void;
   onPick?: (point: MapPosition) => void;
   onStopSelect?: (stop: MobilityStop) => void;
@@ -61,6 +65,26 @@ export default function LocationMap({
   const sizeRef = useRef(size);
   sizeRef.current = size;
   const [measured, setMeasured] = useState(false);
+  const paddingRef = useRef(viewportPadding);
+  paddingRef.current = viewportPadding;
+  const lastContextFit = useRef<string | null>(null);
+  function fit(positions: MapPosition[]) {
+    const fullSize = sizeRef.current;
+    const padding = paddingRef.current;
+    if (!padding) return fitRegionalPositions(positions, fullSize);
+    const left = Math.max(0, padding.left ?? 0), right = Math.max(0, padding.right ?? 0);
+    const top = Math.max(0, padding.top ?? 0), bottom = Math.max(0, padding.bottom ?? 0);
+    const useful = {
+      width: Math.max(80, fullSize.width - left - right),
+      height: Math.max(80, fullSize.height - top - bottom),
+    };
+    const fitted = fitRegionalPositions(positions, useful);
+    const center = worldPoint(fitted), scale = 256 * 2 ** fitted.zoom;
+    return constrainRegionalView({
+      ...worldPosition(center.x - (left - right) / 2 / scale, center.y - (top - bottom) / 2 / scale),
+      zoom: fitted.zoom,
+    }, fullSize);
+  }
   const [view, setView] = useState<RegionalView>(() =>
     constrainRegionalView(
       {
@@ -160,14 +184,13 @@ export default function LocationMap({
     move(fitRegionalPositions(points, sizeRef.current));
   }, [journey?.id, field, size.width, size.height]);
   useEffect(() => {
-    if (!contextRoutes || journey || field) return;
-    move(
-      fitRegionalPositions(
-        contextPaths.flatMap((path) => path.geometry).map(([lng, lat]) => ({ lng, lat })),
-        sizeRef.current,
-      ),
-    );
-  }, [contextSignature, journey?.id, field, size.width, size.height]);
+    if (!contextRoutes || journey || field || !measured) return;
+    // A map becoming the screen keeps its camera. Only choosing a different set of
+    // routes (or explicitly centering) should reset an explored network view.
+    if (preserveViewportOnResize && lastContextFit.current === contextSignature) return;
+    lastContextFit.current = contextSignature ?? '';
+    move(fit(contextPaths.flatMap((path) => path.geometry).map(([lng, lat]) => ({ lng, lat }))));
+  }, [contextSignature, journey?.id, field, size.width, size.height, measured, preserveViewportOnResize]);
   useEffect(() => {
     if (online) setTileFailed(false);
   }, [online]);
@@ -221,23 +244,29 @@ export default function LocationMap({
       );
   }, [indexedStops, displayedRoutes, journey, routeById]);
   const visibleTransitStops = useMemo(() => {
-    const center = worldPoint(view),
-      scale = 256 * 2 ** view.zoom;
+    const center = worldPoint(view), scale = 256 * 2 ** view.zoom;
     const occupied = new Set<string>();
-    const cellSize = view.zoom >= 14 ? 12 : 20;
+    const cellSize = view.zoom >= 14 ? 18 : 32;
+    const selectedRoute = contextRoutes?.length === 1;
+    const essential = new Set(journey?.steps.flatMap((step) => [step.fromId, step.toId]) ?? []);
     return transitStops
-      .filter(({ stop, point }) => {
+      .filter(({ stop, point, terminal, connections }) => {
+        const exception = stop.id === inspectedId || essential.has(stop.id);
+        if (!exception) {
+          if (view.zoom < 13) return false;
+          if (view.zoom < 14 && !selectedRoute && connections.length < 2) return false;
+          if (view.zoom < 14 && selectedRoute && !terminal && connections.length < 2) return false;
+        }
         const x = (point.x - center.x) * scale + size.width / 2;
         const y = (point.y - center.y) * scale + size.height / 2;
         if (x < 6 || x > size.width - 6 || y < 6 || y > size.height - 6) return false;
         const cell = `${Math.round(x / cellSize)}:${Math.round(y / cellSize)}`;
-        // Keep Metro stations at city scale; gradually reveal nearby bus stops on zoom.
-        if (stop.mode !== 'metro' && occupied.has(cell)) return false;
+        if (!exception && occupied.has(cell)) return false;
         occupied.add(cell);
         return true;
       })
-      .slice(0, 240);
-  }, [transitStops, view, size]);
+      .slice(0, 180);
+  }, [transitStops, view, size, inspectedId, contextRoutes?.length, journey]);
   const inspected = transitStops.find((item) => item.stop.id === inspectedId);
   const stationLabels = useMemo(() => {
     const occupied: { left: number; right: number; top: number; bottom: number }[] = [];
@@ -292,7 +321,11 @@ export default function LocationMap({
         return { id: item.stop.id, distance: Math.hypot(p.x - x, p.y - y) };
       })
       .sort((a, b) => a.distance - b.distance)[0];
-    if (nearest && nearest.distance <= 24) setInspectedId(nearest.id);
+    if (nearest && nearest.distance <= 24) {
+      setInspectedId(nearest.id);
+      return true;
+    }
+    return false;
   }
   const legend = useMemo(() => {
     const routes = journey
@@ -399,20 +432,12 @@ export default function LocationMap({
         } else if (active.moved) onPickRef.current?.(viewRef.current);
       }
     } else if (!multiTouch && active?.id === event.pointerId && !active.moved) {
-      if (onExpand) onExpand();
-      else {
-        const rect = event.currentTarget.getBoundingClientRect();
-        if (
-          rect.width > 0 &&
-          rect.height > 0 &&
-          Number.isFinite(event.clientX) &&
-          Number.isFinite(event.clientY)
-        )
-          inspectNearest(
-            ((event.clientX - rect.left) * size.width) / rect.width,
-            ((event.clientY - rect.top) * size.height) / rect.height,
-          );
-      }
+      const rect = event.currentTarget.getBoundingClientRect();
+      const hitStop = rect.width > 0 && rect.height > 0 && inspectNearest(
+        ((event.clientX - rect.left) * size.width) / rect.width,
+        ((event.clientY - rect.top) * size.height) / rect.height,
+      );
+      if (!hitStop) onExpand?.();
     }
     try {
       if (event.currentTarget.hasPointerCapture?.(event.pointerId))
@@ -498,9 +523,10 @@ export default function LocationMap({
       </span>
     </div>
   );
-  const stopSelection = !field && !!visibleTransitStops.length && (
+  const selectableStops = contextRoutes?.length === 1 || navigationMode ? transitStops : visibleTransitStops;
+  const stopSelection = !field && !!selectableStops.length && (
     <>
-      <label htmlFor={`map-stop-${mapId}`}>Estaciones y paradas visibles</label>
+      <label htmlFor={`map-stop-${mapId}`}>{contextRoutes?.length === 1 ? 'Paradas de la ruta' : 'Estaciones y paradas visibles'}</label>
       <select
         id={`map-stop-${mapId}`}
         value={inspectedId}
@@ -516,10 +542,10 @@ export default function LocationMap({
         }}
       >
         <option value="">Elige una estación o tócala en el mapa</option>
-        {inspected && !visibleTransitStops.some((item) => item.stop.id === inspectedId) && (
+        {inspected && !selectableStops.some((item) => item.stop.id === inspectedId) && (
           <option value={inspectedId}>{inspected.stop.name}</option>
         )}
-        {visibleTransitStops.map(({ stop }) => (
+        {selectableStops.map(({ stop }) => (
           <option key={stop.id} value={stop.id}>
             {stop.name}
           </option>
@@ -542,11 +568,13 @@ export default function LocationMap({
   );
   return (
     <div
-      className={`location-map ${field ? 'choosing' : ''}${navigationMode ? ' navigating' : ''}${compact ? ' map-compact' : ''}`}
+      className={`location-map ${field ? 'choosing' : ''}${navigationMode ? ' navigating' : ''}${compact ? ' map-compact' : ''}${contextRoutes?.length === 1 ? ' single-route-map' : ''}`}
     >
       <div ref={container} className="location-map-canvas">
         <svg
           viewBox={`0 0 ${size.width} ${size.height}`}
+          data-map-zoom={view.zoom.toFixed(3)}
+          data-map-center={`${view.lat.toFixed(7)},${view.lng.toFixed(7)}`}
           role="group"
           aria-roledescription="mapa interactivo"
           tabIndex={0}
@@ -906,7 +934,7 @@ export default function LocationMap({
         {!navigationMode && !compact && <div className="location-map-area">MONTERREY · ZMM</div>}
         {compact && (
           <details className="location-map-info">
-            <summary aria-label="Información del mapa">
+            <summary aria-label={contextRoutes?.length === 1 ? 'Consultar paradas de la ruta' : 'Información del mapa'}>
               <Info size={19} aria-hidden="true" />
             </summary>
             <div>
@@ -966,7 +994,7 @@ export default function LocationMap({
                       .flatMap((path) => path.geometry)
                       .map(([lng, lat]) => ({ lng, lat }))
                   : [origin, destination].filter((point): point is MapPosition => !!point);
-              const next = move(fitRegionalPositions(positions, size));
+              const next = move(fit(positions));
               if (field) onPickRef.current?.(next);
             }}
           >
@@ -979,7 +1007,7 @@ export default function LocationMap({
             Reintentar calles
           </button>
         )}
-        {(navigationMode || compact) && !onExpand && stationCard}
+        {(navigationMode || compact) && stationCard}
         <a
           className="location-map-credit"
           href="https://www.openstreetmap.org/copyright"

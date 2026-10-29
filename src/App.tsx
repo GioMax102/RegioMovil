@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -29,9 +29,10 @@ import {
   Bell,
   X,
 } from 'lucide-react';
-import { loadBoard, network, readStored, sendReport, writeStored, type Transport } from './api';
-import type { Arrival, Board, Page, Preference, Scenario, Station } from './types';
+import { loadBoard, network, readStored, writeStored, type Transport } from './api';
+import type { Arrival, Board, Page, Preference, Scenario } from './types';
 const loadNetworkExplorer = () => import('./components/NetworkExplorer');
+const loadReportDialog = () => import('./components/ReportEntry');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
 const SavedTripPreview = lazy(() => import('./mobility/SavedTripPreview'));
@@ -108,7 +109,11 @@ export default function App() {
   const [boardSnapshot, setBoard] = useState<Board | null>(null);
   const [transport, setTransport] = useState<Transport>('local');
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<Modal>(null);
+  const [modal, setModal] = useState<Modal>(() => {
+    try { return !kiosk && Number(localStorage.getItem('regiomovil:report-open')) > Date.now() ? 'report' : null; }
+    catch { return null; }
+  });
+  const [reportTarget, setReportTarget] = useState<{ stationId?: string; routeId?: string }>({});
   const [arrival, setArrival] = useState<Arrival | null>(null);
   const [toast, setToast] = useState('');
   const [homeTrip, setHomeTrip] = useState<SavedMobilityTrip | null>(null);
@@ -141,6 +146,10 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [now, setNow] = useState(new Date());
   const currentStation = network.stations.find((s) => s.id === station)!;
+  function openReport(target: { stationId?: string; routeId?: string }) {
+    setReportTarget(target);
+    setModal('report');
+  }
   const board =
     boardSnapshot?.stationId === station && boardSnapshot.scenario === scenario
       ? boardSnapshot
@@ -284,7 +293,7 @@ export default function App() {
 
   const content = (
     <div
-      className={`app-shell ${!kiosk && page !== 'home' ? 'context-page' : ''} ${kiosk ? 'kiosk' : ''} ${!kiosk && (page === 'plan' || (page === 'stations' && networkTab === 'routes')) ? 'map-page' : ''}`}
+      className={`app-shell ${!kiosk && page !== 'home' ? 'context-page' : ''} ${kiosk ? 'kiosk' : ''} ${!kiosk && page === 'stations' ? 'network-page' : ''} ${!kiosk && (page === 'plan' || (page === 'stations' && networkTab === 'routes')) ? 'map-page' : ''}`}
     >
       <a className="skip-link" href="#main-content">
         Saltar al contenido
@@ -488,9 +497,7 @@ export default function App() {
                     : page === 'plan'
                       ? 'Planea tu viaje.'
                       : page === 'stations'
-                        ? networkTab === 'routes'
-                          ? 'Rutas y redes.'
-                          : 'Estaciones.'
+                        ? 'Red de transporte.'
                         : 'Tus guardados.'}
               </h1>
               {kiosk && <p>Llegadas y afluencia simuladas.</p>}
@@ -568,7 +575,7 @@ export default function App() {
                 setLineFilter('all');
                 setStationQuery(currentStation.name);
               }}
-              onReport={() => setModal('report')}
+              onReport={() => openReport({ stationId: station })}
             />
           )}
           {page === 'home' && kiosk && (
@@ -730,7 +737,10 @@ export default function App() {
                   </div>
                 </section>
                 {!kiosk && (
-                  <button className="report-link" onClick={() => setModal('report')}>
+                  <button
+                    className="report-link"
+                    onClick={() => openReport({ stationId: station })}
+                  >
                     <Flag size={15} />
                     ¿Algo no está bien? Compártelo
                     <ArrowUpRight size={14} />
@@ -811,6 +821,7 @@ export default function App() {
                   location.replace(target.href);
                 }}
                 componentProps={{
+                  onReportRoute: (routeId: string) => openReport({ routeId }),
                   onPlanLine: (lineId: string) => {
                     const line = network.lines.find((item) => item.id === lineId);
                     if (!line) return;
@@ -855,6 +866,7 @@ export default function App() {
                 onSelect={setStation}
               />
               <MetroStationDetail
+                onReport={() => openReport({ stationId: station })}
                 station={currentStation}
                 board={board}
                 saved={favorites.includes(station)}
@@ -1222,12 +1234,31 @@ export default function App() {
         <SourcesDialog onClose={() => setModal(null)} transport={transport} scenario={scenario} />
       )}
       {modal === 'report' && !kiosk && (
-        <ReportDialog
-          station={currentStation}
-          onClose={() => setModal(null)}
-          onSent={() => {
-            setModal(null);
-            announce('Reporte guardado para revisión. No cambia el estado oficial del servicio.');
+        <DeferredSection
+          load={loadReportDialog}
+          loadingLabel="Abriendo reporte…"
+          onRetry={() => location.reload()}
+          loadingFallback={
+            <Dialog title="Tu experiencia cuenta" onClose={() => setModal(null)}>
+              <SectionLoading label="Abriendo reporte…" />
+            </Dialog>
+          }
+          errorFallback={
+            <Dialog title="No pudimos abrir el reporte" onClose={() => setModal(null)}>
+              <p role="alert">Revisa tu conexión y recarga la aplicación para volver a intentar.</p>
+              <button className="primary-button" onClick={() => location.reload()}>
+                Recargar aplicación
+              </button>
+            </Dialog>
+          }
+          componentProps={{
+            initialStationId: reportTarget.stationId,
+            initialRouteId: reportTarget.routeId,
+            onClose: () => setModal(null),
+            onSent: () => {
+              setModal(null);
+              announce('Reporte recibido. Queda privado y pendiente de revisión.');
+            },
           }}
         />
       )}
@@ -1352,96 +1383,6 @@ function SourcesDialog({
           peatonal.
         </p>
       </div>
-    </Dialog>
-  );
-}
-function ReportDialog({
-  station,
-  onClose,
-  onSent,
-}: {
-  station: Station;
-  onClose: () => void;
-  onSent: () => void;
-}) {
-  const [category, setCategory] = useState('crowding');
-  const [detail, setDetail] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (busy) return;
-    setError('');
-    setBusy(true);
-    try {
-      await sendReport(station.id, category, detail.trim());
-      if (!mounted.current) return;
-      onSent();
-    } catch (error) {
-      if (!mounted.current) return;
-      setError(
-        error instanceof Error
-          ? error.message
-          : 'No hay conexión con el servidor. Tu texto sigue aquí; vuelve a intentar.',
-      );
-    } finally {
-      if (mounted.current) setBusy(false);
-    }
-  }
-  return (
-    <Dialog title="Tu experiencia cuenta" onClose={onClose}>
-      <p className="dialog-intro">
-        Reporte del piloto en <strong>{station.name}</strong>. Se guarda para revisión; no se envía
-        a autoridades ni cambia las predicciones.
-      </p>
-      <form className="report-form" onSubmit={submit}>
-        <label>
-          ¿Qué observaste?
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="crowding">Saturación de personas</option>
-            <option value="climate">Aire acondicionado</option>
-            <option value="accessibility">Accesibilidad</option>
-            <option value="condition">Condición de la unidad</option>
-          </select>
-        </label>
-        <label>
-          Cuéntanos un poco
-          <textarea
-            value={detail}
-            onChange={(e) => setDetail(e.target.value)}
-            minLength={10}
-            maxLength={500}
-            required
-            placeholder="Describe lo que observaste, sin incluir datos personales."
-            rows={4}
-          />
-          <span className="character-count">{detail.length}/500 · Mínimo 10 caracteres</span>
-        </label>
-        <p className="subtle">
-          No compartas nombres, teléfonos o datos de pago. Los reportes se almacenan en el servidor
-          del piloto.
-        </p>
-        {error && (
-          <p className="inline-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button
-          className="primary-button full-width"
-          type="submit"
-          disabled={busy || detail.trim().length < 10}
-        >
-          {busy ? 'Enviando…' : 'Enviar reporte al piloto'}
-          <ArrowRight size={17} />
-        </button>
-      </form>
     </Dialog>
   );
 }

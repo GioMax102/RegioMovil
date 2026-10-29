@@ -1,6 +1,7 @@
 import { Clock3, Info, Accessibility } from 'lucide-react';
 import { ArrivalCard, Forecast, LineBadge } from './Primitives';
 import StationActions from './StationActions';
+import PublicReports from './DeferredReports';
 import {
   getMetroServiceWindow,
   getNextMetroOpening,
@@ -17,6 +18,7 @@ export default function MetroStationDetail({
   onSave,
   onArrival,
   now,
+  onReport,
 }: {
   station: Station;
   board: Board | null;
@@ -24,6 +26,7 @@ export default function MetroStationDetail({
   onSave: () => void;
   onArrival: (arrival: Arrival) => void;
   now: Date;
+  onReport?: () => void;
 }) {
   const open = isMetroOperating(now);
   const hours = getMetroServiceWindow(now);
@@ -112,6 +115,7 @@ export default function MetroStationDetail({
           {!board && <p role="status">Cargando…</p>}
         </section>
       )}
+      <PublicReports stationId={station.id} onReport={onReport} />
     </div>
   );
 }

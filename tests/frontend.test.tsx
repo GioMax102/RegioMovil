@@ -7,6 +7,8 @@ import { readFile } from 'node:fs/promises';
 import { registerHooks } from 'node:module';
 import { JSDOM } from 'jsdom';
 import React from 'react';
+import 'fake-indexeddb/auto';
+import { readReportDraft, clearReportDraft } from '../src/reportDraft';
 import { createApp } from '../server/app.mjs';
 
 const realFetch = globalThis.fetch;
@@ -114,6 +116,7 @@ let holdReports = false;
 const heldRequests: (() => void)[] = [];
 const requests: { path: string; method: string }[] = [];
 const completedRequests: { path: string; method: string }[] = [];
+const submittedReports: { id: string; title: string; detail: string }[] = [];
 
 before(async () => {
   const network = JSON.parse(
@@ -146,16 +149,22 @@ before(async () => {
     if (url.pathname === '/api/reports' && method === 'POST' && holdReports)
       await new Promise<void>((resolve) => heldRequests.push(resolve));
     const response = await realFetch(url, init);
+    if (url.pathname === '/api/reports' && method === 'POST' && response.ok) {
+      submittedReports.push((await response.clone().json()).report);
+    }
     completedRequests.push({ path: url.pathname, method });
     return response;
   };
 });
 
-beforeEach((context) => {
+beforeEach(async (context) => {
+  const prior = await readReportDraft();
+  if (prior) await clearReportDraft(prior.draftId);
   // The UI clock and API board refer to the same operating-hour fixture.
   context.mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-15T18:00:00Z') });
   requests.length = 0;
   completedRequests.length = 0;
+  submittedReports.length = 0;
   spoken.length = 0;
   failRequests = () => false;
   holdStation = null;
@@ -222,12 +231,23 @@ test('screen changes from home, sidebar and mobile consistently reset scroll and
     await user.click(
       mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
     );
-    const title = screen.getByRole('heading', { name: 'Rutas y redes.', exact: true });
+    const title = screen.getByRole('heading', { name: 'Red de transporte.', exact: true });
     assert.equal(document.activeElement, title);
     assert.equal(screen.getByRole('main').getAttribute('aria-labelledby'), title.id);
     assert.deepEqual(scrolls, [{ top: 0, left: 0, behavior: 'auto' }]);
     // A module finishing its download must not take focus a second time.
-    await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
+    const metroTab = screen.getByRole('tab', { name: 'Estaciones de Metro' });
+    const routesTab = screen.getByRole('tab', { name: 'Rutas y redes' });
+    await user.click(metroTab);
+    assert.equal(document.activeElement, metroTab);
+    assert.equal(screen.getByRole('heading', { name: 'Red de transporte.', exact: true }), title);
+    await user.keyboard('{ArrowRight}');
+    assert.equal(document.activeElement, routesTab);
+    assert.equal(routesTab.getAttribute('aria-selected'), 'true');
+    assert.equal(screen.getByRole('heading', { name: 'Red de transporte.', exact: true }), title);
+    await user.keyboard('{ArrowLeft}');
+    assert.equal(document.activeElement, metroTab);
+    assert.equal(metroTab.getAttribute('aria-selected'), 'true');
     const search = screen.getByRole('textbox', { name: 'Buscar estación por nombre o municipio' });
     await user.click(search);
     await user.type(search, 'Anahuac');
@@ -246,7 +266,7 @@ test('screen changes from home, sidebar and mobile consistently reset scroll and
     );
     assert.equal(
       document.activeElement,
-      screen.getByRole('heading', { name: 'Estaciones.', exact: true }),
+      screen.getByRole('heading', { name: 'Red de transporte.', exact: true }),
     );
     assert.equal(scrolls.length, 3);
   } finally {
@@ -447,7 +467,7 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
     mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
   );
   await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
-  assert.ok(screen.getByRole('heading', { name: 'Rutas y redes.', exact: true }));
+  assert.ok(screen.getByRole('heading', { name: 'Red de transporte.', exact: true }));
   assert.equal(screen.queryByRole('heading', { name: 'Próximas llegadas' }), null);
   assert.equal(
     screen.getByRole('tab', { name: /Rutas y redes/ }).getAttribute('aria-selected'),
@@ -455,29 +475,29 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
   );
 });
 
-test('a report is submitted through the UI and persisted as unverified in SQLite', async () => {
+test('a report is submitted through the UI and stays private and pending in SQLite', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   await user.selectOptions(
     within(dialog).getByRole('combobox', { name: '¿Qué observaste?' }),
     'climate',
   );
   const description = 'La ventilación de la unidad estaba apagada durante mi recorrido.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Ventilación apagada');
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), description);
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   await screen.findByRole('status');
-  await waitFor(() => assert.equal(screen.queryByRole('dialog'), null));
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
   const response = await realFetch(`${base}/api/reports?station=padre-mier`);
   const payload = await response.json();
-  assert.ok(
-    payload.reports.some(
-      (report: { detail: string; status: string; category: string }) =>
-        report.detail === description &&
-        report.status === 'unverified' &&
-        report.category === 'climate',
-    ),
-  );
+  assert.ok(!payload.reports.some((report: { detail: string }) => report.detail === description));
+  const stored = application.store.get(submittedReports[0].id);
+  assert.equal(stored.detail, description);
+  assert.equal(stored.status, 'pending');
+  assert.equal(stored.category, 'climate');
+  assert.equal(stored.publication_consent, 0);
   assert.ok(
     requests.some((request) => request.path === '/api/reports' && request.method === 'POST'),
   );
@@ -486,8 +506,10 @@ test('a report is submitted through the UI and persisted as unverified in SQLite
 test('failed report submission preserves its text and does not claim success', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const description = 'La puerta no cerró durante la observación de este viaje.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Puerta con una falla');
   const textarea = within(dialog).getByRole('textbox', {
     name: /Cuéntanos un poco/,
   }) as HTMLTextAreaElement;
@@ -496,10 +518,10 @@ test('failed report submission preserves its text and does not claim success', a
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   assert.match(
     (await within(dialog).findByRole('alert')).textContent || '',
-    /No hay conexión con el servidor del piloto.*Tu texto sigue aquí/,
+    /No pudimos confirmar la recepción.*Puede haberse guardado.*Tu borrador sigue aquí/,
   );
   assert.equal(textarea.value, description);
-  assert.equal(screen.queryByRole('status'), null);
+  assert.ok(!screen.queryByText('Reporte recibido. Queda privado y pendiente de revisión.'));
   assert.equal(
     (within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }) as HTMLButtonElement)
       .disabled,
@@ -546,16 +568,27 @@ test('kiosk allows station consultation and speech while hiding report/planning/
 test('a late response from a closed report cannot close or erase a new draft', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   let dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const oldText = 'Observé saturación al abordar en esta estación durante la mañana.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Saturación al abordar');
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), oldText);
   holdReports = true;
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
   await waitFor(() => assert.equal(heldRequests.length, 1));
   await closeDialog();
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
   await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
+  dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
+  await user.click(within(dialog).getByRole('button', { name: 'Descartar borrador' }));
+  await user.click(screen.getByRole('button', { name: 'Descartar definitivamente' }));
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
+  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
+  await screen.findByRole('textbox', { name: 'Título' });
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const newText = 'Este borrador nuevo describe una puerta y todavía no se ha enviado.';
+  await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Borrador nuevo');
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), newText);
   await act(async () => {
     holdReports = false;
@@ -575,8 +608,8 @@ test('a late response from a closed report cannot close or erase a new draft', a
     newText,
   );
   assert.equal(
-    screen.queryByRole('status'),
-    null,
+    !!screen.queryByText('Reporte recibido. Queda privado y pendiente de revisión.'),
+    false,
     'A previous report must not announce success for the new draft.',
   );
   assert.equal(
@@ -584,9 +617,8 @@ test('a late response from a closed report cannot close or erase a new draft', a
       .disabled,
     false,
   );
-  const stored = await (await realFetch(`${base}/api/reports?station=padre-mier`)).json();
-  assert.ok(stored.reports.some((report: { detail: string }) => report.detail === oldText));
-  assert.ok(!stored.reports.some((report: { detail: string }) => report.detail === newText));
+  assert.equal(application.store.get(submittedReports[0].id).detail, oldText);
+  assert.equal(submittedReports.length, 1, 'The new private draft must not have been submitted.');
 });
 
 test('opening the current station from home resets a previous line filter', async () => {

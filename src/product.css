@@ -35,6 +35,10 @@
   border-radius: 50%;
 }
 .location-button {
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(ellipse at 100% 110%, #087b6410 0 24%, transparent 24.3%),
+    radial-gradient(ellipse at 100% 110%, transparent 0 37%, #087b6408 37.3% 38%, transparent 38.3%);
   box-shadow: 0 2px 7px #103e3606;
 }
 .connection-pill {

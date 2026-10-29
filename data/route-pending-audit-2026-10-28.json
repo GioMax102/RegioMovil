@@ -1,0 +1,710 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-28",
+  "scope": "Nueva revisión de las 24 variantes bus pendientes de la auditoría 2026-10-27. No es una recertificación operativa de todo el catálogo. No se hicieron comunicaciones a terceros.",
+  "baseline": {
+    "catalogBusRoutes": 209,
+    "availableGeometryRoutes": 185,
+    "pendingGeometryRoutes": 24
+  },
+  "result": {
+    "auditedRoutes": 24,
+    "newImportedRoutes": 6,
+    "availableGeometryRoutes": 191,
+    "pendingGeometryRoutes": 18
+  },
+  "sharedEvidence": {
+    "imaIndex": {
+      "url": "https://www.imanuevoleon.mx/rutasurbanas",
+      "httpStatus": 200,
+      "sha256": "77bd689b25f58ba82ecc8becaf8a8bac638aa0ef9222d3de187f13b7ddbf0cee",
+      "publishedLinkCount": 166
+    },
+    "metrorreyCsv": {
+      "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+      "httpStatus": 200,
+      "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+      "rowCount": 36,
+      "fieldNames": [
+        "periodo",
+        "mes",
+        "modalidad_SETME",
+        "tipo_servicio",
+        "nombre_ruta",
+        "cantidad_unidades",
+        "nombre_concesionario",
+        "fecha_permiso",
+        "tarifa",
+        "horario_funcionamiento",
+        "pasajeros_periodo",
+        "km_prestados_periodo",
+        "cumplimiento",
+        "IPK_promedio_periodo",
+        "tiempo_recorrido"
+      ]
+    },
+    "metrorreySite": {
+      "url": "https://www.metrorrey.mx/",
+      "sha256": "f4074f77f39bf5a9839c8a1da2da3882044b3f36dd0edc16dcd5bb0f9b6502b3",
+      "mapUrls": [],
+      "mapCount": 0,
+      "downloadedBytes": 1158118
+    }
+  },
+  "routes": [
+    {
+      "id": "ima-128-remanente-ermita-cananea-centro",
+      "name": "Ruta 128 Remanente Ermita – Cananea – Centro",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.nl.gob.mx/es/boletines/renueva-samuel-garcia-con-30-nuevas-unidades-las-rutas-227-y-128",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "indexMatches": [],
+      "reason": "no-matching-official-map-page",
+      "nextAction": "Obtener mapa o secuencia georreferenciada de la variante Ermita–Cananea–Centro; el boletín de renovación no resuelve calles, sentidos ni paradas.",
+      "geometryInExperimentalGraph": false
+    },
+    {
+      "id": "ima-218-directa-santa-maria-rosita-fleteros",
+      "name": "Ruta 218 Directa Santa Maria Rosita Fleteros",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-without-map-embed",
+      "result": "imported",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/copy-2-of-projects-4/enchanted-echoes",
+          "finalUrl": "https://www.imanuevoleon.mx/copy-2-of-projects-4/enchanted-echoes",
+          "httpStatus": 200,
+          "sha256": "894ea0db650f2460557c62ef8c0f96f7708606a633ba1d5379b8896d44c0f7f0"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 218 Directa Santa María - Rosita - Fleteros",
+          "url": "https://www.imanuevoleon.mx/copy-2-of-projects-4/enchanted-echoes"
+        }
+      ],
+      "reason": "deferred-iframe-recovered-and-matching-kml-validated",
+      "pageHeading": "Ruta 218 Directa Santa María - Rosita - Fleteros",
+      "mapTitle": "Ruta 218 Directa Santa María - Rosita - Fleteros",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_121b699f66e595bdf29fafd5fc9dc255.html",
+      "embedSha256": "fb45a6af6fb334f79fbb7ad684426feff121ca78df7837c8f9733b76373e42f0",
+      "mapId": "1n1LQF_dG-hLJm1BzHY1mXrYkneLNfJ8",
+      "kmlSha256": "f9824243535cdc57d70298e1b3f47169cd69ccf0132775a51ca0f56fa9a29603",
+      "segments": 1,
+      "publishedMarkers": 2,
+      "vertices": 412,
+      "nextAction": "Comprobar orden, sentidos y paradas intermedias mediante fuente oficial o levantamiento revisado; los dos marcadores publicados no representan una lista completa de paradas.",
+      "geometryInExperimentalGraph": true
+    },
+    {
+      "id": "ima-218-directa-santa-maria-rosita-plutarco-e-calles",
+      "name": "Ruta 218 Directa Santa Maria Rosita Plutarco E. Calles",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-download-failed",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/copy-2-of-projects",
+          "error": "HTTP Error 404: Not Found"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 218 Directa Santa María - Rosita - Plutarco E. Calles",
+          "url": "https://www.imanuevoleon.mx/copy-2-of-projects"
+        }
+      ],
+      "reason": "official-page-download-failed",
+      "nextAction": "Recuperar enlace corregido desde IMA para la variante Plutarco E. Calles; no usar Fleteros ni el troncal por compartir el código 218.",
+      "geometryInExperimentalGraph": false
+    },
+    {
+      "id": "ima-223-directa-hector-caballero",
+      "name": "Ruta 223 Directa Hector Caballero",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-without-map-embed",
+      "result": "imported",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/copy-9-of-projects-2-1/enchanted-echoes",
+          "finalUrl": "https://www.imanuevoleon.mx/copy-9-of-projects-2-1/enchanted-echoes",
+          "httpStatus": 200,
+          "sha256": "ef538d01ef854503718b46e1e67cdd212dc793f1599292de20457005b1167c2d"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 223 Directa Héctor Caballero",
+          "url": "https://www.imanuevoleon.mx/copy-9-of-projects-2-1/enchanted-echoes"
+        }
+      ],
+      "reason": "deferred-iframe-recovered-and-matching-kml-validated",
+      "pageHeading": "Ruta 223 Directa Héctor Caballero",
+      "mapTitle": "Ruta 223 Directa Héctor Caballero",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_a6a2106bbc97da6e090ec0b0522318a4.html",
+      "embedSha256": "0e48a9934e0ad5824c8cd7c3c8a4efcbebd7e4747bf2afd512ecc353d4776b02",
+      "mapId": "1JlU_jR7gw9_ZB_4PEiOSLDLKflmyINU",
+      "kmlSha256": "bf548cea37231e5db6c70c39d7b35ad137176c92daa8d1cc2ece879c387dbd08",
+      "segments": 1,
+      "publishedMarkers": 2,
+      "vertices": 407,
+      "nextAction": "Comprobar orden, sentidos y paradas intermedias mediante fuente oficial o levantamiento revisado; los dos marcadores publicados no representan una lista completa de paradas.",
+      "geometryInExperimentalGraph": true
+    },
+    {
+      "id": "ima-226-alimentadora-palmiras-estacion-sendero",
+      "name": "Ruta 226 Alimentadora Palmiras – Estación Sendero",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-without-map-embed",
+      "result": "imported",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1/enchanted-echoes",
+          "finalUrl": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1/enchanted-echoes",
+          "httpStatus": 200,
+          "sha256": "7a105e6f712affc84554d657f84052e9737cad047da995888c0929209ee7fa97"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 226 Alimentadora Palmiras - Estación Sendero",
+          "url": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1/enchanted-echoes"
+        }
+      ],
+      "reason": "deferred-iframe-recovered-and-matching-kml-validated",
+      "pageHeading": "Ruta 226 Alimentadora Palmiras - Estación Sendero",
+      "mapTitle": "Ruta 226 Alimentadora Palmiras - Estación Sendero",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_b720c1e37147f742761037028da6a26b.html",
+      "embedSha256": "27b2a575261926167387f1545638de2a90e2f78e50d5d9c731c199d14756f88c",
+      "mapId": "1CkntKiXutOqovvnwic0zw7VEu0j_4fE",
+      "kmlSha256": "cbbf7011b25d2f25f02957641c31f3ec5aa0891cd0ac2cbebeeb30ec324ae020",
+      "segments": 1,
+      "publishedMarkers": 2,
+      "vertices": 583,
+      "nextAction": "Comprobar orden, sentidos y paradas intermedias mediante fuente oficial o levantamiento revisado; los dos marcadores publicados no representan una lista completa de paradas.",
+      "geometryInExperimentalGraph": true
+    },
+    {
+      "id": "ima-227-remanente-clouthier",
+      "name": "Ruta 227 Remanente Clouthier",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.nl.gob.mx/es/boletines/renueva-samuel-garcia-con-30-nuevas-unidades-las-rutas-227-y-128",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "indexMatches": [],
+      "reason": "no-matching-official-map-page",
+      "nextAction": "Obtener mapa diferenciado de Clouthier; conservar identidad separada de Emiliano Zapata.",
+      "geometryInExperimentalGraph": false
+    },
+    {
+      "id": "ima-227-remanente-emiliano-zapata",
+      "name": "Ruta 227 Remanente Emiliano Zapata",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.nl.gob.mx/es/boletines/renueva-samuel-garcia-con-30-nuevas-unidades-las-rutas-227-y-128",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "indexMatches": [],
+      "reason": "no-matching-official-map-page",
+      "nextAction": "Obtener mapa diferenciado de Emiliano Zapata; conservar identidad separada de Clouthier.",
+      "geometryInExperimentalGraph": false
+    },
+    {
+      "id": "ima-228-remanente-santa-isabel-estacion-felix-u-gomez",
+      "name": "Ruta 228 Remanente Santa Isabel Estacion Felix U. Gomez",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-without-map-embed",
+      "result": "imported",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1-1/enchanted-echoes",
+          "finalUrl": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1-1/enchanted-echoes",
+          "httpStatus": 200,
+          "sha256": "8654f512ddb9eeca59980cb1a2a3a66ac9fe62a326cc0abfdca213c7eb35ec0a"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 228 Remanente Santa Isabel - Estación Félix U. Gómez",
+          "url": "https://www.imanuevoleon.mx/copy-18-of-projects-2-1-1-1/enchanted-echoes"
+        }
+      ],
+      "reason": "deferred-iframe-recovered-and-matching-kml-validated",
+      "pageHeading": "Ruta 228 Remanente Santa Isabel - Estación Félix U. Gómez",
+      "mapTitle": "Ruta 228 Remanente Santa Isabel - Estación Félix U. Gómez",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_dfe3440214d07b52495c43b3374238c7.html",
+      "embedSha256": "fcaaff2ac12717469c9390c4600dbe7dd2f0fab74ecf950c55b023f430d6daa7",
+      "mapId": "1muptXpanLPZAyXOkLi3EB82s5CGXTE8",
+      "kmlSha256": "6e572e8ad3232b00a1c5dda0957111023a44e5d0ce0932bb47729844db6aa4d6",
+      "segments": 1,
+      "publishedMarkers": 2,
+      "vertices": 427,
+      "nextAction": "Comprobar orden, sentidos y paradas intermedias mediante fuente oficial o levantamiento revisado; los dos marcadores publicados no representan una lista completa de paradas.",
+      "geometryInExperimentalGraph": true
+    },
+    {
+      "id": "ima-233-remanente-raul-salinas-fome-35-uanl",
+      "name": "Ruta 233 Remanente Raul Salinas Fome 35 UANL",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-without-map-embed",
+      "result": "imported",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/copy-21-of-projects-2-1-1-1/enchanted-echoes",
+          "finalUrl": "https://www.imanuevoleon.mx/copy-21-of-projects-2-1-1-1/enchanted-echoes",
+          "httpStatus": 200,
+          "sha256": "e05c2cee94d0cb8b67c4fe6da58122459aae24771dba325bc80fe335e4e25cc7"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 233 Remanente Raúl Salinas - Fome 35 - UANL",
+          "url": "https://www.imanuevoleon.mx/copy-21-of-projects-2-1-1-1/enchanted-echoes"
+        }
+      ],
+      "reason": "deferred-iframe-recovered-and-matching-kml-validated",
+      "pageHeading": "Ruta 233 Remanente Raúl Salinas - Fome 35 - UANL",
+      "mapTitle": "Ruta 233 Remanente Raúl Salinas - Fome 35 - UANL",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_21e092a8e277de10cbd640c6e975aada.html",
+      "embedSha256": "ccfb2c0b828080f884c09826f2dd4ba3f8b8b18f2ca64ebed19b268ef898a54c",
+      "mapId": "100zprx5GUYIZy4CTAh09bIptKRoKOhU",
+      "kmlSha256": "1a5527c80ea2bc2993bd25518464c7a36d220240dd69df45c99439207c93be14",
+      "segments": 1,
+      "publishedMarkers": 2,
+      "vertices": 469,
+      "nextAction": "Comprobar orden, sentidos y paradas intermedias mediante fuente oficial o levantamiento revisado; los dos marcadores publicados no representan una lista completa de paradas.",
+      "geometryInExperimentalGraph": true
+    },
+    {
+      "id": "ima-38-310-troncal-lincoln-ruiz-cortines-centro",
+      "name": "Ruta 38/310 Troncal Lincoln Ruiz Cortines Centro",
+      "networkId": "troncales-integradas",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-identity-mismatch",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/projects/enchanted-echoes",
+          "finalUrl": "https://www.imanuevoleon.mx/projects/enchanted-echoes",
+          "httpStatus": 200,
+          "sha256": "994ee5fa16e1a6c660450b30841ecb2aac4c9f7d243a102632584809aefa3edf"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 38/310 Troncal Lincoln Ruiz Cortines - Centro",
+          "url": "https://www.imanuevoleon.mx/projects/enchanted-echoes"
+        }
+      ],
+      "reason": "official-page-identity-mismatch",
+      "nextAction": "Solicitar corrección pública del vínculo 38/310 o fuente inequívoca; descartar el mapa 213 como sustituto.",
+      "geometryInExperimentalGraph": false,
+      "pageHeading": "Ruta 213 Directa Soriana Sendero Quinta Colonial"
+    },
+    {
+      "id": "ima-405-alimentadora-felix-u-gomez-estanzuela",
+      "name": "Ruta 405 Alimentadora Félix U. Gómez – Estanzuela",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.nl.gob.mx/es/boletines/entrega-gobernador-nuevas-unidades-de-transporte-fortalece-sectores-en-el-sur-de",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "indexMatches": [],
+      "reason": "no-matching-official-map-page",
+      "nextAction": "Obtener mapa específico de la ruta IMA 405; no copiar el Transmetro FUG–Carretera Nacional–La Estanzuela sin equivalencia oficial.",
+      "geometryInExperimentalGraph": false
+    },
+    {
+      "id": "ima-5-remanente-estanzuela-los-cristales",
+      "name": "Ruta 5 Remanente Estanzuela – Los Cristales",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.nl.gob.mx/es/boletines/entrega-gobernador-nuevas-unidades-de-transporte-fortalece-sectores-en-el-sur-de",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "indexMatches": [],
+      "reason": "no-matching-official-map-page",
+      "nextAction": "Confirmar si el alimentador Los Cristales–La Estanzuela de Metrorrey corresponde a esta ruta IMA 5 antes de reutilizarlo; obtener código, variante, sentido y paradas oficiales.",
+      "geometryInExperimentalGraph": false
+    },
+    {
+      "id": "ima-50-mas-palomas-san-angel",
+      "name": "Ruta 50 Más Palomas – San Ángel",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "result": "pending",
+      "sourceChecks": [
+        {
+          "url": "https://www.nl.gob.mx/es/boletines/entrega-samuel-garcia-nuevas-unidades-la-ruta-50-mas-palomas-que-restructura-su-recorrido",
+          "error": "HTTP Error 403: Forbidden"
+        }
+      ],
+      "indexMatches": [],
+      "reason": "candidate-map-does-not-confirm-san-angel-extension",
+      "nextAction": "Obtener el mapa posterior a la extensión San Ángel de noviembre de 2025; el KML Más Palomas inspeccionado conserva el recorrido previo y no acredita la extensión.",
+      "geometryInExperimentalGraph": false,
+      "candidateMap": {
+        "url": "https://www.imanuevoleon.mx/blank-6-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1-1",
+        "mapTitle": "Ruta 50 Remanente Mas Palomas",
+        "mapIds": [
+          "1jKAR-OjeaEvt9VqKcAYCZ5jJYJO3fn0"
+        ],
+        "kmlSha256": "9f375b440db27fd0f83ad30066780cbcbb63d868e59c92fa3129d06972b2aa9e",
+        "bounds": {
+          "lat": [
+            25.615945,
+            25.684275
+          ],
+          "lng": [
+            -100.320098,
+            -100.265928
+          ]
+        }
+      },
+      "additionalSourceUrls": [
+        "https://www.nl.gob.mx/es/boletines/entrega-samuel-garcia-nuevas-unidades-la-ruta-50-mas-palomas-que-restructura-su-recorrido"
+      ]
+    },
+    {
+      "id": "ima-527-alimentadora-mision-de-san-javier-san-pablo",
+      "name": "Ruta 527 Alimentadora Mision de San Javier San Pablo",
+      "networkId": "muevo-leon",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "official-page-without-map-embed",
+      "result": "imported",
+      "sourceChecks": [
+        {
+          "url": "https://www.imanuevoleon.mx/copy-33-of-projects-2-1-1-1-1-1/enchanted-echoes",
+          "finalUrl": "https://www.imanuevoleon.mx/copy-33-of-projects-2-1-1-1-1-1/enchanted-echoes",
+          "httpStatus": 200,
+          "sha256": "b0e741971152fb344ad12f2e947c880f742768cd69c3c33db1f00d98f0b61ef5"
+        }
+      ],
+      "indexMatches": [
+        {
+          "title": "Ruta 527 Alimentadora Misión de San Javier San Pablo",
+          "url": "https://www.imanuevoleon.mx/copy-33-of-projects-2-1-1-1-1-1/enchanted-echoes"
+        }
+      ],
+      "reason": "deferred-iframe-recovered-and-matching-kml-validated",
+      "pageHeading": "Ruta 527 Alimentadora Misión de San Javier San Pablo",
+      "mapTitle": "Ruta 527 Alimentadora Misión de San Javier San Pablo",
+      "embedUrl": "https://www-imanuevoleon-mx.filesusr.com/html/cedf2d_ae4befa5c10d2dc28a82ca0f78e088f4.html",
+      "embedSha256": "2a2adb150074b284066cc89cf314ec9274cff57788b7aa03459c961fad67684c",
+      "mapId": "1O9NsaZiKxQtOKHYnIFjlm5Dfm2tn90Q",
+      "kmlSha256": "7fbfbe9bcab6366a4be9063d78c8bc2f99063947354591bbc7d5d1c677b3b811",
+      "segments": 1,
+      "publishedMarkers": 2,
+      "vertices": 236,
+      "nextAction": "Comprobar orden, sentidos y paradas intermedias mediante fuente oficial o levantamiento revisado; los dos marcadores publicados no representan una lista completa de paradas.",
+      "geometryInExperimentalGraph": true
+    },
+    {
+      "id": "transmetro-exposicion-juarez-valle-del-roble",
+      "name": "Exposición – Juárez – Valle del Roble",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 3,
+          "publishedName": "EXPOSICION-JUAREZ-VALLEDELROBLE",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Confirmar vigencia y mapa de esta identidad histórica frente a la ruta IMA 182 Valle del Roble–Exposición; no duplicar automáticamente su geometría."
+    },
+    {
+      "id": "transmetro-felix-u-gomez-monte-cristal",
+      "name": "Félix U. Gómez – Monte Cristal",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 4,
+          "publishedName": "FELIXU_GOMEZ-MONTECRISTAL",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Confirmar vigencia y mapa de esta identidad histórica frente a las variantes IMA 224; un nombre parecido no acredita equivalencia."
+    },
+    {
+      "id": "transmetro-garza-sada-carretera-nacional",
+      "name": "Garza Sada – Carretera Nacional",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 13,
+          "publishedName": "GARZASADA-CARRETERANACIONAL",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/",
+        "https://beta.nl.gob.mx/es/boletines/inicia-gobernador-operaciones-de-la-ruta-transmetro-garza-sada-carretera-nacional",
+        "https://www.nl.gob.mx/es/licitacion-publica-de-metrorrey-no-stcm-25-2024-daf",
+        "https://www.nl.gob.mx/sites/default/files/repositorio/Dependencias/Sistema%20de%20Transporte%20Colectivo%20%28Metrorrey%29/Convocatorias/STCM_25_2024/20241128_ficha_tecnica_stcm25.pdf"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Revisar ficha técnica STCM-25-2024 y distinguir el circuito Garza Sada–Mederos del mapa publicado FUG–Carretera Nacional–La Estanzuela; validar itinerario y paradas.",
+      "additionalEvidence": {
+        "publishedMapHeading": "TM FUG - Carretera Nacional - La Estanzuela",
+        "technicalPdfFetch": "HTTP 403; contenido no validado en esta revisión"
+      }
+    },
+    {
+      "id": "transmetro-hospital-metropolitano-prados-del-nogalar",
+      "name": "Hospital Metropolitano – Prados del Nogalar",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 23,
+          "publishedName": "HOSP_METROPOLITANO-PRADOSDELNOGALAR",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Obtener mapa georreferenciado inequívoco de Prados del Nogalar; no sustituirlo por Casa Blanca, Anillo Eléctrico o Diego Díaz."
+    },
+    {
+      "id": "transmetro-mederos-el-uro",
+      "name": "Mederos – El Uro",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 17,
+          "publishedName": "MEDEROS-ELURO",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/",
+        "https://beta.nl.gob.mx/es/boletines/inicia-gobernador-operaciones-de-la-ruta-transmetro-garza-sada-carretera-nacional"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Obtener mapa o paradas georreferenciadas del circuito Mederos–El Uro inaugurado en mayo de 2025; el boletín sólo enumera avenidas y no identifica cada giro/parada."
+    },
+    {
+      "id": "transmetro-palmiras-buenavista-villas-san-francisco",
+      "name": "Palmiras – Buenavista / Villas San Francisco",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 19,
+          "publishedName": "PALMIRAS-BUENAVISTA/VILLASSANFRANCISCO",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Obtener mapa exacto del alimentador Palmiras y sus puntos de enlace; no reutilizar el recorrido completo Mitras–Villas de San Francisco ni la ruta IMA 226."
+    },
+    {
+      "id": "transmetro-sendero-buenavista",
+      "name": "Sendero – Buenavista",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 20,
+          "publishedName": "SENDERO-BUENAVISTA",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Confirmar vigencia y mapa del servicio histórico Sendero–Buenavista; distinguirlo de la nueva ruta IMA 226 Palmiras–Sendero."
+    },
+    {
+      "id": "transmetro-sendero-fernando-amilpa",
+      "name": "Sendero – Fernando Amilpa",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 24,
+          "publishedName": "SENDERO-FERNANDOAMILPA",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Confirmar variante Fernando Amilpa y la posible extensión Amarantos con mapa propio; no sustituir por Sendero–Metroplex."
+    },
+    {
+      "id": "transmetro-universidad-asarco-nuevo-sur-mederos",
+      "name": "Universidad – Asarco – Nuevo Sur – Mederos",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 31,
+          "publishedName": "UNIVERSIDAD-ASARCO-NUEVOSUR-MEDEROS",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Confirmar vigencia e identidad frente a IMA 301 Revolución–UANL; pedir mapa exacto del corredor histórico antes de compartir geometría."
+    },
+    {
+      "id": "transmetro-y-griega-dos-rios",
+      "name": "Y Griega – Dos Ríos",
+      "networkId": "transmetro",
+      "checkedAt": "2026-10-28",
+      "baselineStatus": "pending",
+      "baselineReason": "no-geometric-source-documented",
+      "result": "pending",
+      "reason": "official-csv-has-no-coordinate-or-map-fields",
+      "sourceChecks": [
+        {
+          "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+          "httpStatus": 200,
+          "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+          "row": 5,
+          "publishedName": "YGRIEGA-DOSRIOS",
+          "period": "2025-09"
+        }
+      ],
+      "additionalSourceUrls": [
+        "https://www.metrorrey.mx/"
+      ],
+      "geometryInExperimentalGraph": false,
+      "nextAction": "Confirmar equivalencia o sustitución por FUG–Dos Ríos; el desplazamiento del extremo requiere evidencia oficial antes de copiar su trazo."
+    }
+  ]
+}
