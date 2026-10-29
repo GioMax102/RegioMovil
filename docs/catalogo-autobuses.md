@@ -1,5 +1,7 @@
 # Catálogo de autobuses: fuentes y alcance
 
+> Registro histórico: conserva el alcance y las cifras de su fecha. Para el estado vigente, consultar el [índice documental](README.md), la [especificación técnica](especificacion-tecnica.md) y la [hoja de ruta](hoja-de-ruta.md).
+
 ## Inventario de cobertura — 25 de octubre de 2026
 
 El catálogo local contiene **214 servicios documentados de seis redes**, no 41. Los 41 de la investigación inicial que figura más abajo fueron una primera incorporación y no describen la cobertura actual. Hay **59 servicios con mapa de consulta en su ficha**: tres líneas de Metro y 56 paquetes de autobús. El mapa general y el grafo experimental conservan **54 recorridos y 3,417 puntos**, porque los cinco mapas nuevos se incorporan **sólo para consulta**.

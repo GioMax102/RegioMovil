@@ -1,5 +1,7 @@
 # Integración de redes y nuevos servicios
 
+> Registro histórico: conserva el alcance y las cifras de su fecha. Para el estado vigente, consultar el [índice documental](README.md), la [especificación técnica](especificacion-tecnica.md) y la [hoja de ruta](hoja-de-ruta.md).
+
 Consulta de fuentes: **15 de octubre de 2026**. Se incorporan ambas redes solicitadas: autobuses y ampliaciones de Metrorrey. Las fichas de catálogo no equivalen a servicios operando hoy.
 
 ## Lo que está integrado

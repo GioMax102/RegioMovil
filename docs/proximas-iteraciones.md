@@ -1,5 +1,7 @@
 # Próximas iteraciones: red de autobuses
 
+> Registro histórico: conserva el alcance y las cifras de su fecha. Para el estado vigente, consultar el [índice documental](README.md), la [especificación técnica](especificacion-tecnica.md) y la [hoja de ruta](hoja-de-ruta.md).
+
 Ya se incorporaron Muevo León / urbanas IMA, RegioRuta, Ecovía / GMG, Troncales e integradas y Transmetro al catálogo consultable, con búsqueda, filtros y doce mapas de autobús. Las ampliaciones L4/L6 están documentadas como obras. Ver [integración y cobertura actual](integracion-rutas.md). El planificador de lugares y transporte combina L1–L3 con los recorridos de autobús que tienen geometría disponible, en un modelo experimental. Ampliar y validar esa cobertura requiere el trabajo siguiente.
 
 ## Trabajo previo por red

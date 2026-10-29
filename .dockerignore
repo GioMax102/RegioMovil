@@ -6,4 +6,14 @@ android
 output
 .env
 .env.local
+.env.*
+.idea
+.codex
+.agents
+.aws
+.pnpm-store
+test-results
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.log

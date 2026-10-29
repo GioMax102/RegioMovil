@@ -16,6 +16,7 @@
     "mobility:build": "node scripts/prepare-mobility.mjs",
     "start": "node --env-file-if-exists=.env server/index.mjs",
     "test": "node --import tsx --test tests/*.test.mjs tests/*.test.tsx",
+    "docs:check": "node scripts/check-docs.mjs",
     "model:train": "node server/train-model.mjs",
     "test:backend": "node --test tests/backend*.test.mjs",
     "android:sync": "pnpm build && cap sync android",

@@ -1,8 +1,11 @@
 name: Calidad
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   app:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -11,5 +14,8 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm docs:check
       - run: pnpm build
       - run: pnpm test
+      - run: node scripts/prepare-coverage-inventory.mjs --check
+      - run: python3 -m unittest discover -s tests -p '*_test.py'
