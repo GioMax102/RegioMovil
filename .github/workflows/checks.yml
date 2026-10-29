@@ -19,3 +19,30 @@ jobs:
       - run: pnpm test
       - run: node scripts/prepare-coverage-inventory.mjs --check
       - run: python3 -m unittest discover -s tests -p '*_test.py'
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: docker build -t regiomovil:ci .
+      - name: Smoke test of the production image
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_name="regiomovil-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'docker rm -f "$container_name" >/dev/null 2>&1 || true' EXIT
+          docker run -d --name "$container_name" -p 127.0.0.1::3001 regiomovil:ci
+          address="$(docker port "$container_name" 3001/tcp)"
+          ready=false
+          for attempt in {1..30}; do
+            if curl --silent --fail "http://${address}/api/health" >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = true
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://${address}/api/admin/session")" = 404
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://${address}/admin.html")" = 404

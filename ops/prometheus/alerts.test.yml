@@ -1,0 +1,38 @@
+rule_files:
+  - alerts.yml
+evaluation_interval: 30s
+tests:
+  - interval: 30s
+    input_series:
+      - series: 'up{job="regiomovil",instance="app:9091"}'
+        values: '0+0x12'
+      - series: 'regiomovil_reports_stored{job="regiomovil"}'
+        values: '4500+0x30'
+      - series: 'regiomovil_reports_limit{job="regiomovil"}'
+        values: '5000+0x30'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: RegioMovilMetricsUnavailable
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: RegioMovilMetricsUnavailable
+        exp_alerts:
+          - exp_labels:
+              job: regiomovil
+              instance: app:9091
+              severity: critical
+            exp_annotations:
+              summary: 'No se pueden recolectar métricas de RegioMóvil'
+              description: 'Revisar proceso, red privada y secreto del recolector.'
+      - eval_time: 5m
+        alertname: RegioMovilReportsCapacity
+        exp_alerts: []
+      - eval_time: 11m
+        alertname: RegioMovilReportsCapacity
+        exp_alerts:
+          - exp_labels:
+              job: regiomovil
+              severity: warning
+            exp_annotations:
+              summary: 'El almacenamiento de reportes supera el 80% de su cuota'
+              description: 'Revisar retención y capacidad; no borrar observaciones válidas para silenciar la alerta.'

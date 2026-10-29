@@ -4,5 +4,11 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: { host: '0.0.0.0', proxy: { '/api': 'http://127.0.0.1:3001' } },
-  build: { target: 'es2022', sourcemap: false, manifest: true, cssMinify: 'lightningcss' },
+  build: {
+    target: 'es2022',
+    sourcemap: false,
+    manifest: true,
+    cssMinify: 'lightningcss',
+    rollupOptions: { input: { app: 'index.html', admin: 'admin.html' } },
+  },
 });

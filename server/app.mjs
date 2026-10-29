@@ -10,6 +10,7 @@ import { findServices, mergeCatalogs } from './catalog.mjs';
 import { createPlaceSearch, PlaceSearchError } from './places.mjs';
 import { createPlaceSuggestions } from './place-suggestions.mjs';
 import { planMobility } from './mobility.mjs';
+import { createAdminRouter, ADMIN_CONTENT_SECURITY_POLICY } from './admin.mjs';
 
 export const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost', 'https://localhost', 'capacitor://localhost'];
 const MIME = { '.txt': 'text/plain; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
@@ -56,7 +57,7 @@ async function readJson(request, context = 'el reporte', maxBytes = 4096) {
   catch { throw new HttpError(400, 'INVALID_JSON', 'El JSON de la solicitud no es válido.'); }
 }
 
-export function createApp({ network, catalog = null, mobilityNetwork = null, placesOptions, placeSuggestionsOptions, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12 } = {}) {
+export function createApp({ network, catalog = null, mobilityNetwork = null, placesOptions, placeSuggestionsOptions, databasePath = ':memory:', now = () => new Date(), allowedOrigins = DEFAULT_ORIGINS, distPath = null, reportLimit = 12, adminOptions = null } = {}) {
   if (!network?.stations?.length || !network?.lines?.length) throw new Error('A nonempty transit network is required.');
   if (allowedOrigins.includes('*')) throw new Error('CORS wildcard is not supported. Configure explicit origins.');
   const serviceCatalog = mergeCatalogs(catalog ? [catalog] : []);
@@ -119,14 +120,21 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
     if (!route) throw new HttpError(404, 'ROUTE_NOT_FOUND', 'No encontramos ese recorrido en el catálogo.');
     return route;
   };
+  const admin = createAdminRouter({ options: adminOptions, store, network, catalog: serviceCatalog, readJson, send, HttpError, limit });
 
   async function staticFile(pathname, request, response) {
     if (!distPath) return false;
     const root = resolve(distPath);
     let decoded;
     let requested;
-    try { decoded = decodeURIComponent(pathname); requested = resolve(root, `.${decoded}`); }
+    try { decoded = decodeURIComponent(pathname); requested = resolve(root, `.${decoded === '/admin' ? '/admin.html' : decoded}`); }
     catch { throw new HttpError(400, 'INVALID_PATH', 'La dirección no es válida.'); }
+    if (['/admin', '/admin.html'].includes(decoded)) {
+      if (!adminOptions) throw new HttpError(404, 'NOT_FOUND', 'No encontramos ese recurso.');
+      response.setHeader('Content-Security-Policy', ADMIN_CONTENT_SECURITY_POLICY);
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    }
     if (/[\\\u0000-\u001f\u007f]/.test(decoded)) throw new HttpError(400, 'INVALID_PATH', 'La dirección no es válida.');
     if (decoded.split('/').some(segment => segment.startsWith('.'))) throw new HttpError(403, 'FORBIDDEN_PATH', 'No se puede abrir esa dirección.');
     if (requested !== root && !requested.startsWith(`${root}${sep}`)) throw new HttpError(403, 'FORBIDDEN_PATH', 'No se puede abrir esa dirección.');
@@ -154,7 +162,7 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
     const content = request.method === 'HEAD' ? undefined : encoded || await readFile(realFile);
     response.writeHead(200, { 'Content-Type': MIME[extension], 'Content-Length': encoded?.length ?? metadata.size,
       Vary:'Origin, Accept-Encoding', ...(encoding ? {'Content-Encoding':encoding} : {}),
-      'Cache-Control': extension === '.html' || decoded === '/sw.js' ? 'no-cache' : /-[A-Za-z0-9_-]{8,}\./.test(file) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600' });
+      'Cache-Control': decoded === '/admin' || decoded === '/admin.html' ? 'no-store' : extension === '.html' || decoded === '/sw.js' ? 'no-cache' : /-[A-Za-z0-9_-]{8,}\./.test(file) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600' });
     response.end(content);
     return true;
   }
@@ -168,17 +176,25 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
     response.setHeader('Vary', 'Origin');
     const origin = request.headers.origin;
     try {
-      if (origin && !allowedOrigins.includes(origin)) throw new HttpError(403, 'ORIGIN_NOT_ALLOWED', 'Este origen no está autorizado.');
-      if (origin) response.setHeader('Access-Control-Allow-Origin', origin);
+      const target = request.url || '/';
+      if (!target.startsWith('/') || target.startsWith('//')) throw new HttpError(400, 'INVALID_PATH', 'La dirección no es válida.');
+      const url = new URL(target, 'http://localhost');
+      const date = now();
+      if (await admin.handle(request, response, url, date)) return;
+      const adminPage = ['/admin', '/admin.html'].includes(url.pathname);
+      if (adminPage) {
+        if (!adminOptions) throw new HttpError(404, 'NOT_FOUND', 'No encontramos ese recurso.');
+        response.setHeader('Content-Security-Policy', ADMIN_CONTENT_SECURITY_POLICY);
+        response.setHeader('Referrer-Policy', 'no-referrer');
+        response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+      }
+      if (origin && !allowedOrigins.includes(origin) && !(adminPage && origin === admin.authentication.origin)) throw new HttpError(403, 'ORIGIN_NOT_ALLOWED', 'Este origen no está autorizado.');
+      if (origin && !adminPage) response.setHeader('Access-Control-Allow-Origin', origin);
       if (request.method === 'OPTIONS') {
         response.writeHead(204, { 'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '600' });
         response.end();
         return;
       }
-      const target = request.url || '/';
-      if (!target.startsWith('/') || target.startsWith('//')) throw new HttpError(400, 'INVALID_PATH', 'La dirección no es válida.');
-      const url = new URL(target, 'http://localhost');
-      const date = now();
       if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) {
         if (['GET', 'HEAD'].includes(request.method) && await staticFile(url.pathname, request, response)) return;
         throw new HttpError(404, 'NOT_FOUND', 'No encontramos ese recurso.');
@@ -345,5 +361,5 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
       send(response, knownError ? error.status : 500, { error: { code: knownError ? error.code : 'INTERNAL_ERROR', message: knownError ? error.message : 'No pudimos completar la solicitud. Intenta de nuevo.' } });
     }
   }
-  return { handler, close: () => store.close(), store };
+  return { handler, ready: admin.ready, admin: admin.authentication, close: () => { admin.close(); store.close(); }, store };
 }
