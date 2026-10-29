@@ -221,6 +221,11 @@ async function closeDialog() {
     within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar ventana' }),
   );
 }
+async function waitForMobilityMap() {
+  // Loading the public graph includes its download, JSON decoding and render.
+  // Match readPublicDocument's 10-second budget instead of the default 1-second query.
+  await screen.findByRole('region', { name: 'Mapa del viaje', exact: true }, { timeout: 10000 });
+}
 
 test('screen changes from home, sidebar and mobile consistently reset scroll and focus the new heading', async () => {
   await mount();
@@ -758,7 +763,8 @@ test('a saved bus stop opens as the planning origin without an invented destinat
   await user.click(mainNavigation().getByRole('button', { name: 'Mi movilidad', exact: true }));
   const favorite = await screen.findByRole('button', { name: stop.name, exact: true });
   await user.click(favorite);
-  assert.ok(await screen.findByRole('button', { name: `Origen: ${stop.name}`, exact: true }));
+  await waitForMobilityMap();
+  assert.ok(screen.getByRole('button', { name: `Origen: ${stop.name}`, exact: true }));
   assert.ok(screen.getByRole('button', { name: 'Destino: Elige un punto', exact: true }));
   assert.equal(
     screen.getByRole('button', { name: 'Buscar rutas', exact: true }).hasAttribute('disabled'),
@@ -811,7 +817,8 @@ for (const retired of [false, true]) {
       await user.click(mainNavigation().getByRole('button', { name: 'Mi movilidad', exact: true }));
       await user.click(await screen.findByRole('button', { name: stop.name, exact: true }));
       const originName = retired ? 'Elige un punto' : currentStop.name;
-      await screen.findByRole('button', { name: `Origen: ${originName}`, exact: true });
+      await waitForMobilityMap();
+      assert.ok(screen.getByRole('button', { name: `Origen: ${originName}`, exact: true }));
       await act(async () => window.dispatchEvent(new dom.window.Event('offline')));
       assert.ok(screen.getByRole('button', { name: `Origen: ${originName}`, exact: true }));
       assert.ok(screen.getByRole('button', { name: 'Destino: Elige un punto', exact: true }));

@@ -10,6 +10,7 @@ Solicitud: preparar RegioMóvil para evaluación exhaustiva por un equipo técni
 - Hoja de ruta con responsables por rol, dependencias y aceptación: seguridad, respaldo, Prometheus/Grafana, administración, rendimiento y visión.
 - Guías de contribución, revisión, comunicación de vulnerabilidades y licencias pendientes.
 - Control de enlaces documentales integrado en CI, junto con verificación de inventario/importador. Permisos CI de sólo lectura y exclusión adicional de entornos/bases locales de Git/contexto Docker.
+- Tres pruebas de favoritos esperan la disponibilidad del mapa antes de comprobar el origen. Conservan las aserciones y no introducen reintentos ni cambios de producto.
 
 No cambia el comportamiento funcional de la app ni se despliega una versión. No se instaló monitoreo, administración web o visión; no se ejecutó una auditoría OWASP ni una nueva prueba Android/visual.
 
@@ -28,7 +29,15 @@ Entorno local: Linux, Node **24.22.1**, pnpm **11.25.0**. Resultados obtenidos s
 | `node --check scripts/check-docs.mjs` y `git diff --check`                        | Sin errores de sintaxis ni espacios conflictivos.                                                                                             |
 | Revisión cruzada                                                                  | Contrato/configuración/algoritmos contrastados con código; corregidas precisiones de WAL y diagnóstico origen=destino.                        |
 
-Logs de build/suite en `/tmp/regiomovil-documentation-build.log` y `/tmp/regiomovil-documentation-tests.log`: evidencia temporal local, no archivos portables del repositorio. CI queda configurado para repetir sus controles; estos resultados son locales y no se presentan como una ejecución remota aprobada.
+Logs de build/suite en `/tmp/regiomovil-documentation-build.log` y `/tmp/regiomovil-documentation-tests.log`: evidencia temporal local, no archivos portables del repositorio. CI queda configurado para repetir sus controles; los resultados de la tabla son locales.
+
+### Ajuste a partir de CI
+
+En la revisión documental `7642c0a`, CI detectó un fallo intermitente en la prueba que abre una parada guardada como origen. La consulta DOM tenía un límite implícito de un segundo, aunque el flujo descarga y decodifica el grafo público de casi 9 MB antes de renderizar el selector. La navegación sí había ocurrido; la prueba terminaba antes de que apareciera el control.
+
+Se espera ahora la región accesible «Mapa del viaje», que sólo se renderiza con el grafo disponible, con el plazo de 10 segundos del lector de documentos públicos. Después se comprueban sin cambios el origen exacto, destino vacío y búsqueda deshabilitada. El criterio se aplica a los tres casos equivalentes, incluido offline; no se añaden pausas, reintentos ni un timeout global. El origen y la red se actualizan dentro del mismo callback, por lo que la condición de disponibilidad precede a esas aserciones.
+
+Las tres pruebas específicas aprobaron y la repetición final de la suite obtuvo **373/373**, sin fallos, cancelaciones u omisiones. Log temporal: `/tmp/regiomovil-documentation-final-tests.log`. El resultado remoto de la candidata debe consultarse en la PR y no inferirse de una ejecución anterior.
 
 Los registros anteriores mantienen sus fechas y alcance. No se ejecutaron auditoría de dependencias actual, SAST/DAST, prueba de penetración ni revisión de configuración en proveedores. No se renovó evidencia visual/física de Android.
 
