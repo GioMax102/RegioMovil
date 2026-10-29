@@ -1,5 +1,7 @@
 # Verificación del piloto
 
+> Registro histórico: conserva el alcance y las cifras de su fecha. Para el estado vigente, consultar el [índice documental](README.md), la [especificación técnica](especificacion-tecnica.md) y la [hoja de ruta](hoja-de-ruta.md).
+
 La revisión posterior de la rama `codex/movilidad-multimodal`, con 96 pruebas y el APK experimental, se documenta en [verificación multimodal](experimento-multimodal-verificacion.md). Lo que sigue conserva el registro de la entrega anterior de catálogo.
 
 Comprobación de la integración de ambas redes: **15 de octubre de 2026**, America/Monterrey.

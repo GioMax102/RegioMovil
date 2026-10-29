@@ -1,5 +1,7 @@
 # Revisión de seguridad, calidad y portabilidad
 
+> Registro histórico: conserva el alcance y las cifras de su fecha. Para el estado vigente, consultar el [índice documental](README.md), la [especificación técnica](especificacion-tecnica.md) y la [hoja de ruta](hoja-de-ruta.md).
+
 Fecha: 18 de octubre de 2026. Rama de trabajo: `fixes`.
 
 Esta revisión cubre código y dependencias del repositorio. No equivale a una prueba de penetración de los proveedores, una certificación ni una auditoría completa del historial de Git. Los cambios no se han publicado en Cloudflare o Render.

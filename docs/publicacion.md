@@ -1,6 +1,8 @@
-# Preparación de publicación · 19 de octubre de 2026
+# Preparación de publicación
 
-La candidata **1.1.0**, Android **versionCode 2**, se prepara en `fixes`. Este procedimiento no hace merge, push ni publica por sí mismo. [Notas de la versión](releases/1.1.0.md).
+Procedimiento revisado el **29 de octubre de 2026**. El repositorio declara **1.1.0**, Android **versionCode 2**; confirmar la versión ya distribuida antes de preparar otra entrega. Trabajar sobre una revisión candidata identificada, sin asumir una rama fija. Este procedimiento no hace merge, push ni publica por sí mismo. [Notas de la versión](releases/1.1.0.md).
+
+Las cuentas, despliegues y límites de proveedores descritos abajo son antecedentes de octubre, sin comprobación remota nueva. El estado del código y los requisitos para ampliar operación están en la [especificación](especificacion-tecnica.md) y [seguridad y operación](seguridad-y-operacion.md).
 
 ## Publicación anterior documentada
 
@@ -17,7 +19,7 @@ Según la configuración documentada del piloto del 18 de octubre, Pages recibe 
 
 Requisitos: Node 24+, pnpm 11.25.0, JDK 21, Android SDK 36 y Python 3 estándar para crear el ZIP. No se necesitan claves de mapas, un dominio de pago ni una base de datos de pago.
 
-1. Dejar los cambios finales en un commit de `fixes`. El APK y el paquete anotan ese commit. Revisar `git status`; no distribuir una mezcla de archivos de distintas revisiones.
+1. Dejar los cambios finales en un commit de la rama candidata. El APK y el paquete anotan ese commit. Revisar `git status`; no distribuir una mezcla de archivos de distintas revisiones.
 2. Ejecutar, **en secuencia** y sin otra compilación que reemplace `dist`:
 
 ```sh
@@ -60,7 +62,7 @@ Antes de sustituir el piloto, comparar la huella pública del certificado de amb
 
 Estos pasos requieren la solicitud de publicación correspondiente. Mantener disponible la revisión y los artefactos anteriores para regresar a una versión funcional.
 
-1. Actualizar referencias remotas y comprobar qué cambios tiene `main`; el estado de una referencia local no acredita el remoto. Revisar la PR de `fixes` hacia `main` y que los checks hayan aprobado. CI ejecuta build y pruebas en Node 24; Android Lint/firma se validan por separado. No hacer force push.
+1. Actualizar referencias remotas y comprobar qué cambios tiene `main`; el estado de una referencia local no acredita el remoto. Revisar la PR de la candidata hacia `main` y que los checks hayan aprobado. CI ejecuta documentación, build, pruebas Node 24, inventario e importador; Android Lint/firma se validan por separado. No hacer force push.
 2. Integrar la revisión aprobada. Si el merge crea otro commit, reconstruir y empaquetar desde ese commit en `main`: el manifiesto debe identificar la revisión publicada. No reutilizar un APK de un commit diferente presentándolo como si fuera del merge.
 3. En Render, confirmar CORS y las variables, cambiar la rama de despliegue a `main` y desplegar ese commit. Esperar un health check correcto. La web anterior debe seguir funcionando con la API nueva; probar `/api/health`, carga de red y sugerencias antes de continuar.
 4. CORS debe incluir al menos `https://regiomovil.pages.dev` y `https://localhost` para Android. Conservar sólo los orígenes de prueba que realmente se utilicen, sin `*`. No añadir credenciales al cliente. El Dockerfile usa Node 24 y escucha en `HOST=0.0.0.0` y el puerto de Render.
@@ -74,7 +76,9 @@ Si falla la candidata, detener su distribución y restaurar la implementación a
 
 Android no permite volver a un `versionCode` menor como actualización normal. Distribuir una corrección firmada con la misma llave y un código **mayor**, incluso si reutiliza el comportamiento anterior. Desinstalar puede borrar guardados locales; no recomendarlo como rollback automático.
 
-## Límites gratuitos y validación pendiente
+## Antecedentes de proveedores y validación pendiente
+
+El comportamiento y las condiciones de los planes de proveedor se deben verificar en sus paneles antes de publicar; los siguientes puntos recogen el contexto de la entrega anterior.
 
 - Render puede entrar en reposo; la primera búsqueda puede tardar cerca de un minuto. La búsqueda es cancelable y la planificación descargada continúa en el dispositivo.
 - SQLite no tiene persistencia garantizada en el servicio gratuito. Los guardados pertenecen al dispositivo y no constituyen respaldo en la nube.

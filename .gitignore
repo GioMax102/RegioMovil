@@ -41,6 +41,11 @@ dist/
 .pnpm-store/
 .env
 .env.local
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 output/
 test-results/
 *.tsbuildinfo

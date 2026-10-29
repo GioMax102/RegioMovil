@@ -1,5 +1,7 @@
 # Modelo experimental de movilidad
 
+> Registro histórico: conserva el alcance y las cifras de su fecha. Para el estado vigente, consultar el [índice documental](README.md), la [especificación técnica](especificacion-tecnica.md) y la [hoja de ruta](hoja-de-ruta.md).
+
 Esta rama permite comparar recorridos que combinan Metro y los autobuses con geometría oficial publicada. Es un grafo geográfico de referencia con búsqueda limitada, no un sistema conectado a despachos, horarios, GPS de unidades o conteos de pasajeros. La geometría de autobús procede de los mapas publicados; sus sentidos y secuencia operativa todavía no están verificados.
 
 ## Cobertura del artefacto

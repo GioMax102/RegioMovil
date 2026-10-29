@@ -1,5 +1,7 @@
 # Producto, accesibilidad y criterios de aceptación
 
+> Registro histórico: conserva el alcance y las cifras de su fecha. Para el estado vigente, consultar el [índice documental](README.md), la [especificación técnica](especificacion-tecnica.md) y la [hoja de ruta](hoja-de-ruta.md).
+
 Estado de referencia: 15 de octubre de 2026. Este documento distingue lo implementado de las metas que todavía deben comprobarse. Una revisión de código o una prueba automática no sustituye la evaluación con personas.
 
 ## Valor y alcance actual

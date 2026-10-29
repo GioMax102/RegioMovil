@@ -1,118 +1,85 @@
 # RegioMóvil
 
-**Tu ciudad, a tu ritmo.** Aplicación Android, PWA y pantalla de consulta para paradas, con frontend y backend en un solo repositorio. Un piloto funcional para decidir con menos incertidumbre, sin crear cuenta y sin descargar un motor de mapas.
+**Tu ciudad, a tu ritmo.** Iniciativa social para consultar transporte público de Nuevo León, explorar trayectos y compartir observaciones sobre estaciones, recorridos y unidades.
 
-**Continuidad vigente (28 de octubre):** [mejoras de usabilidad del formulario y guía](docs/MEJORAS_USABILIDAD_2026-10-28.md), [entrega de mapas y cobertura](docs/ENTREGA_PRODUCTO_2026-10-28.md), [plan de las nueve anotaciones](docs/PLAN_PRODUCTO_COMUNIDAD_2026-10-27.md) y [evaluación de administración comunitaria y visión](docs/MODELO_COMUNIDAD_Y_VISION_2026-10-27.md). T1–T4 implementados; prueba física/visual pendiente. Cobertura actual: 191/209 buses; las cifras históricas siguientes describen entregas anteriores.
+Este repositorio contiene un piloto funcional para web/PWA, Android y pantallas de parada. La planificación es experimental: **arribos, duración, afluencia y condiciones de unidades son simulados**. No hay conexión con GPS de operadores, pagos ni atención institucional de reportes.
 
-El punto de partida es el entregable del Equipo 5. Su propuesta se convierte aquí en una experiencia verificable: red de transporte pública documentada, planeación sobre conexiones reales, escenarios de unidades, afluencia y condiciones, y fuentes visibles desde la interfaz.
+## Documentación para evaluar el proyecto
 
-La versión candidata **1.1.0**, preparada en **`fixes`**, ofrece un buscador único de lugares, calles, direcciones y paradas. Los mismos extremos se comparan entre Metro, autobús o sus combinaciones; los filtros se aplican a los resultados. La red documentada reúne **54 servicios y 3,417 puntos publicados**: tres líneas de Metro, treinta Transmetro, GMG, siete RegioRuta y trece recorridos IMA. Se calculan hasta ocho alternativas distintas por secuencia de servicios. [Cobertura y fuentes](docs/cobertura-autobuses-20261016.md), [método y benchmark](docs/modelo-movilidad.md).
+| Documento                                                | Contenido                                                                    |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [Especificación técnica](docs/especificacion-tecnica.md) | Arquitectura, servidor, almacenamiento, algoritmos, configuración y límites. |
+| [Contrato de API](docs/api.md)                           | Endpoints, entradas, respuestas, errores y ejemplos.                         |
+| [Propuesta social](docs/propuesta-social.md)             | Problema, aportación, participación comunitaria e indicadores de impacto.    |
+| [Pitch](docs/pitch.md)                                   | Presentación breve para personas y organizaciones interesadas.               |
+| [Seguridad y operación](docs/seguridad-y-operacion.md)   | Controles existentes, riesgos, revisión OWASP y plan de monitoreo.           |
+| [Hoja de ruta](docs/hoja-de-ruta.md)                     | Prioridades, dependencias y criterios de aceptación.                         |
+| [Guía de revisión técnica](docs/revision-tecnica.md)     | Recorrido de evaluación y evidencia para un equipo técnico.                  |
 
-Las búsquedas nuevas sin internet se restringen a puntos oficiales. Puedes etiquetar un viaje como Casa, Trabajo o Escuela y guardar las alternativas con sus mapas; los lugares o coordenadas sólo se conservan tras confirmar ese guardado. El cálculo corre localmente en un worker; la red adicional se carga al abrir Planear.
+El [índice documental](docs/README.md) distingue referencias vigentes, guías especializadas y registros históricos. Las cifras de una entrega anterior no acreditan el estado actual.
 
-Planear con selección en mapa: [cambios y verificación del 17 de octubre](docs/mapa-y-planear-20261017.md).
+## Inicio rápido
 
-Verificación del buscador de lugares y conexiones: [resultado del 16 de octubre de 2026](docs/buscador-multimodal-20261016.md).
-
-## Qué puedes usar
-
-- **Inicio:** acceso a planeación, guardados y red; información de servicio con simulación identificada.
-- **Planear viaje:** origen y destino por nombre, calle, dirección, parada o ubicación bajo petición. La misma búsqueda compara Metro, autobús y combinaciones; puedes filtrar los resultados y cambiar la prioridad sin volver a introducir los puntos.
-- **Red de transporte:** recorridos por sistema, mapas, estaciones y catálogo de servicios. Búsqueda por número o municipio, filtros y fuentes documentadas; la accesibilidad física permanece sin verificar.
-- **Seguir un trayecto:** mapa de la etapa actual, siguiente parada y confirmaciones manuales «Ya llegué» / «Ya bajé»; GPS opcional en primer plano y controles de pausa, seguimiento y voz.
-- **Guardados:** viajes con etiqueta y hasta ocho alternativas conservadas con su mapa, consulta sin internet y borrado individual o completo. Estaciones, trayectos anteriores y canales oficiales de pago quedan agrupados aparte.
-- **Modo parada:** `/?kiosk=1&locked=1&station=padre-mier` para un módulo dedicado, interfaz de consulta con lectura en voz alta cuando el dispositivo ofrece síntesis de voz. No muestra guardados personales ni permite reportar.
-- **Accesibilidad:** texto ampliado, contraste alto, controles con nombre, teclado, diálogos nativos y respeto de movimiento reducido.
-- **Sin conexión:** catálogo, planificador, modelo y guardados funcionan localmente. Android incorpora el bundle; la PWA precachea también JavaScript, CSS y fuentes al completar su instalación inicial.
-- **Reportes:** fallas de estación, parada/recorrido o unidad con título, descripción y foto opcional. La ruta y variante se seleccionan explícitamente; los reportes permanecen privados hasta revisión y consentimiento. Las fichas muestran reportes publicados, abiertos y resueltos. [Operación, moderación y valor público](docs/quejas-comunitarias.md).
-
-## Qué datos son reales
-
-El catálogo usa **38 ubicaciones únicas** de estaciones de Metrorrey, coordenadas del portal de Datos Abiertos de Nuevo León y el mapa oficial de abril de 2026. Los conteos institucionales por línea pueden contar correspondencias más de una vez. El alias Parque Fundidora se conserva para Arena Monterrey.
-
-**Los arribos, el aforo, el clima de unidad, las incidencias y las duraciones son simulados.** No hay conexión contratada con GPS de concesionarios, sensores, tráfico de Waze o medios de pago. El planificador original calcula las líneas 1, 2 y 3 de Metrorrey. El catálogo adicional reúne Muevo León / urbanas IMA, RegioRuta, Transmetro, Ecovía / GMG y troncales e integradas. El modelo experimental infiere el orden espacial de 51 trazos de autobús y sus enlaces a pie; no confirma sentidos, embarque o cruces seguros. Los servicios sin geometría y L4/L6 en construcción quedan fuera del cálculo. No hay saldos ficticios, cargos, NFC ni boletos válidos.
-
-Ver [procedencia y límites](docs/datos-y-fuentes.md), [alcance y heurísticas](docs/producto-y-accesibilidad.md) y [modelo/API](docs/api.md).
-
-## Ejecutar
-
-Requiere **Node 24+** y **pnpm 11.25+**. No requiere claves, Python ni una base de datos externa.
+Requisitos: **Node.js 24 o posterior y pnpm 11.25.0**, fijado en `package.json`. Usar el lockfile del repositorio.
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Abre `http://localhost:5173`. Vite comunica `/api` con el servidor en `127.0.0.1:3001`.
-
-Para servir interfaz y API con un solo proceso:
+Abrir [http://localhost:5173](http://localhost:5173). Vite redirige `/api` al servidor de `127.0.0.1:3001`. El modo de desarrollo escucha la web en todas las interfaces; utilizarlo en una red de confianza. Para ejecutar la compilación con un solo servidor:
 
 ```sh
 pnpm build
 pnpm start
 ```
 
-Abre `http://localhost:3001`. El archivo opcional `.env` se carga en `pnpm start`; hay un ejemplo en `.env.example`. El servidor escucha solo en loopback por defecto. SQLite crea `.data/regiomovil.sqlite`, fuera del control de versiones.
+Abrir [http://127.0.0.1:3001](http://127.0.0.1:3001). `pnpm start` lee `.env` si existe; copiar [.env.example](.env.example) cuando se necesite configurar puertos, CORS, proveedores de lugares o persistencia. Sin configuración se usa `.data/regiomovil.sqlite`, que contiene reportes privados y queda fuera de Git. El proceso API de `pnpm dev` usa las variables exportadas en la terminal, sin cargar `.env` automáticamente.
 
-También puedes usar `./regiomovil dev`, `./regiomovil build`, `./regiomovil start` y `./regiomovil test`. Este lanzador localiza Node en el sistema o en el runtime de Codex en este equipo.
+El lanzador `./regiomovil dev|build|start|test` admite las mismas tareas y puede localizar el Node 24 del entorno de Codex. En otros equipos se recomienda instalar los requisitos anteriores; ese runtime local no se distribuye con el proyecto.
 
-## Android
+## Qué está disponible
 
-```sh
-pnpm android:build
-```
+- Catálogo, fuentes y mapas de redes, estaciones de Metro y rutas.
+- Planificación local en un Web Worker, alternativas multimodales y guía por etapas en primer plano.
+- Viajes guardados y paquetes para consulta sin conexión, sujetos a descarga y almacenamiento disponibles.
+- Observaciones con título, descripción y fotografía desde cámara, galería o archivos; recuperación de borrador y envío con idempotencia.
+- Publicación contextual con consentimiento y revisión humana mediante una herramienta de terminal del servidor.
+- Preferencias de apariencia y accesibilidad; modo de parada: `/?kiosk=1&locked=1&station=padre-mier`.
 
-Requiere JDK 21 y Android SDK 36. Produce `output/android/regiomovil-debug.apk` con su SHA-256. El APK se instala y abre en modo demostración local, sin un backend remoto obligatorio. Para conectar reportes a un servidor propio:
+Inventario local revisado el **29 de octubre de 2026**: **214 servicios**, de ellos **209 de autobús**; **191 autobuses y 3 líneas de Metro** tienen geometría en el grafo experimental, con **10 806 puntos identificados por ruta**. Hay 38 estaciones únicas de Metro. Permanecen 18 autobuses sin geometría suficiente; L4 y L6 quedan fuera del grafo según el estado fechado de las fuentes. Estas cifras describen archivos del repositorio, no operación en vivo ni paradas verificadas en campo. El [inventario estructurado](data/route-coverage-inventory.json) identifica cada variante.
 
-```sh
-VITE_API_BASE_URL=https://tu-api.example pnpm android:build
-```
+## Comandos de trabajo
 
-La URL se incorpora durante la compilación, debe usar HTTPS y no debe contener credenciales. El backend debe permitir el origen `https://localhost`. También es necesaria para buscar lugares desde el APK: sin API remota, las paradas y el modelo local siguen disponibles. «Usar mi ubicación» obtiene una posición bajo permiso; la guía puede seguirla mientras la app está visible y el usuario lo autoriza. No se promete seguimiento en segundo plano. No se permite HTTP global ni se carga la aplicación desde un servidor remoto. [Compilación, kiosco y firma](docs/android.md).
+| Comando                                                | Propósito                                                                                     |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `pnpm build`                                           | Compilar TypeScript, regenerar catálogo/grafo y producir `dist/`. No descarga fuentes nuevas. |
+| `pnpm test`                                            | Pruebas Node/React; algunas requieren sockets de loopback.                                    |
+| `pnpm docs:check`                                      | Comprobar enlaces locales e integridad básica de documentación.                               |
+| `node scripts/prepare-coverage-inventory.mjs --check`  | Contrastar inventario y artefactos actuales.                                                  |
+| `python3 -m unittest discover -s tests -p '*_test.py'` | Verificar el importador; Python es opcional para el uso ordinario.                            |
+| `pnpm model:train`                                     | Regenerar modelos sintéticos; revisar los cambios antes de incorporarlos.                     |
+| `pnpm android:build`                                   | Compilar APK debug; requiere JDK 21 y Android SDK 36.                                         |
+| `./regiomovil prepare-release`                         | Preparar artefactos revisables; no despliega.                                                 |
 
-## Preparar una actualización
-
-La publicación web y el APK deben usar la misma API HTTPS y revisión de código. `./regiomovil prepare-release` genera un paquete verificable, sin publicar, después del commit, las pruebas y el APK release. Incluye ZIP de Pages, APK firmado, notas y hashes; requiere Python 3 estándar para el ZIP. Consulta el [procedimiento de merge, publicación y rollback](docs/publicacion.md) y las [notas 1.1.0](docs/releases/1.1.0.md). Un merge a `main` no actualiza por sí solo los servicios del piloto.
-
-## Pruebas y modelo
-
-```sh
-pnpm build
-pnpm test
-pnpm model:train
-```
-
-Las pruebas cubren HTTP real, persistencia y validación de reportes, límites, CORS, archivos estáticos, grafo, continuidad entre líneas, escenarios, intervalos y comportamiento offline del service worker. El entrenamiento genera dos regresiones ridge a partir de 2,400 muestras sintéticas con particiones separadas de entrenamiento, calibración y evaluación. Se compara con un modelo base; **las métricas sintéticas no acreditan precisión operativa en Nuevo León**.
-
-El registro de comprobaciones y limitaciones está en [verificación](docs/verificacion.md). No se ha realizado aún una evaluación con pasajeros, adultos mayores ni teléfonos físicos de gama baja.
+Para Android con API remota, configurar `VITE_API_BASE_URL` con HTTPS **antes de compilar** y permitir `https://localhost` en el CORS del servidor. Sin API accesible no funcionan envíos de reportes ni consultas de lugares en línea. La [guía Android](docs/android.md) explica instalación y pruebas por USB; la [guía de publicación](docs/publicacion.md) conserva el procedimiento y antecedentes de despliegue, que deben verificarse en los proveedores antes de publicar otra versión.
 
 ## Estructura
 
 ```text
-src/          React + TypeScript, interfaz adaptativa y accesibilidad
-server/       HTTP Node, SQLite y motor portable de predicción/planeación
-data/         Catálogo regional y fuentes públicas
-models/       Pesos, particiones, métricas y ficha de datos sintéticos
-android/      Proyecto nativo Capacitor, iconos y configuración segura
-public/       PWA, service worker e iconos locales
-scripts/      Desarrollo, precache de build y compilación Android
-tests/        Pruebas de API, dominio y modo offline
-docs/         Producto, fuentes, API, Android y verificación
+src/        Interfaz, mapas, worker de movilidad y almacenamiento del dispositivo
+server/     API HTTP Node, dominio, geocodificación y almacenamiento SQLite
+data/      Catálogos, grafo generado y auditorías de procedencia
+models/     Modelos entrenados con datos sintéticos y documentación
+public/     Recursos públicos, paquetes de rutas y política de privacidad
+android/    Proyecto nativo Capacitor
+scripts/    Generación, importación, moderación, compilación y publicación
+tests/      Contratos, regresiones, seguridad y presupuestos de recursos
+docs/       Especificaciones, guías y evidencia histórica
 ```
 
-Montserrat e Inter se sirven localmente bajo SIL OFL; sus licencias se incluyen en `public/licenses/` y en el APK. Los colores de las líneas proceden del mapa oficial; la identidad verde, piedra y ocre se inspira en el paisaje de Nuevo León y no pretende ser una marca del gobierno. La base geográfica de Monterrey usa un extracto de OpenStreetMap empaquetado localmente, con atribución ODbL; se muestra al abrir mapas de trayectos y redes. [Procedencia y licencia del mapa](src/data/monterrey-map.md). El buscador sugiere lugares automáticamente con Photon al escribir al menos tres caracteres y hacer una pausa de 650 ms; el backend limita las consultas y mantiene una caché. Nominatim se conserva sólo para consultas explícitas de la API. No hay analítica ni cuenta obligatoria. La ubicación del seguimiento autorizado permanece en memoria durante la guía en primer plano; los guardados sólo conservan lugares o coordenadas cuando confirmas guardar un viaje, y se pueden borrar desde Guardados. [Búsqueda y privacidad](docs/lugares-y-privacidad.md).
+## Preparación para operación pública
 
-## Ejecutar en contenedor
+Faltan una evaluación de seguridad con alcance y evidencia OWASP, monitoreo de servidor, respaldo y restauración ensayados, administración web autenticada, validación de rendimiento en dispositivos y revisión sostenida de reportes. Prometheus, Grafana y visión computacional son propuestas; **no están instalados ni integrados**. La [hoja de ruta](docs/hoja-de-ruta.md) define cómo avanzar.
 
-```sh
-docker build -t regiomovil .
-docker run --rm -p 127.0.0.1:3001:3001 -v regiomovil-data:/data regiomovil
-```
-
-Para un servicio público faltan el dominio HTTPS, respaldo del volumen, monitoreo y política de moderación de reportes. Para pasar de simulación a información operativa hacen falta acuerdos de datos, validación con sensores/GPS, medición de frescura y pruebas con pasajeros. El contrato propuesto para fuentes reales se documenta en la API.
-
-## Próximas iteraciones
-
-Metro, Transmetro, GMG, RegioRuta e IMA ya participan en el cálculo con los trazos disponibles. La [cobertura del 27 de octubre](docs/cobertura-rutas-2026-10-27.md) incluye 185 de 209 rutas de autobús, las tres líneas Metro y la explicación individual de las 24 rutas pendientes. La validación de sentidos, secuencias operativas, accesos peatonales y horarios continúa como [trabajo pendiente](docs/proximas-iteraciones.md).
-
-La [evaluación de esta iteración](docs/iteracion-viajes-cotidianos.md) explica qué se incluye, qué se descarta y los criterios para recomendar tramos a pie, bicicleta y monopatín en la siguiente etapa.
+Para contribuir o revisar cambios: [CONTRIBUTING.md](CONTRIBUTING.md). Para comunicar vulnerabilidades: [SECURITY.md](SECURITY.md). Revisar las [licencias y datos](docs/licencias-y-datos.md) antes de redistribuir. No existe todavía una licencia general del código propio; el repositorio no concede por sí solo una licencia de código abierto.
