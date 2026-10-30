@@ -18,7 +18,7 @@ Organización inicial: **29 de octubre de 2026**, base `cc69761`, integración d
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Reportes              | [Comunidad y moderación](quejas-comunitarias.md); [privacidad publicada](../public/privacidad.html).                                                                                      |
 | Administración        | [Habilitación, cuentas, TOTP y operación](operacion-admin.md); [contrato privado](api-administracion.md).                                                                                 |
-| Hosting del piloto    | [Comparación gratuita, decisión y plan de despliegue](plan-hosting-gratuito.md), evaluado el 30 de octubre de 2026. Pendiente de aprovisionamiento remoto. |
+| Hosting del piloto    | [Comparación gratuita y plan](plan-hosting-gratuito.md); [secuencia operativa](hosting-ejecucion.md), evaluados el 30 de octubre de 2026. Plantillas verificadas; aprovisionamiento remoto pendiente. |
 | Seguridad y monitoreo | [Matriz OWASP](matriz-owasp.md), [plan del lote](plan-administracion-seguridad.md) y [stack local](../ops/compose.monitoring.yml). La implementación no acredita despliegue remoto.       |
 | Android               | [Compilación, instalación y pruebas](android.md). Una instalación histórica no acredita una revisión nueva.                                                                               |
 | Entregas              | [Publicación](publicacion.md); [notas 1.1.0](releases/1.1.0.md). Confirmar despliegues y versión distribuida antes de actualizar.                                                         |

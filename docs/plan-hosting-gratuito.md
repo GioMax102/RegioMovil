@@ -10,6 +10,8 @@ Según la [documentación oficial de Oracle](https://docs.oracle.com/en-us/iaas/
 
 El alta normalmente requiere un medio de pago para verificación; consultar las condiciones de la [oferta](https://www.oracle.com/cloud/free/faq/). No confundir los créditos de prueba con recursos Always Free ni actualizar a pago por uso para sortear capacidad sin revisar costes. Una alerta de presupuesto notifica: no impone por sí sola un límite de gasto.
 
+La región principal se elige al registrarse y [no puede cambiarse](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingregions.htm). Las cuentas gratuitas no tienen SLA. Revisar la cuota antes del [fin de la prueba](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier.htm): usar recursos fuera de cuota puede causar deshabilitación y posterior eliminación. No se ha comprobado capacidad en una cuenta del titular.
+
 Si no se consigue una A1 gratuita, detener esta vía y evaluar **Azure for Students** si el titular cumple requisitos; no sustituir automáticamente por una VM de pago. Tampoco se recomienda la micro de 1 GB para construir y ejecutar conjuntamente aplicación y monitoreo sin medir memoria.
 
 ## Comparación orientada al proyecto
@@ -29,7 +31,7 @@ SQLite [WAL no funciona sobre un filesystem de red](https://www.sqlite.org/wal.h
 
 Un hostname público dirige a un proxy HTTPS en la VM. El proxy entrega tráfico al servidor Node por loopback. Node sirve web, `/api` y `/admin` desde el mismo origen; guarda reportes y autenticación en archivos distintos bajo un volumen persistente. Una sola instancia de la aplicación; sin réplicas compartiendo SQLite.
 
-- **HTTPS:** Caddy instalado en el host, con certificados y renovación automática; [requisitos](https://caddyserver.com/docs/automatic-https): DNS correcto, puertos 80/443 accesibles y directorio de certificados persistente. Configuración a preparar: hostname real y `reverse_proxy 127.0.0.1:3001`. No usar un certificado local/autofirmado para el APK público.
+- **HTTPS:** Caddy instalado en el host, con certificados y renovación automática; [requisitos](https://caddyserver.com/docs/automatic-https): DNS correcto, puertos 80/443 accesibles y directorio de certificados persistente. La [plantilla](../ops/Caddyfile.example) ya valida; sustituir su hostname reservado por el real. Esto no acredita emisión de certificado ni acceso remoto. No usar un certificado local/autofirmado para el APK público.
 - **Hostname sin comprar dominio:** subdominio disponible de [DuckDNS](https://www.duckdns.org/), proveedor gratuito de DNS dinámico. Mantener su actualización y token privados. Un dominio propio es opcional y su coste se presupuestaría aparte.
 - **Aplicación/monitoreo:** reutilizar [Compose](../ops/compose.monitoring.yml), cuyos puertos ya están limitados a loopback. Grafana y Prometheus se consultan por túnel SSH; no publicarlos mediante Caddy.
 - **Datos:** volumen `reports` para las dos bases; volúmenes propios de métricas y Grafana. El disco de la VM debe conservarse al reemplazar el contenedor. Elegir explícitamente qué ocurre con el volumen al eliminar una VM.
@@ -52,7 +54,7 @@ Un hostname público dirige a un proxy HTTPS en la VM. El proxy entrega tráfico
 
 ## Configuración de producción a preparar
 
-En un archivo privado del servidor, sin valores reales en Git:
+Partir de [production.env.example](../ops/production.env.example), copiar a un archivo privado del servidor y reemplazar hostname y secreto, sin valores reales en Git:
 
 ```dotenv
 ADMIN_ENABLED=true
@@ -64,15 +66,15 @@ CORS_ORIGINS=https://HOSTNAME_REAL,https://localhost,capacitor://localhost
 
 Completar el secreto con `openssl rand -hex 32` en el servidor y conservarlo en un gestor privado. El valor vacío impide iniciar administración. El Compose proporciona las rutas `/data/regiomovil.sqlite` y `/data/admin-auth.sqlite`, y la imagen fija `NODE_ENV=production`. `ADMIN_ORIGIN` no lleva barra final ni `/admin`. El archivo anterior es una plantilla para sustituir los marcadores, no una configuración ejecutable.
 
-**Cambio requerido en H3:** el Compose actual no propaga `CORS_ORIGINS` al contenedor. Añadir esa variable expresamente a `services.app.environment` en la configuración de despliegue y comprobar los orígenes web/Android. Declararla únicamente en el archivo de interpolación de Compose no la inyecta en la aplicación. No habilitar el piloto hasta pasar esa comprobación.
+**Mejora implementada:** Compose ya propaga `CORS_ORIGINS` al contenedor. La prueba con el perfil de producción verifica orígenes HTTPS/Android exactos, excepción HTTP desactivada, bases separadas y publicaciones sólo loopback. El perfil mantiene el secreto vacío y exige completarlo antes del arranque. Falta verificar CORS HTTP desde el hostname y el teléfono reales.
 
-Al desplegar se preparará un comando único con `docker compose --env-file RUTA_PRIVADA -f ops/compose.monitoring.yml ...` y nombre de proyecto estable. No se omite `--env-file` en operaciones posteriores: cambiar proyecto/configuración accidentalmente puede crear volúmenes nuevos y aparentar pérdida de datos. Preparar también el procedimiento `exec app node scripts/admin-user.mjs ...` para la cuenta nominal. No registrar contraseñas como argumentos.
+La [secuencia operativa](hosting-ejecucion.md) fija un único archivo privado y el proyecto `regiomovil-pilot`. No se omite `--env-file` en operaciones posteriores: cambiar proyecto/configuración accidentalmente puede crear volúmenes nuevos y aparentar pérdida de datos. Incluye el procedimiento `exec app node scripts/admin-user.mjs ...` para la cuenta nominal. No registrar contraseñas como argumentos.
 
 No reutilizar `ADMIN_ALLOW_INSECURE_LOCALHOST=true`, orígenes HTTP locales ni el secreto de una prueba. El proxy termina TLS; la aplicación sigue escuchando sólo tras loopback. Los límites por socket actuales agruparán usuarios tras el proxy: probar login y reportes con varias personas. No habilitar confianza indiscriminada en `X-Forwarded-For`; si se necesita IP original, diseñar confianza limitada al proxy y pruebas anti-suplantación antes de cambiar el código.
 
 ## Comprobaciones y políticas iniciales
 
-- **Capacidad:** medir CPU, RSS, event loop, tamaño de bases/WAL y fotos antes de anunciar número de usuarios. El grafo y SQLite síncronos no garantizan alta concurrencia. Fijar rotación/tamaño de logs Docker y espacio libre mínimo; estas configuraciones aún deben implementarse para el destino.
+- **Capacidad:** medir CPU, RSS, event loop, tamaño de bases/WAL y fotos antes de anunciar número de usuarios. El grafo y SQLite síncronos no garantizan alta concurrencia. Logs Docker ya acotados mediante `json-file`, `max-size=10m`, `max-file=3` para los tres servicios; verificar su aplicación al recrear contenedores. Falta fijar y medir el espacio libre mínimo del destino.
 - **Objetivos propuestos, pendientes de ensayo:** respaldo diario, RPO de hasta 24 horas y RTO de 4 horas. Conservar siete copias diarias cifradas fuera de la VM, sujeto a política de privacidad/capacidad aprobada. No usar snapshots como sustituto de la copia online verificada ni prometer esos objetivos sin medirlos.
 - **Actualizaciones:** escoger un commit aprobado y guardar respaldo antes de construir/recrear; registrar versión anterior. Volver a una imagen no revierte una migración de datos: revisar compatibilidad y restaurar sólo con procedimiento explícito. Nunca usar `down -v` como actualización.
 - **Exposición:** sin puertos de bases, métricas o consolas públicos; acceso mínimo al host/proveedor y MFA del proveedor. No montar el socket Docker dentro de la aplicación. Caddy tampoco debe abrir su API administrativa a internet.
@@ -83,8 +85,15 @@ No reutilizar `ADMIN_ALLOW_INSECURE_LOCALHOST=true`, orígenes HTTP locales ni e
 
 1. Confirmar cuenta OCI y disponibilidad A1; si falla, elegibilidad Azure for Students y presupuesto educativo. Las credenciales se introducen directamente en la consola del proveedor.
 2. Confirmar hostname y responsable de respaldos. No se necesita un dominio comprado para el ensayo.
-3. Implementar y revisar configuración HTTPS, límites de logs y procedimiento de actualización/restauración del destino, sin alterar el panel ciudadano.
+3. Aplicar las plantillas HTTPS y producción, comprobar límites de logs y completar el procedimiento de actualización/restauración del destino, sin alterar el panel ciudadano.
 4. Ejecutar H1–H8 con evidencia fechada y commit; registrar si ARM64, TLS, restauración o dispositivo no pudieron verificarse. No trasladar los 422 tests de la entrega anterior como resultado de pruebas nuevas.
 5. Tras aprobar piloto, reconstruir y distribuir el APK apuntando al hostname definitivo. El panel será `https://HOSTNAME_REAL/admin` y los usuarios compartirán el mismo backend.
 
-Validación de esta entrega documental: enlaces locales mediante `pnpm docs:check` y revisión del diff. Las ofertas enlazadas se consultaron en su documentación oficial el 30 de octubre de 2026; pueden cambiar. No se ha contratado hosting ni completado H0–H8.
+## Confirmación y evidencia del 30 de octubre
+
+- Oferta OCI y alternativa Azure revisadas de nuevo en fuentes oficiales. Se confirma la recomendación como mejor ajuste entre las opciones evaluadas, sujeta a disponibilidad y condiciones. La elegibilidad de Azure Students requiere verificación académica; no deriva de que el proyecto sea social.
+- Tres pruebas interpretan el Compose real: defaults, perfil de producción y sobrescritura CORS. Verifican rotación, aislamiento de puertos y almacenamiento configurado sin leer `.env`, imprimir secretos ni iniciar servicios.
+- `Caddyfile.example` validado con Caddy **2.11.7**, imagen oficial fijada por digest, en contenedor efímero sin red ni puertos. La CI repite esa validación. No se solicitaron certificados públicos.
+- `pnpm docs:check`: 62 archivos y 353 enlaces locales válidos; diff sin errores de espacios. Las tres pruebas Compose pasaron, ninguna omitida. Se omiten explícitamente si la herramienta no está instalada; la CI vuelve a comprobarlas en el runner.
+
+No se ha contratado hosting, verificado ARM64 ni completado H0–H8. La configuración está preparada para ensayo; el servidor remoto y su coste real aún no están confirmados.

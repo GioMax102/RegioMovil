@@ -54,3 +54,5 @@ jobs:
         run: docker run --rm --network none --entrypoint promtool -v "$PWD/ops/prometheus:/etc/prometheus:ro" prom/prometheus:v3.13.5@sha256:aafa9d694e6a883c02db516d9f6e5b84e14195f49a2a6456a4cca815edda72b9 check rules /etc/prometheus/alerts.yml
       - name: Test alert transitions
         run: docker run --rm --network none --entrypoint promtool -v "$PWD/ops/prometheus:/etc/prometheus:ro" -w /etc/prometheus prom/prometheus:v3.13.5@sha256:aafa9d694e6a883c02db516d9f6e5b84e14195f49a2a6456a4cca815edda72b9 test rules alerts.test.yml
+      - name: Validate HTTPS proxy template without network access
+        run: docker run --rm --network none --cap-drop ALL --cap-add NET_BIND_SERVICE --security-opt no-new-privileges:true --entrypoint caddy -v "$PWD/ops/Caddyfile.example:/etc/caddy/Caddyfile:ro" caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f validate --config /etc/caddy/Caddyfile --adapter caddyfile

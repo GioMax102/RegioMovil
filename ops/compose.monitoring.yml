@@ -1,4 +1,9 @@
 name: regiomovil-monitoring
+x-bounded-logging: &bounded-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
 services:
   app:
     build:
@@ -7,6 +12,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3001
       DATABASE_PATH: /data/regiomovil.sqlite
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:3001,http://127.0.0.1:3001,http://localhost,https://localhost,capacitor://localhost}
       ADMIN_DATABASE_PATH: /data/admin-auth.sqlite
       ADMIN_ENABLED: ${ADMIN_ENABLED:-false}
       ADMIN_ORIGIN: ${ADMIN_ORIGIN:-http://localhost:3001}
@@ -25,6 +31,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
+    logging: *bounded-logging
     stop_grace_period: 10s
   prometheus:
     # LTS patch release verified against prometheus.io/download on 2026-10-29.
@@ -50,6 +57,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
+    logging: *bounded-logging
   grafana:
     image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
     environment:
@@ -78,6 +86,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
+    logging: *bounded-logging
 networks:
   web: {}
   console: {}
