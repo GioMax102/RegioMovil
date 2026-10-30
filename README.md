@@ -10,6 +10,8 @@ Este repositorio contiene un piloto funcional para web/PWA, Android y pantallas 
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [Especificación técnica](docs/especificacion-tecnica.md) | Arquitectura, servidor, almacenamiento, algoritmos, configuración y límites. |
 | [Contrato de API](docs/api.md)                           | Endpoints, entradas, respuestas, errores y ejemplos.                         |
+| [Administración privada](docs/operacion-admin.md)        | Habilitación, cuentas, MFA, roles, respaldos y monitoreo local.              |
+| [API administrativa](docs/api-administracion.md)         | Sesiones, permisos, indicadores y decisiones de moderación.                  |
 | [Propuesta social](docs/propuesta-social.md)             | Problema, aportación, participación comunitaria e indicadores de impacto.    |
 | [Pitch](docs/pitch.md)                                   | Presentación breve para personas y organizaciones interesadas.               |
 | [Seguridad y operación](docs/seguridad-y-operacion.md)   | Controles existentes, riesgos, revisión OWASP y plan de monitoreo.           |
@@ -44,30 +46,36 @@ El lanzador `./regiomovil dev|build|start|test` admite las mismas tareas y puede
 - Planificación local en un Web Worker, alternativas multimodales y guía por etapas en primer plano.
 - Viajes guardados y paquetes para consulta sin conexión, sujetos a descarga y almacenamiento disponibles.
 - Observaciones con título, descripción y fotografía desde cámara, galería o archivos; recuperación de borrador y envío con idempotencia.
-- Publicación contextual con consentimiento y revisión humana mediante una herramienta de terminal del servidor.
+- Publicación contextual con consentimiento y revisión humana desde panel privado o CLI del servidor.
+- Administración con MFA obligatorio, roles, bandeja, revisión de fotografías, historial e indicadores agregados.
+- Instrumentación privada, configuración local Prometheus/Grafana y respaldo consistente de SQLite.
 - Preferencias de apariencia y accesibilidad; modo de parada: `/?kiosk=1&locked=1&station=padre-mier`.
 
 Inventario local revisado el **29 de octubre de 2026**: **214 servicios**, de ellos **209 de autobús**; **191 autobuses y 3 líneas de Metro** tienen geometría en el grafo experimental, con **10 806 puntos identificados por ruta**. Hay 38 estaciones únicas de Metro. Permanecen 18 autobuses sin geometría suficiente; L4 y L6 quedan fuera del grafo según el estado fechado de las fuentes. Estas cifras describen archivos del repositorio, no operación en vivo ni paradas verificadas en campo. El [inventario estructurado](data/route-coverage-inventory.json) identifica cada variante.
 
 ## Comandos de trabajo
 
-| Comando                                                | Propósito                                                                                     |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `pnpm build`                                           | Compilar TypeScript, regenerar catálogo/grafo y producir `dist/`. No descarga fuentes nuevas. |
-| `pnpm test`                                            | Pruebas Node/React; algunas requieren sockets de loopback.                                    |
-| `pnpm docs:check`                                      | Comprobar enlaces locales e integridad básica de documentación.                               |
-| `node scripts/prepare-coverage-inventory.mjs --check`  | Contrastar inventario y artefactos actuales.                                                  |
-| `python3 -m unittest discover -s tests -p '*_test.py'` | Verificar el importador; Python es opcional para el uso ordinario.                            |
-| `pnpm model:train`                                     | Regenerar modelos sintéticos; revisar los cambios antes de incorporarlos.                     |
-| `pnpm android:build`                                   | Compilar APK debug; requiere JDK 21 y Android SDK 36.                                         |
-| `./regiomovil prepare-release`                         | Preparar artefactos revisables; no despliega.                                                 |
+| Comando                                                                    | Propósito                                                                                             |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm build`                                                               | Compilar TypeScript, regenerar catálogo/grafo y producir `dist/`. No descarga fuentes nuevas.         |
+| `pnpm test`                                                                | Pruebas Node/React; algunas requieren sockets de loopback.                                            |
+| `pnpm docs:check`                                                          | Comprobar enlaces locales e integridad básica de documentación.                                       |
+| `pnpm admin:user create revision@example.org moderator "Persona revisora"` | Crear una cuenta administrativa después de configurar el servidor; contraseña solicitada en terminal. |
+| `node scripts/prepare-coverage-inventory.mjs --check`                      | Contrastar inventario y artefactos actuales.                                                          |
+| `python3 -m unittest discover -s tests -p '*_test.py'`                     | Verificar el importador; Python es opcional para el uso ordinario.                                    |
+| `pnpm model:train`                                                         | Regenerar modelos sintéticos; revisar los cambios antes de incorporarlos.                             |
+| `pnpm android:build`                                                       | Compilar APK debug; requiere JDK 21 y Android SDK 36.                                                 |
+| `./regiomovil prepare-release`                                             | Preparar artefactos revisables; no despliega.                                                         |
 
 Para Android con API remota, configurar `VITE_API_BASE_URL` con HTTPS **antes de compilar** y permitir `https://localhost` en el CORS del servidor. Sin API accesible no funcionan envíos de reportes ni consultas de lugares en línea. La [guía Android](docs/android.md) explica instalación y pruebas por USB; la [guía de publicación](docs/publicacion.md) conserva el procedimiento y antecedentes de despliegue, que deben verificarse en los proveedores antes de publicar otra versión.
+
+El panel se abre en `/admin` o `/admin.html`, **en el mismo origen del servidor API**. Está deshabilitado por defecto y no hay cuentas predeterminadas ni registro público. Configurar `ADMIN_*`, aprovisionar una cuenta con CLI y completar TOTP según la [guía de operación](docs/operacion-admin.md). `VITE_API_BASE_URL` no redirige credenciales administrativas a un servidor externo.
 
 ## Estructura
 
 ```text
 src/        Interfaz, mapas, worker de movilidad y almacenamiento del dispositivo
+src/admin/  Entrada web independiente para revisión administrativa privada
 server/     API HTTP Node, dominio, geocodificación y almacenamiento SQLite
 data/      Catálogos, grafo generado y auditorías de procedencia
 models/     Modelos entrenados con datos sintéticos y documentación
@@ -76,10 +84,13 @@ android/    Proyecto nativo Capacitor
 scripts/    Generación, importación, moderación, compilación y publicación
 tests/      Contratos, regresiones, seguridad y presupuestos de recursos
 docs/       Especificaciones, guías y evidencia histórica
+ops/        Compose, reglas Prometheus y paneles Grafana para operación local
 ```
 
 ## Preparación para operación pública
 
-Faltan una evaluación de seguridad con alcance y evidencia OWASP, monitoreo de servidor, respaldo y restauración ensayados, administración web autenticada, validación de rendimiento en dispositivos y revisión sostenida de reportes. Prometheus, Grafana y visión computacional son propuestas; **no están instalados ni integrados**. La [hoja de ruta](docs/hoja-de-ruta.md) define cómo avanzar.
+El lote de administración y seguridad del **29 de octubre de 2026** añade autenticación Better Auth, TOTP, permisos en servidor, controles CSRF, copias online y monitoreo opcional con Compose. La integración local se prueba con datos temporales; **no acredita instalación ni configuración del servidor remoto**. La [matriz OWASP](docs/matriz-owasp.md) registra controles y brechas, sin declarar conformidad ni certificación.
+
+Siguen pendientes la evaluación independiente de seguridad y del despliegue, recuperación operativa con responsables, alertas con canal de guardia, perfilado en dispositivos y revisión sostenida de reportes. Consolidar incidencias, verificar reparaciones y conectar un circuito institucional son etapas futuras; visión computacional sigue siendo una propuesta. La [hoja de ruta](docs/hoja-de-ruta.md) define la continuidad.
 
 Para contribuir o revisar cambios: [CONTRIBUTING.md](CONTRIBUTING.md). Para comunicar vulnerabilidades: [SECURITY.md](SECURITY.md). Revisar las [licencias y datos](docs/licencias-y-datos.md) antes de redistribuir. No existe todavía una licencia general del código propio; el repositorio no concede por sí solo una licencia de código abierto.

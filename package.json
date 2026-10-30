@@ -19,6 +19,8 @@
     "docs:check": "node scripts/check-docs.mjs",
     "model:train": "node server/train-model.mjs",
     "test:backend": "node --test tests/backend*.test.mjs",
+    "admin:user": "node --env-file-if-exists=.env scripts/admin-user.mjs",
+    "backup:reports": "node scripts/backup-reports.mjs",
     "android:sync": "pnpm build && cap sync android",
     "android:open": "cap open android",
     "android:build": "node scripts/android-build.mjs",
@@ -31,6 +33,7 @@
     "@capacitor/core": "^8.0.0",
     "@fontsource-variable/inter": "^5.2.0",
     "@fontsource-variable/montserrat": "^5.2.0",
+    "better-auth": "1.7.14",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
