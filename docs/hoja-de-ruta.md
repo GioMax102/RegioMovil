@@ -8,6 +8,8 @@ Existen web/PWA, Android, exploración de red, planificación experimental, guí
 
 Antes de ampliar el uso, el producto debe conservar datos confiablemente, permitir operación responsable y demostrar su comportamiento en dispositivos reales. Después se puede medir impacto social. Un número de reportes no demuestra por sí solo daño, demanda de inversión ni representatividad de toda la población.
 
+Para la instalación remota de R1/R2, seguir el [plan de hosting gratuito](plan-hosting-gratuito.md), evaluado el 30 de octubre de 2026. Recomienda una VM con disco local persistente y aceptación por etapas; no acredita un servidor contratado ni desplegado.
+
 ## Entregas priorizadas
 
 | ID / prioridad                                           | Resultado y dependencia                                                  | Criterios de aceptación                                                                                                                                                                                                                                                                        | Responsable por rol                            |
