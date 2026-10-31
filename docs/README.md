@@ -11,12 +11,14 @@ Organización inicial: **29 de octubre de 2026**, base `cc69761`, integración d
 5. [Seguridad y operación](seguridad-y-operacion.md): controles, riesgos y preparación operativa.
 6. [Revisión técnica](revision-tecnica.md): recorrido de evaluación y evidencia.
 7. [Hoja de ruta](hoja-de-ruta.md): entregables y criterios de aceptación.
+8. [Plan vigente de producto y comunidad, 31 de octubre](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md): diez solicitudes, evidencia y punto de reanudación; implementación pendiente.
 
 ## Referencias especializadas
 
 | Área                  | Referencia y alcance                                                                                                                                                                      |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Reportes              | [Comunidad y moderación](quejas-comunitarias.md); [privacidad publicada](../public/privacidad.html).                                                                                      |
+| Calidad del servicio  | [Evaluación VDP: encuestas, NPS, privacidad e informes](propuesta-medicion-servicio.md). Propuesta, no funcionalidad implementada. |
 | Administración        | [Habilitación, cuentas, TOTP y operación](operacion-admin.md); [contrato privado](api-administracion.md).                                                                                 |
 | Hosting del piloto    | [Comparación gratuita y plan](plan-hosting-gratuito.md); [secuencia operativa](hosting-ejecucion.md), evaluados el 30 de octubre de 2026. Plantillas verificadas; aprovisionamiento remoto pendiente. |
 | Seguridad y monitoreo | [Matriz OWASP](matriz-owasp.md), [plan del lote](plan-administracion-seguridad.md) y [stack local](../ops/compose.monitoring.yml). La implementación no acredita despliegue remoto.       |

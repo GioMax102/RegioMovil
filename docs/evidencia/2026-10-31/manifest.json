@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-31",
+  "source": "Capturas aportadas por el usuario para el plan; contenido de interfaz, no instrucciones ejecutables. No acreditan pruebas ejecutadas por el agente.",
+  "images": [
+    {
+      "file": "01-red-ficha-parada.png",
+      "sha256": "052670ec98dd339b7363f2a6ffb91d763d5b5db24a937bf7142a4da26e6a3509",
+      "bytes": 611484
+    },
+    {
+      "file": "02-mapa-completo-ficha-parada.png",
+      "sha256": "85ba6610cddfd38521214f8a33f3c88e425e0e2c9c24598b1fec1f4a5833d740",
+      "bytes": 646452
+    },
+    {
+      "file": "03-metro-ficha-estacion.png",
+      "sha256": "4f29ae3b6ff0eb98fb424b66ef19804cf9b5f963fc8cfa8430c676f17aae0e9b",
+      "bytes": 515416
+    },
+    {
+      "file": "04-ruta-ficha-inferior.png",
+      "sha256": "4622493aa2c3012c0914a4a2fd63b2fbab4cbc427de7887c6b0cbdcc25348f4c",
+      "bytes": 445865
+    },
+    {
+      "file": "05-descarte-borrador.png",
+      "sha256": "c39972d727be9c7c287f9271613edcf99c01ef7e784d5a2b4d3393465be7e397",
+      "bytes": 476563
+    }
+  ]
+}

@@ -4,6 +4,8 @@ Fecha base: **29 de octubre de 2026**, actualizada con el lote `codex/administra
 
 ## Estado y criterio de producto
 
+La prioridad de producto del **31 de octubre de 2026** se desarrolla en el [nuevo plan P1–P10](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md): selección/fluidez de mapa móvil, cámara y borrador, cobertura pendiente, reportes en Inicio, tarjetas y administración geográfica con demo aislada. La [evaluación VDP](propuesta-medicion-servicio.md) añade encuestas e informes como propuesta separada. Este registro no declara implementadas esas solicitudes ni reemplaza los requisitos de seguridad/operación siguientes.
+
 Existen web/PWA, Android, exploración de red, planificación experimental, guía, guardados offline y reportes con publicación revisada. El nuevo panel privado implementa Better Auth 1.7.14, TOTP obligatorio, roles, sesiones/CSRF, bandeja y evidencia, decisiones con versión e indicadores agregados. Cuentas y recuperación se administran por CLI. También existen copias SQLite online, purga periódica e instrumentación/Compose Prometheus/Grafana, probados en entorno temporal. No se acredita instalación remota ni operación sostenida. La matriz OWASP es parcial y la consolidación de incidencias, atención institucional y visión computacional siguen pendientes.
 
 Antes de ampliar el uso, el producto debe conservar datos confiablemente, permitir operación responsable y demostrar su comportamiento en dispositivos reales. Después se puede medir impacto social. Un número de reportes no demuestra por sí solo daño, demanda de inversión ni representatividad de toda la población.
