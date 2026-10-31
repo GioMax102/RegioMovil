@@ -1,0 +1,23 @@
+rules:
+  - id: regiomovil-no-dynamic-code
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: No interpretar datos como código; usar funciones y estructuras explícitas.
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+  - id: regiomovil-no-raw-dom-html
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Renderizar contenido comunitario como texto; no asignar HTML sin sanitización revisada.
+    pattern-either:
+      - pattern: $ELEMENT.innerHTML = $VALUE
+      - pattern: document.write(...)
+      - pattern: $ELEMENT.insertAdjacentHTML(...)
+  - id: regiomovil-no-disabled-tls-validation
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: Mantener la validación TLS del cliente y del proceso.
+    pattern-either:
+      - pattern: 'process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"'
+      - pattern: '{rejectUnauthorized: false, ...}'

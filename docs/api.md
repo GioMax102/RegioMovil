@@ -16,7 +16,7 @@ curl --fail http://127.0.0.1:3001/api/health
 
 Node.js 24 o posterior; configuración en [.env.example](../.env.example) y [especificación técnica](especificacion-tecnica.md). `pnpm dev` inicia API en 3001 y Vite en 5173 con proxy `/api`. `pnpm start` carga `.env`; `pnpm dev` y `pnpm dev:api` no la cargan automáticamente. Para desarrollo con variables personalizadas, expórtalas en la terminal.
 
-Salvo la descarga de fotografías, las respuestas son JSON UTF-8. Los errores usan `{"error":{"code":"INVALID_JSON","message":"…"}}`. Por defecto se envía `Cache-Control: no-store`; las excepciones de lectura pública se indican abajo. No existe autenticación de usuarios ni un API HTTP de administración. CORS restringe orígenes de navegador y **no autentica** a una persona o cliente.
+Salvo la descarga de fotografías, las respuestas son JSON UTF-8. Los errores usan `{"error":{"code":"INVALID_JSON","message":"…"}}`. Por defecto se envía `Cache-Control: no-store`; las excepciones de lectura pública se indican abajo. La consulta y el envío ciudadano no requieren cuenta. La [API administrativa](api-administracion.md) es independiente, deshabilitada por defecto y exige cuenta, MFA y permisos en servidor. CORS restringe orígenes de navegador y **no autentica** a una persona o cliente.
 
 | Límite por proceso y dirección IP del socket                    | Valor                          |
 | --------------------------------------------------------------- | ------------------------------ |
@@ -158,9 +158,9 @@ Errores: `400 INVALID_REPORT|INVALID_REPORT_DRAFT|INVALID_TARGET|INVALID_STATION
 
 No combinar `station` y `route` (`400 INVALID_TARGET`). No existe consulta pública de borradores, pendientes o rechazados, consulta por ID de reporte privado, paginación ni filtro HTTP de estados. `summary` de la lista contiene `total`, `open`, `resolved`, `byCategory`; el endpoint de resumen añade `targets` con agrupación por tipo, estación/ruta, categoría, estado, cantidad y última fecha. Los conteos abarcan el total retenido y no solo los 20 elementos de la lista. Son cantidades de reportes, no de personas únicas, fallas confirmadas o prioridad automática de inversión.
 
-Reportes y fotografías se entregan con `no-store`. Retención máxima de 90 días con limpieza al acceder al almacenamiento; no existe todavía un trabajo programado de eliminación. Cupos globales activos: 5000 reportes y 50000000 bytes de fotografías. Alcanzar el cupo rechaza nuevos envíos sin retirar evidencia vigente para hacer espacio. La retención de copias de seguridad debe administrarse por separado.
+Reportes y fotografías se entregan con `no-store`. Retención de 90 días con limpieza al acceder al almacenamiento y, mediante `server/index.mjs`, al iniciar y cada seis horas mientras el proceso está activo. Un servidor detenido no ejecuta purgas. Cupos globales activos: 5000 reportes y 50000000 bytes de fotografías. Alcanzar el cupo rechaza nuevos envíos sin retirar evidencia vigente para hacer espacio. La retención de copias de seguridad debe administrarse por separado.
 
-La revisión se opera únicamente mediante [CLI de moderación](../scripts/moderate-report.mjs), con identidad declarada de revisor, nota e historial. Publicar exige consentimiento y confirmación de revisión de texto/foto. Resolver es una transición administrativa; no prueba una reparación física por sí sola. No se envía automáticamente a autoridades ni se utiliza para modificar predicciones. Diseño y protocolo: [quejas-comunitarias.md](quejas-comunitarias.md).
+La revisión se opera desde el [panel privado](operacion-admin.md) y su [API autenticada](api-administracion.md), con actor de cuenta, nota e historial; se conserva la [CLI de moderación](../scripts/moderate-report.mjs) con identidad declarada por el operador del host. Publicar exige consentimiento y confirmación de revisión de texto/foto. Resolver es una transición administrativa; no prueba una reparación física por sí sola. No se envía automáticamente a autoridades ni se utiliza para modificar predicciones. Diseño y protocolo: [quejas-comunitarias.md](quejas-comunitarias.md).
 
 ## Errores comunes y pruebas
 

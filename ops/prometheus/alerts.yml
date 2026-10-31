@@ -1,0 +1,48 @@
+groups:
+  - name: regiomovil
+    rules:
+      - alert: RegioMovilMetricsUnavailable
+        expr: up{job="regiomovil"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'No se pueden recolectar métricas de RegioMóvil'
+          description: 'Revisar proceso, red privada y secreto del recolector.'
+      - alert: RegioMovilServerErrors
+        expr: sum(rate(regiomovil_http_requests_total{status="5xx"}[5m])) / clamp_min(sum(rate(regiomovil_http_requests_total[5m])), 0.01) > 0.05 and sum(increase(regiomovil_http_requests_total[5m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Más de 5% de respuestas de error del servidor'
+      - alert: RegioMovilMemoryHigh
+        expr: regiomovil_process_resident_bytes > 536870912
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'El proceso supera 512 MiB de memoria residente'
+          description: 'Umbral inicial de desarrollo; ajustarlo al presupuesto medido del servidor.'
+      - alert: RegioMovilEventLoopSlow
+        expr: regiomovil_event_loop_delay_seconds > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'El bucle de eventos presenta retraso sostenido'
+      - alert: RegioMovilReportsCapacity
+        expr: regiomovil_reports_stored / regiomovil_reports_limit > 0.8 or regiomovil_reports_photo_bytes / regiomovil_reports_photo_bytes_limit > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'El almacenamiento de reportes supera el 80% de su cuota'
+          description: 'Revisar retención y capacidad; no borrar observaciones válidas para silenciar la alerta.'
+      - alert: RegioMovilTelemetryErrors
+        expr: increase(regiomovil_telemetry_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Falló una lectura de capacidad del almacenamiento'

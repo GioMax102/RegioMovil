@@ -1,0 +1,103 @@
+name: regiomovil-monitoring
+x-bounded-logging: &bounded-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+services:
+  app:
+    build:
+      context: ..
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_PATH: /data/regiomovil.sqlite
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:3001,http://127.0.0.1:3001,http://localhost,https://localhost,capacitor://localhost}
+      ADMIN_DATABASE_PATH: /data/admin-auth.sqlite
+      ADMIN_ENABLED: ${ADMIN_ENABLED:-false}
+      ADMIN_ORIGIN: ${ADMIN_ORIGIN:-http://localhost:3001}
+      ADMIN_ALLOW_INSECURE_LOCALHOST: ${ADMIN_ALLOW_INSECURE_LOCALHOST:-false}
+      ADMIN_AUTH_SECRET: ${ADMIN_AUTH_SECRET:-}
+      METRICS_HOST: 0.0.0.0
+      METRICS_PORT: 9091
+      METRICS_TOKEN_FILE: /run/secrets/metrics_token
+    ports:
+      - '127.0.0.1:3001:3001'
+    volumes:
+      - reports:/data
+    secrets:
+      - metrics_token
+    networks: [web, metrics]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    logging: *bounded-logging
+    stop_grace_period: 10s
+  prometheus:
+    # LTS patch release verified against prometheus.io/download on 2026-10-29.
+    image: prom/prometheus:v3.13.5@sha256:aafa9d694e6a883c02db516d9f6e5b84e14195f49a2a6456a4cca815edda72b9
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=512MB
+      - --web.listen-address=0.0.0.0:9090
+    ports:
+      - '127.0.0.1:9090:9090'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus:/prometheus
+    secrets:
+      - metrics_token
+    # Internal-only networks suppress host publishing in Docker Engine 29.
+    # A separate bridge permits the explicit loopback console binding.
+    networks: [console, metrics]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    logging: *bounded-logging
+  grafana:
+    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
+    environment:
+      GF_SECURITY_ADMIN_USER: operador
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_password
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_DISABLE_LOGIN_FORM: 'false'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: 'false'
+      GF_SECURITY_COOKIE_SAMESITE: strict
+      GF_SECURITY_ALLOW_EMBEDDING: 'false'
+      GF_LOG_LEVEL: warn
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    secrets:
+      - grafana_password
+    networks: [console, metrics]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    logging: *bounded-logging
+networks:
+  web: {}
+  console: {}
+  metrics:
+    internal: true
+volumes:
+  reports: {}
+  prometheus: {}
+  grafana: {}
+secrets:
+  metrics_token:
+    file: ../.data/monitoring-secrets/metrics_token
+  grafana_password:
+    file: ../.data/monitoring-secrets/grafana_password

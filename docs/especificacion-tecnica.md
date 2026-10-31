@@ -1,6 +1,6 @@
 # Especificación técnica de RegioMóvil
 
-**Estado:** piloto funcional, versión de paquete 1.1.0. **Revisión documental:** 29 de octubre de 2026. **Destinatarios:** desarrollo, operaciones, seguridad, datos y responsables de producto.
+**Estado:** piloto funcional, versión de paquete 1.1.0. **Revisión documental:** 29 de octubre de 2026, actualizada con el lote `codex/administracion-ciberseguridad`. **Destinatarios:** desarrollo, operaciones, seguridad, datos y responsables de producto.
 
 Este documento describe el código presente en el repositorio. Los comandos se ejecutan desde su raíz. El historial Git identifica la revisión exacta; los inventarios de datos conservan su propia fecha y revisión. Una característica propuesta no debe presentarse como instalada o validada por esta documentación.
 
@@ -8,16 +8,16 @@ Este documento describe el código presente en el repositorio. Los comandos se e
 
 RegioMóvil reúne un catálogo de transporte de Nuevo León, mapas, planificación experimental Metro/autobús, guía de viaje, viajes guardados y observaciones comunitarias con texto/foto. La misma interfaz se entrega como web/PWA, Android con Capacitor y modo de pantalla de estación.
 
-| Disponible                                                                                    | Pendiente para una operación pública más amplia                                                    |
-| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Catálogo y geometrías trazables a fuentes; grafo calculado localmente                         | Validación de secuencia y sentido de autobuses con operadores; completar fuentes faltantes         |
-| Simulaciones de llegada, aforo, clima y condición de unidades                                 | Telemetría autorizada, predicciones y métricas con viajes reales                                   |
-| Reportes privados por defecto, consentimiento, moderación por CLI y consulta pública filtrada | Administración web autenticada, gestión de casos, indicadores operativos y protocolo institucional |
-| Controles de entrada, cabeceras y límites de recursos                                         | Evaluación de seguridad independiente, matriz OWASP verificable y cierre de hallazgos              |
-| Endpoint de salud y pruebas automatizadas                                                     | Métricas operativas, Prometheus/Grafana, alertas y ejercicios de recuperación                      |
-| Límites de búsqueda, carga diferida y worker                                                  | Perfilado de memoria/renderizado en dispositivos diversos y objetivos de servicio medidos          |
+| Disponible                                                                             | Pendiente para una operación pública más amplia                                            |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Catálogo y geometrías trazables a fuentes; grafo calculado localmente                  | Validación de secuencia y sentido de autobuses con operadores; completar fuentes faltantes |
+| Simulaciones de llegada, aforo, clima y condición de unidades                          | Telemetría autorizada, predicciones y métricas con viajes reales                           |
+| Reportes privados, consentimiento, moderación web/CLI e indicadores agregados          | Consolidación de incidencias, evidencia de reparación y circuito institucional             |
+| Controles de entrada, cabeceras, límites, MFA/roles/CSRF y matriz OWASP parcial        | Evaluación independiente, matriz completa del nivel elegido y cierre de hallazgos          |
+| Salud, métricas privadas, Compose Prometheus/Grafana, reglas de alerta y copias online | Instalación remota, guardia, recuperación operativa y objetivos de servicio medidos        |
+| Límites de búsqueda, carga diferida y worker                                           | Perfilado de memoria/renderizado en dispositivos diversos y objetivos de servicio medidos  |
 
-No se gestionan pagos, saldo o boletos. No existe un feed autorizado de GPS de vehículos, reconocimiento visual de daños, autenticación administrativa ni certificación de seguridad. El GPS del dispositivo sirve a la guía de la persona; no informa dónde se encuentran las unidades. La preferencia de accesibilidad devuelve estado desconocido cuando no existe evidencia.
+No se gestionan pagos, saldo o boletos. No existe un feed autorizado de GPS de vehículos, reconocimiento visual de daños ni certificación de seguridad. El GPS del dispositivo sirve a la guía de la persona; no informa dónde se encuentran las unidades. La preferencia de accesibilidad devuelve estado desconocido cuando no existe evidencia.
 
 ## Arquitectura y fronteras
 
@@ -31,6 +31,10 @@ flowchart LR
   Client --> Local["Guardados y borrador en el dispositivo"]
   Client --> API["HTTP Node.js: API y archivos estáticos"]
   API --> SQLite["SQLite: reportes y revisión"]
+  Admin["Panel privado con MFA y roles"] --> API
+  API --> Identity["SQLite separado: identidad y sesiones"]
+  API --> Metrics["Listener privado de métricas"]
+  Metrics --> Monitoring["Prometheus y Grafana opcionales"]
   CLI["CLI de moderación con acceso al servidor"] --> SQLite
   API --> Places["Nominatim y Photon por HTTPS"]
 ```
@@ -44,6 +48,9 @@ Los importadores no se ejecutan al abrir una pantalla. El build ordinario prepar
 | `server/domain.mjs`, `server/model.mjs`             | Funciones portables de simulación y planificación Metro; compartidas entre navegador y API.                                                                                                 |
 | `server/mobility.mjs`                               | Motor geográfico multimodal portable, sin acceso a archivos ni red.                                                                                                                         |
 | `server/index.mjs`, `server/app.mjs`                | HTTP nativo de Node.js 24, carga de datos, API, cabeceras, cuotas y entrega de `dist/`. No usa Express.                                                                                     |
+| `src/admin/`, `admin.html`                          | Entrada web independiente; autenticación, enrolamiento TOTP, bandeja, revisión e indicadores. No consume la URL externa de la app ciudadana.                                                |
+| `server/admin.mjs`, `server/admin-auth.mjs`         | Router privado, Better Auth 1.7.14, sesiones, CSRF, permisos y auditoría de acceso.                                                                                                         |
+| `server/observability.mjs`, `ops/`                  | Listener de métricas separado, etiquetas finitas, Prometheus/Grafana y reglas de alerta locales.                                                                                            |
 | `server/storage.mjs`, `server/report-photos.mjs`    | Persistencia SQLite, migraciones, revisión, retención, idempotencia y validación de fotos.                                                                                                  |
 | `server/places.mjs`, `server/place-suggestions.mjs` | Consultas externas acotadas; normalización, referencias locales y manejo de errores.                                                                                                        |
 | `data/`, `public/route-packs/`, `models/`           | Datos fuente/canónicos, geometrías publicadas y artefacto sintético del modelo.                                                                                                             |
@@ -72,32 +79,43 @@ curl --fail http://127.0.0.1:3001/api/health
 
 El build ejecuta TypeScript, prepara catálogo y grafo, construye con Vite y finaliza assets/PWA. `pnpm start` sirve API y `dist/` en un solo proceso. Si `dist/` no existe, la API puede iniciar, pero no estará disponible la interfaz compilada. `./regiomovil build|dev|start|test` ofrece un acceso equivalente que exige Node compatible; puede usar el runtime local de Codex si está presente, sin convertirlo en requisito del proyecto.
 
-| Comando                                                | Uso                                                                                                                |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `pnpm test`                                            | Suite JavaScript/TypeScript con Node y `tsx`; requiere build previo para pruebas de assets.                        |
-| `pnpm test:backend`                                    | Pruebas `backend*.test.mjs`, incluidas seguridad y reportes.                                                       |
-| `pnpm catalog:build`                                   | Regenera el catálogo desde fuentes incorporadas.                                                                   |
-| `pnpm mobility:build`                                  | Regenera las copias del grafo público y servidor.                                                                  |
-| `pnpm model:train`                                     | Reproduce `models/artifact.json` con muestras sintéticas y semilla fija.                                           |
-| `python3 -m unittest discover -s tests -p '*_test.py'` | Pruebas de importadores Python; no se incluyen automáticamente en `pnpm test`.                                     |
-| `pnpm android:build`                                   | Build y sincronización de assets para APK de depuración; revisar opciones del script antes de una entrega firmada. |
-| `./regiomovil android-connect`                         | Comprueba backend local en 4173 y túnel ADB para desarrollo; no instala ni reinicia la app.                        |
-| `pnpm release:prepare`                                 | Prepara y verifica artefactos de entrega local; no publica automáticamente.                                        |
+| Comando                                                              | Uso                                                                                                                |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pnpm test`                                                          | Suite JavaScript/TypeScript con Node y `tsx`; requiere build previo para pruebas de assets.                        |
+| `pnpm test:backend`                                                  | Pruebas `backend*.test.mjs`; las nuevas `admin-*.test.mjs` también se ejecutan en `pnpm test`.                     |
+| `pnpm admin:user create CORREO moderator "Nombre"`                   | Aprovisiona una cuenta con contraseña solicitada en terminal, después de configurar `ADMIN_*`.                     |
+| `node scripts/backup-reports.mjs ORIGEN.sqlite DESTINO-NUEVO.sqlite` | Copia online consistente de reportes o accesos, validada y sin sobrescribir; destino privado 0700.                 |
+| `pnpm catalog:build`                                                 | Regenera el catálogo desde fuentes incorporadas.                                                                   |
+| `pnpm mobility:build`                                                | Regenera las copias del grafo público y servidor.                                                                  |
+| `pnpm model:train`                                                   | Reproduce `models/artifact.json` con muestras sintéticas y semilla fija.                                           |
+| `python3 -m unittest discover -s tests -p '*_test.py'`               | Pruebas de importadores Python; no se incluyen automáticamente en `pnpm test`.                                     |
+| `pnpm android:build`                                                 | Build y sincronización de assets para APK de depuración; revisar opciones del script antes de una entrega firmada. |
+| `./regiomovil android-connect`                                       | Comprueba backend local en 4173 y túnel ADB para desarrollo; no instala ni reinicia la app.                        |
+| `pnpm release:prepare`                                               | Prepara y verifica artefactos de entrega local; no publica automáticamente.                                        |
 
 ### Variables
 
-| Variable                      | Valor o comportamiento predeterminado        | Alcance                                                                                                                                                                       |
-| ----------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HOST`                        | `127.0.0.1`                                  | Interfaz HTTP del servidor. El contenedor utiliza `0.0.0.0`.                                                                                                                  |
-| `PORT`                        | `3001`                                       | Puerto HTTP; entero de 0–65535, con 0 reservado a asignación automática útil en pruebas.                                                                                      |
-| `DATABASE_PATH`               | `.data/regiomovil.sqlite`                    | Archivo SQLite, fuera de `dist/`. Requiere volumen persistente en despliegues efímeros.                                                                                       |
-| `CORS_ORIGINS`                | Lista local explícita                        | Orígenes separados por comas; no se admite `*`. Incluir exactamente los orígenes publicados.                                                                                  |
-| `PLACES_PROVIDER_URL`         | `https://nominatim.openstreetmap.org/search` | Destino HTTPS de consulta explícita de lugares.                                                                                                                               |
-| `PLACES_SUGGEST_PROVIDER_URL` | `https://photon.komoot.io/api/`              | Destino HTTPS de sugerencias; el proveedor público Nominatim se rechaza para esta función.                                                                                    |
-| `PLACES_USER_AGENT`           | Identificador del proyecto                   | Identifica la aplicación ante los proveedores; no contiene credenciales.                                                                                                      |
-| `VITE_API_BASE_URL`           | Vacío: mismo origen en web                   | Se incorpora **al compilar** el frontend. Es público y nunca debe contener secretos. Android distribuido requiere backend HTTPS configurado para reportes y búsqueda externa. |
+| Variable                               | Valor o comportamiento predeterminado        | Alcance                                                                                                                                                                       |
+| -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HOST`                                 | `127.0.0.1`                                  | Interfaz HTTP del servidor. El contenedor utiliza `0.0.0.0`.                                                                                                                  |
+| `PORT`                                 | `3001`                                       | Puerto HTTP; entero de 0–65535, con 0 reservado a asignación automática útil en pruebas.                                                                                      |
+| `DATABASE_PATH`                        | `.data/regiomovil.sqlite`                    | Archivo SQLite, fuera de `dist/`. Requiere volumen persistente en despliegues efímeros.                                                                                       |
+| `CORS_ORIGINS`                         | Lista local explícita                        | Orígenes separados por comas; no se admite `*`. Incluir exactamente los orígenes publicados.                                                                                  |
+| `PLACES_PROVIDER_URL`                  | `https://nominatim.openstreetmap.org/search` | Destino HTTPS de consulta explícita de lugares.                                                                                                                               |
+| `PLACES_SUGGEST_PROVIDER_URL`          | `https://photon.komoot.io/api/`              | Destino HTTPS de sugerencias; el proveedor público Nominatim se rechaza para esta función.                                                                                    |
+| `PLACES_USER_AGENT`                    | Identificador del proyecto                   | Identifica la aplicación ante los proveedores; no contiene credenciales.                                                                                                      |
+| `VITE_API_BASE_URL`                    | Vacío: mismo origen en web                   | Se incorpora **al compilar** el frontend. Es público y nunca debe contener secretos. Android distribuido requiere backend HTTPS configurado para reportes y búsqueda externa. |
+| `ADMIN_ENABLED`                        | Desactivada; sólo `true` activa              | API administrativa opcional, sin cuentas por defecto.                                                                                                                         |
+| `ADMIN_ORIGIN`                         | Sin valor al habilitar                       | Origen exacto HTTPS, sin path ni credenciales; debe coincidir con el panel y la API.                                                                                          |
+| `ADMIN_AUTH_SECRET`                    | Sin valor                                    | Secreto privado de al menos 32 bytes, aleatorio y respaldado en un gestor; nunca `VITE_*`.                                                                                    |
+| `ADMIN_DATABASE_PATH`                  | `.data/admin-auth.sqlite`                    | Identidades/MFA/sesiones; distinta de `DATABASE_PATH` y fuera de archivos públicos.                                                                                           |
+| `ADMIN_ALLOW_INSECURE_LOCALHOST`       | Desactivada                                  | Excepción HTTP explícita sólo para loopback; prohibida en producción.                                                                                                         |
+| `METRICS_TOKEN` o `METRICS_TOKEN_FILE` | Desactivado sin token                        | Bearer privado de 32–256 caracteres URL-safe, literal o archivo; no configurar ambos.                                                                                         |
+| `METRICS_HOST`, `METRICS_PORT`         | `127.0.0.1`, `9091`                          | Listener independiente; un cambio de interfaz exige revisar red y acceso al recolector.                                                                                       |
 
 `pnpm start` y `./regiomovil start` cargan `.env` si existe. Los scripts de desarrollo no lo cargan automáticamente: exportar las variables en la terminal. Los valores `VITE_` siguen el mecanismo de entorno de Vite al construir. Usar [.env.example](../.env.example) como plantilla, sin incorporar `.env` o archivos de claves al control de versiones.
+
+El panel es una entrada web separada, servida como `/admin` o `/admin.html`; su API siempre usa el mismo origen y no hereda `VITE_API_BASE_URL`. Configuración de HTTPS, provisión de cuentas, recuperación y métricas: [operacion-admin.md](operacion-admin.md).
 
 El proceso configura `requestTimeout=10000 ms`, `headersTimeout=8000 ms`, `keepAliveTimeout=5000 ms`. En SIGTERM/SIGINT deja de aceptar conexiones, cierra SQLite al finalizar las activas y tiene una salida forzada de 5 s. HTTPS y certificados corresponden al proxy o plataforma de publicación; el servidor local no termina TLS.
 
@@ -108,7 +126,7 @@ docker build -t regiomovil .
 docker run --rm -p 127.0.0.1:3001:3001 -v regiomovil-data:/data regiomovil
 ```
 
-`Dockerfile` compila en Node 24 Alpine y ejecuta `dist/`, `server/`, `data/` y `models/` como usuario `node`, sin dependencias npm de servidor. `/data` conserva SQLite. Este ejemplo solo expone loopback; para publicación faltan dominio/TLS, política de red, respaldo/restauración y monitoreo verificados. No ejecutar varias instancias sobre un archivo SQLite compartido por red sin un diseño y pruebas específicos.
+`Dockerfile` compila en Node 24 Alpine, conserva dependencias npm de producción para Better Auth y ejecuta `dist/`, `server/`, `data/` y `models/` como usuario `node`. Incluye CLI de cuentas y respaldo; `/data` conserva SQLite. El [Compose opcional](../ops/compose.monitoring.yml) agrega un volumen propio, recolector y paneles, probado en un entorno temporal. Este ejemplo solo expone loopback; la publicación necesita dominio/TLS, política de red, recuperación y monitoreo verificados en destino. No ejecutar varias instancias sobre un archivo SQLite compartido por red sin un diseño y pruebas específicos.
 
 ## Datos, cobertura y trazabilidad
 
@@ -165,17 +183,18 @@ El radio nominal del intervalo de 80% se obtiene de residuales absolutos de cali
 
 El servidor usa `node:sqlite` (`DatabaseSync`), esquema `PRAGMA user_version=3`. Las migraciones se ejecutan transaccionalmente al abrir la base; una versión superior provoca rechazo para evitar abrirla con código antiguo. Datos persistidos:
 
-| Entidad                    | Contenido y control                                                                                                                                                                                                                      |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `reports`                  | Destino de estación/unidad/ruta, título, categoría, texto, referencias, foto sanitizada, consentimiento, fechas, estado, clave opcional de borrador y hash para idempotencia. Índices de destino/estado/fecha y clave de borrador única. |
-| `report_moderation_events` | Acción, reporte, identidad declarada del revisor, nota y fecha. Borrado en cascada al expirar el reporte. No es un registro inmutable ni prueba de identidad.                                                                            |
-| JSON de catálogo/modelo    | Archivos de referencia leídos al iniciar; su modificación requiere revisión y regeneración, no un formulario público.                                                                                                                    |
+| Entidad                      | Contenido y control                                                                                                                                                                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reports`                    | Destino de estación/unidad/ruta, título, categoría, texto, referencias, foto sanitizada, consentimiento, fechas, estado, clave opcional de borrador y hash para idempotencia. Índices de destino/estado/fecha y clave de borrador única. |
+| `report_moderation_events`   | Acción, reporte, ID autenticado del revisor web o identidad declarada por CLI, nota y fecha. Borrado en cascada al expirar el reporte. No es una bitácora inmutable.                                                                     |
+| Base administrativa separada | Tablas de Better Auth para cuentas, verificadores de contraseña, MFA, sesiones y desafíos; tablas propias para acceso, verificación MFA por sesión y revisión de cambios de permisos. Restringida al host.                               |
+| JSON de catálogo/modelo      | Archivos de referencia leídos al iniciar; su modificación requiere revisión y regeneración, no un formulario público.                                                                                                                    |
 
 SQLite opera en WAL, `synchronous=NORMAL`, `busy_timeout=3000`, claves foráneas activas y `secure_delete=ON`; configura `journal_size_limit=8388608` para el archivo retenido tras reset/checkpoint y aplica permisos privados al archivo y auxiliares presentes. Ese ajuste no es un techo de disco ni impide que el WAL crezca durante actividad; véase [SQLite PRAGMA](https://www.sqlite.org/pragma.html#pragma_journal_size_limit). Son controles locales: no proporcionan cifrado de disco, de respaldos ni una garantía de eliminación forense. WAL exige respaldos consistentes; no copiar solo el archivo principal mientras la aplicación escribe.
 
 Todo reporte entra `pending` y privado. Consentimiento y revisión explícita permiten `published`; puede pasar a `resolved`, `rejected` o retirarse a `pending` según transiciones permitidas. Solo `published|resolved`, con consentimiento y vigencia, aparece en lectura pública. El estado resuelto refleja una decisión administrativa; debe acompañarse de evidencia de cierre cuando se implemente gestión de casos.
 
-La retención de 90 días elimina reportes al acceder al almacenamiento; no hay limpieza programada. Hay un techo de 5000 reportes y 50 MB decimales de fotografías; al agotarse, se rechazan nuevos envíos. Los originales aceptados en cliente tienen límite de 8 MB y 24 megapíxeles; se reducen a 1280 px por lado mayor y hasta 400000 bytes. El servidor vuelve a validar estructura, tamaño y dimensiones y retira metadatos de los formatos admitidos. No existe anonimización automática de rostros/placas: la revisión humana debe considerarlos antes de publicar.
+La retención de 90 días elimina reportes al acceder al almacenamiento y, mediante `server/index.mjs`, al iniciar y cada seis horas de ejecución. El temporizador no opera con el proceso detenido ni purga copias externas. Hay un techo de 5000 reportes y 50 MB decimales de fotografías; al agotarse, se rechazan nuevos envíos. Los originales aceptados en cliente tienen límite de 8 MB y 24 megapíxeles; se reducen a 1280 px por lado mayor y hasta 400000 bytes. El servidor vuelve a validar estructura, tamaño y dimensiones y retira metadatos de los formatos admitidos. No existe anonimización automática de rostros/placas: la revisión humana debe considerarlos antes de publicar.
 
 ```bash
 node scripts/moderate-report.mjs .data/regiomovil.sqlite list --status pending
@@ -183,11 +202,13 @@ node scripts/moderate-report.mjs .data/regiomovil.sqlite show ID_DEL_REPORTE
 node scripts/moderate-report.mjs .data/regiomovil.sqlite summary --status public
 ```
 
-Las acciones de publicación y revisión requieren acceso privilegiado al servidor y sus archivos, fuera de HTTP. El CLI registra el nombre declarado por el operador, sin autenticación propia; los permisos y auditoría del acceso al servidor siguen siendo responsabilidad operativa. Contrato y comandos de revisión: [api.md](api.md) y [quejas-comunitarias.md](quejas-comunitarias.md).
+El panel privado ofrece bandeja y evidencia a `moderator|admin`; `analyst` sólo consulta agregados. Better Auth 1.7.14 gestiona contraseñas y TOTP obligatorio; las cuentas se aprovisionan por CLI, sin registro público. Sesiones de una hora absoluta, cookies HttpOnly/SameSite estricto/Secure bajo HTTPS, origen exacto y CSRF protegen los flujos. Se revalida acceso antes de mutaciones y cambios de cuenta revocan sesiones. La comparación atómica de versión del reporte evita sobrescribir otra decisión.
+
+La API incluye filtros y paginación (20 por defecto, máximo 100, offset hasta 5000), antigüedad de cola, mediana/p95 a primera revisión y distribución por destino limitada a 100 grupos con indicadores de truncamiento. Son reportes retenidos, no casos únicos o reparaciones verificadas. El CLI de moderación mantiene privilegios del host e identidad declarada, diferenciada de la cuenta autenticada web. Contratos y operación: [API administrativa](api-administracion.md), [operación](operacion-admin.md) y [reportes](quejas-comunitarias.md).
 
 ## PWA, Android y recuperación local
 
-El service worker almacena shell y assets públicos del mismo origen; excluye `/api` y reportes. El grafo multimodal se obtiene bajo demanda y queda fuera del precache inicial. La disponibilidad sin red depende de haber descargado los datos requeridos o guardado un paquete de viaje; abrir la app una vez no garantiza que todo mapa o servicio esté disponible offline.
+El service worker almacena shell y assets públicos del mismo origen; excluye `/api`, reportes y la entrada/recursos propios de administración. El grafo multimodal se obtiene bajo demanda y queda fuera del precache inicial. La disponibilidad sin red depende de haber descargado los datos requeridos o guardado un paquete de viaje; abrir la app una vez no garantiza que todo mapa o servicio esté disponible offline.
 
 El modo sin conexión del cálculo acepta extremos de paradas oficiales del artefacto, no una búsqueda externa ni nuevas coordenadas. Los viajes guardados incluyen un subconjunto del grafo, geometrías y fuentes: hasta ocho paquetes y 4000000 bytes totales en almacenamiento local. Guardarlos puede conservar lugares o coordenadas elegidos expresamente; no se afirma ausencia total de datos de ubicación en el dispositivo.
 
@@ -197,9 +218,11 @@ Capacitor empaqueta `dist/` dentro de Android (`mx.regiomovil.app`) sin `server.
 
 ## Seguridad y disponibilidad actuales
 
-El servidor limita cuerpos y frecuencia, valida destinos/campos, usa SQL parametrizado y no ofrece endpoints administrativos públicos. Sirve únicamente extensiones permitidas bajo `dist/`, verifica paths reales/symlinks y no expone `.data` o source maps. Usa `nosniff`, protección contra framing, política de referer, CSP y CORS explícito. La CSP permite estilos inline necesarios para posicionar mapas; sus destinos de API/imagen deben revisarse al cambiar la publicación. La validación de fotografías y los tests existentes reducen riesgos conocidos, sin equivaler a una auditoría completa.
+El servidor limita cuerpos y frecuencia, valida destinos/campos y usa SQL parametrizado. Los endpoints administrativos están deshabilitados por defecto y, cuando se habilitan, exigen autenticación, MFA y autorización en servidor. Sirve únicamente extensiones permitidas bajo `dist/`, verifica paths reales/symlinks y no expone `.data` o source maps. Usa `nosniff`, protección contra framing, política de referer, CSP y CORS explícito. La CSP permite estilos inline necesarios para posicionar mapas; sus destinos de API/imagen deben revisarse al cambiar la publicación. La validación de fotografías y los tests existentes reducen riesgos conocidos, sin equivaler a una auditoría completa.
 
-El endpoint de salud confirma que el proceso responde. No hay `/metrics`, dashboards de Grafana, alertas ni SLO verificado. Tampoco existen autorización por roles, sesiones administrativas o defensa contra abuso distribuido. La aceptación pública debe exigir evaluación de seguridad con requisitos trazables, pruebas de recuperación y capacidad, y una política de tratamiento de datos. El plan de evaluación, respaldo y observabilidad está en [seguridad y operación](seguridad-y-operacion.md); los criterios de entrega se mantienen en la [hoja de ruta](hoja-de-ruta.md).
+El endpoint de salud confirma respuesta del proceso. Al configurar `METRICS_TOKEN` o `METRICS_TOKEN_FILE` se abre un listener independiente con `GET|HEAD /metrics`, bearer y `no-store`, por defecto `127.0.0.1:9091`; no es una ruta pública de la API ciudadana. Exporta tráfico/latencia por plantilla, memoria/CPU, retraso del bucle de eventos y cupos agregados sin GPS, IDs o texto. El stack local incluye Prometheus, Grafana y alertas iniciales sin entrega a una guardia. No está instalado automáticamente en el servidor remoto y no acredita SLO.
+
+El script de respaldo usa Online Backup API, verifica integridad/esquema y publica copias 0600 sin sobrescribir. Las bases de reportes y accesos se copian por separado; una instantánea conjunta exige coordinar la aplicación. Faltan defensa distribuida, TLS/configuración de destino, evaluación independiente, recuperación institucional de MFA y objetivos de capacidad/recuperación. La [matriz OWASP](matriz-owasp.md) es parcial; la [operación](seguridad-y-operacion.md) y [hoja de ruta](hoja-de-ruta.md) delimitan la aceptación.
 
 ## Rendimiento y comprobación
 

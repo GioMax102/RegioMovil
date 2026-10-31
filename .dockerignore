@@ -16,4 +16,5 @@ test-results
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+ops/secrets
 *.log

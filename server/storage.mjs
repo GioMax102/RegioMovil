@@ -14,6 +14,11 @@ const boundedLimit = limit => Math.min(100, Math.max(1, Math.trunc(Number(limit)
 const columns = `id, station_id AS stationId, route_id AS routeId, title, category, detail,
   target_type AS targetType, unit_reference AS unitReference, location_reference AS locationReference,
   photo_mime AS photoMime, created_at AS createdAt, status`;
+const privateColumns = `${columns}, publication_consent AS publicationConsent,
+  photo_data IS NOT NULL AS hasPhoto,
+  status || ':' || COALESCE((SELECT MAX(event.id) FROM report_moderation_events event
+    WHERE event.report_id = reports.id), 0) AS version`;
+const privateReport = row => row ? { ...row, publicationConsent: row.publicationConsent === 1, hasPhoto: row.hasPhoto === 1 } : null;
 const schema = `CREATE TABLE reports (
   id TEXT PRIMARY KEY, station_id TEXT, route_id TEXT,
   target_type TEXT NOT NULL CHECK(target_type IN ('station','unit','route')),
@@ -170,17 +175,86 @@ export function createReportStore(path = ':memory:') {
         photo_data IS NOT NULL AS hasPhoto FROM reports ${status === 'all' ? '' : 'WHERE status = ?'}
         ORDER BY created_at DESC, rowid DESC LIMIT ?`).all(...(status === 'all' ? [] : [status]), boundedLimit(limit));
     },
+    adminList({ status = 'pending', category = 'all', targetType = 'all', stationId, routeId, limit = 20, offset = 0 } = {}, date = new Date()) {
+      if (!['pending', 'published', 'resolved', 'rejected', 'all'].includes(status)) throw new RangeError('Estado inválido.');
+      if (category !== 'all' && !REPORT_CATEGORIES.includes(category)) throw new RangeError('Categoría inválida.');
+      if (!['station', 'unit', 'route', 'all'].includes(targetType)) throw new RangeError('Destino inválido.');
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0 || offset > MAX_REPORTS) throw new RangeError('Paginación inválida.');
+      const where = [], params = [];
+      for (const [field, value] of [['status', status], ['category', category], ['target_type', targetType]]) {
+        if (value !== 'all') { where.push(`${field} = ?`); params.push(value); }
+      }
+      for (const [field, value] of [['station_id', stationId], ['route_id', routeId]]) {
+        if (value !== undefined) {
+          if (typeof value !== 'string' || !value || value.length > 160 || /[\u0000-\u001f\u007f]/.test(value)) throw new RangeError('Referencia inválida.');
+          where.push(`${field} = ?`); params.push(value);
+        }
+      }
+      prune(date);
+      const filter = where.length ? `WHERE ${where.join(' AND ')}` : '';
+      const total = db.prepare(`SELECT COUNT(*) AS total FROM reports ${filter}`).get(...params).total;
+      const reports = db.prepare(`SELECT ${privateColumns} FROM reports ${filter}
+        ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?`).all(...params, limit, offset).map(privateReport);
+      return { reports, total, limit, offset };
+    },
+    adminDetail(id, date = new Date()) {
+      prune(date);
+      const report = privateReport(db.prepare(`SELECT ${privateColumns} FROM reports WHERE id = ?`).get(id));
+      return report ? { ...report, history: store.moderationHistory(id) } : null;
+    },
+    adminPhoto(id, date = new Date()) {
+      prune(date);
+      return db.prepare('SELECT photo_mime AS mime, photo_data AS data FROM reports WHERE id = ? AND photo_data IS NOT NULL').get(id) || null;
+    },
+    usage() {
+      const row = db.prepare('SELECT COUNT(*) AS reportCount, COALESCE(SUM(length(photo_data)),0) AS photoBytes FROM reports').get();
+      return { ...row, reportLimit: MAX_REPORTS, photoBytesLimit: MAX_STORED_PHOTO_BYTES };
+    },
+    pruneExpired(date = new Date()) { return prune(date).changes; },
+    adminDashboard(date = new Date()) {
+      prune(date);
+      const counters = db.prepare(`SELECT COUNT(*) AS total,
+        COALESCE(SUM(status='pending'),0) AS pending, COALESCE(SUM(status='published'),0) AS published,
+        COALESCE(SUM(status='resolved'),0) AS resolved, COALESCE(SUM(status='rejected'),0) AS rejected FROM reports`).get();
+      const queue = db.prepare(`SELECT MIN(created_at) AS oldestPendingAt,
+        COALESCE(SUM(created_at < ?),0) AS pendingOver7Days FROM reports WHERE status='pending'`)
+        .get(new Date(date.getTime() - 7 * 86400_000).toISOString());
+      const durations = db.prepare(`SELECT reports.created_at AS receivedAt, MIN(event.created_at) AS firstReviewedAt
+        FROM reports JOIN report_moderation_events event ON event.report_id=reports.id GROUP BY reports.id`).all()
+        .map(row => (Date.parse(row.firstReviewedAt) - Date.parse(row.receivedAt)) / 3600_000)
+        .filter(hours => Number.isFinite(hours) && hours >= 0).sort((a,b) => a-b);
+      const count = durations.length;
+      const round = value => value == null ? null : Math.round(value * 100) / 100;
+      const review = { reviewedCount: count,
+        medianHours: round(count ? (durations[Math.floor((count-1)/2)] + durations[Math.floor(count/2)]) / 2 : null),
+        p95Hours: round(count ? durations[Math.ceil(count * 0.95)-1] : null) };
+      const byCategory = db.prepare('SELECT category, COUNT(*) AS count FROM reports GROUP BY category ORDER BY count DESC, category').all();
+      const targets = db.prepare(`SELECT target_type AS targetType, station_id AS stationId, route_id AS routeId,
+        COUNT(*) AS count, SUM(status='pending') AS pending, SUM(status='published') AS published,
+        SUM(status='resolved') AS resolved, SUM(status='rejected') AS rejected FROM reports
+        GROUP BY target_type, station_id, route_id ORDER BY count DESC, targetType, stationId, routeId LIMIT 100`).all();
+      const targetGroupsTotal = db.prepare(`SELECT COUNT(*) AS count FROM
+        (SELECT 1 FROM reports GROUP BY target_type, station_id, route_id)`).get().count;
+      return { counters, queue, review, byCategory, targets, targetGroupsTotal,
+        targetsTruncated: targetGroupsTotal > targets.length, capacity: store.usage(), generatedAt: date.toISOString() };
+    },
     moderationHistory(id) { return db.prepare('SELECT action, reviewer, note, created_at AS createdAt FROM report_moderation_events WHERE report_id = ? ORDER BY id').all(id); },
-    moderate(id, action, { reviewer, note = '', reviewed = false } = {}, date = new Date()) {
+    moderate(id, action, { reviewer, note = '', reviewed = false, expectedVersion } = {}, date = new Date()) {
       if (typeof reviewer !== 'string' || !reviewer.trim() || reviewer.length > 100 || /[\u0000-\u001f\u007f]/.test(reviewer)) throw new RangeError('Identifica a la persona revisora (hasta 100 caracteres).');
       if (typeof note !== 'string' || note.length > 500 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(note)) throw new RangeError('La nota de moderación no es válida.');
       if (!['publish', 'reject', 'resolve', 'unpublish'].includes(action)) throw new RangeError('Acción de moderación inválida.');
+      if (expectedVersion !== undefined && (typeof expectedVersion !== 'string' || !/^(pending|published|resolved|rejected):\d{1,20}$/.test(expectedVersion))) throw new RangeError('La versión de revisión no es válida.');
       if (action === 'publish' && !reviewed) throw new RangeError('Confirma la revisión del texto y la foto antes de publicar.');
       db.exec('BEGIN IMMEDIATE');
       try {
         prune(date);
         const report = store.get(id, date);
         if (!report) { db.exec('COMMIT'); return false; }
+        if (expectedVersion !== undefined) {
+          const currentVersion = db.prepare(`SELECT status || ':' || COALESCE((SELECT MAX(event.id)
+            FROM report_moderation_events event WHERE event.report_id = reports.id),0) AS version FROM reports WHERE id=?`).get(id).version;
+          if (currentVersion !== expectedVersion) { db.exec('COMMIT'); return false; }
+        }
         const next = { publish: 'published', reject: 'rejected', resolve: 'resolved', unpublish: 'pending' }[action];
         const allowed = action === 'publish' ? report.status === 'pending' && report.publication_consent === 1 && (report.target_type === 'station' || !!report.route_id)
           : action === 'resolve' ? report.status === 'published'

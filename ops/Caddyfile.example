@@ -1,0 +1,10 @@
+# Copy to /etc/caddy/Caddyfile on the VM and replace this reserved hostname.
+# Caddy runs on the host; app's published port remains bound to loopback.
+# TLS certificates/storage are managed by the host's Caddy service.
+{
+	admin 127.0.0.1:2019
+}
+
+regiomovil.example.org {
+	reverse_proxy 127.0.0.1:3001
+}

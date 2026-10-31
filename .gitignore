@@ -46,6 +46,7 @@ dist/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+ops/secrets/
 output/
 test-results/
 *.tsbuildinfo

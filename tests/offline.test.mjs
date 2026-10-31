@@ -144,6 +144,20 @@ function workerHarness(source = worker) {
   };
 }
 
+test('administration never replaces the passenger shell or enters its public offline cache', async () => {
+  const harness = workerHarness();
+  await harness.lifecycle('install');
+  const shell = await (await harness.cached('/index.html')).text();
+  const requests = harness.fetched.length;
+  harness.setNavigation('administration login');
+  for (const path of ['/admin', '/admin.html', '/adm%69n', '/admin/reports', '/admin%2Freports'])
+    assert.equal((await harness.fetch(path, { mode: 'navigate' })).intercepted, false);
+  for (const path of ['/assets/admin-Abc12345.js', '/assets/admin-Abc12345.css', '/api/admin/session'])
+    assert.equal((await harness.fetch(path)).intercepted, false);
+  assert.equal(harness.fetched.length, requests);
+  assert.equal(await (await harness.cached('/index.html')).text(), shell);
+});
+
 test('finalizer precaches hashed JavaScript, CSS and local fonts before any page visit', async () => {
   assert.ok(!worker.includes('/* BUILD_ASSETS */ []'));
   const harness = workerHarness();
@@ -372,11 +386,13 @@ test('current production build precaches the base and Red graphs and stores defe
   for (const path of stats.deferredAssets || []) {
     assert.ok(!harness.added.includes(path), `${path} must not increase the initial install.`);
     const opened = await harness.fetch(path);
-    assert.equal(opened.response.status, 200);
+    if (path.startsWith('/assets/admin-')) assert.equal(opened.intercepted, false);
+    else assert.equal(opened.response.status, 200);
   }
   harness.setOffline();
   for (const path of stats.deferredAssets || []) {
     const offline = await harness.fetch(path);
-    assert.equal(offline.response.status, 200, `${path} should remain available after opening the experiment.`);
+    if (path.startsWith('/assets/admin-')) assert.equal(offline.intercepted, false);
+    else assert.equal(offline.response.status, 200, `${path} should remain available after opening the experiment.`);
   }
 });

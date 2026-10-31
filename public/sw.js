@@ -29,11 +29,15 @@ self.addEventListener('activate', (event) => {
 });
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  let path;
+  try { path = decodeURIComponent(url.pathname); } catch { return; }
   if (
     event.request.method !== 'GET' ||
     url.origin !== self.location.origin ||
     url.pathname === '/api' ||
-    url.pathname.startsWith('/api/')
+    url.pathname.startsWith('/api/') ||
+    path === '/admin' || path === '/admin.html' || path.startsWith('/admin/') ||
+    path.startsWith('/assets/admin-')
   )
     return;
   if (event.request.mode === 'navigate') {

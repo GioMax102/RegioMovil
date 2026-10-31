@@ -2,6 +2,8 @@
 
 Actualización del 28 de octubre: interfaz proactiva “Compartir observación”, captura cámara/galería/archivos y reportes dentro de la guía. [Entrega y pendientes físicos](ENTREGA_PRODUCTO_2026-10-28.md). La publicación y moderación descritas aquí se conservan.
 
+Actualización del **29 de octubre de 2026**, lote `codex/administracion-ciberseguridad`: revisión desde panel privado con cuentas, TOTP obligatorio, roles, evidencia, decisiones e indicadores. La CLI sigue disponible. La implementación y las pruebas locales no acreditan actualización del servidor remoto; [habilitación y operación](operacion-admin.md), [contrato administrativo](api-administracion.md).
+
 La funcionalidad recoge título, descripción, categoría y una foto opcional. Cada reporte identifica una estación de Metro, una ruta y variante exactas, o una unidad de esa ruta. Las fallas de parada o recorrido pueden incluir un cruce o referencia del lugar; la referencia no se convierte en una estación ni en coordenadas verificadas.
 
 El número económico es un campo independiente. Los códigos repetidos del catálogo nunca se usan para adivinar una variante. Al cambiar de estación a unidad tampoco se adjunta automáticamente la estación que estaba abierta en la aplicación.
@@ -27,7 +29,11 @@ SQLite migra a v3 conservando reportes y eventos anteriores. `draftId` opcional 
 
 Se necesita Node 24 o posterior y acceso al archivo SQLite del servidor. `DATABASE_PATH` configura su ubicación; por defecto es `.data/regiomovil.sqlite`. El directorio y el archivo contienen información privada. Deben residir en almacenamiento persistente con respaldo si se opera un servidor público. La compilación del frontend no actualiza automáticamente el backend remoto.
 
-La revisión se realiza desde una terminal del servidor. No existe una API pública que publique quejas.
+La revisión se realiza desde `/admin` o `/admin.html` en el mismo origen de la API, o desde una terminal del servidor. El panel está desactivado por defecto y sus cuentas se crean mediante CLI; no hay registro público. Better Auth 1.7.14 gestiona contraseña/TOTP y sesiones de una hora; las decisiones requieren origen exacto, CSRF y un rol autorizado.
+
+`analyst` consulta sólo indicadores agregados. `moderator` y `admin` pueden filtrar la bandeja, abrir el texto y la foto privados y registrar decisiones. La versión recibida del reporte se compara de manera atómica: ante una decisión concurrente se carga la versión actual, sin sobrescribir la revisión anterior. La interfaz pide nota y confirmación separada; publicar exige consentimiento y revisión de contenido. El historial web registra la identidad autenticada y las lecturas individuales/fotos quedan en la bitácora de acceso.
+
+Los indicadores incluyen pendientes por antigüedad, mediana/p95 de tiempo a primera revisión, categorías, capacidad y hasta 100 grupos de destinos con más reportes. Se informa cuántos grupos existen y si la tabla está truncada; los totales no se limitan a esa tabla. Estas vistas administran observaciones, sin consolidar todavía incidencias o acreditar reparaciones. No existe una API anónima que permita publicar reportes.
 
 ```sh
 node scripts/moderate-report.mjs .data/regiomovil.sqlite list --status pending
@@ -39,9 +45,9 @@ node scripts/moderate-report.mjs .data/regiomovil.sqlite unpublish ID --reviewer
 node scripts/moderate-report.mjs .data/regiomovil.sqlite summary --status public
 ```
 
-`export-photo` crea una copia privada con permisos 0600 y rechaza sobrescribir archivos. Antes de publicar deben revisarse texto y foto: datos personales, rostros o placas, contenido abusivo, pertinencia y asociación al lugar correcto. `--reviewed` deja constancia de esa revisión. Las transiciones registran quién revisó, fecha y nota. `reject` permite rechazar un reporte pendiente.
+`export-photo` crea una copia privada con permisos 0600 y rechaza sobrescribir archivos. Antes de publicar deben revisarse texto y foto: datos personales, rostros o placas, contenido abusivo, pertinencia y asociación al lugar correcto. `--reviewed` deja constancia de esa revisión. Las transiciones CLI registran la identidad declarada por el operador, fecha y nota; esta identidad no equivale a la cuenta autenticada del panel. `reject` permite rechazar un reporte pendiente o publicado.
 
-La retención es de 90 días. El almacenamiento admite hasta 5000 reportes y 50 MB de fotos vigentes. Al agotarse la cuota se informa el error; no se elimina evidencia reciente para aceptar el siguiente reporte. La migración de la base es transaccional y conserva las observaciones antiguas como privadas cuando no tienen consentimiento o destino inequívoco.
+La retención es de 90 días. Se purga al acceder al almacén y, desde el proceso principal, al iniciar y cada seis horas mientras está en ejecución. El almacenamiento admite hasta 5000 reportes y 50 MB de fotos vigentes. Al agotarse la cuota se informa el error; no se elimina evidencia reciente para aceptar el siguiente reporte. La migración de la base es transaccional y conserva las observaciones antiguas como privadas cuando no tienen consentimiento o destino inequívoco. Los respaldos online tienen un [procedimiento independiente](operacion-admin.md#respaldo-y-ensayo-de-restauración); sus copias no se eliminan con la purga de la base activa.
 
 ## Valor público y uso para inversión
 
