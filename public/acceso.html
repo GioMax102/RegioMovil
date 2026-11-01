@@ -1,4 +1,164 @@
 <!doctype html>
-<html lang="es-MX"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#006b53"><title>Prueba RegioMóvil</title>
-<style>body{margin:0;background:#f2f7f3;color:#173f35;font:18px/1.6 system-ui,sans-serif}main{max-width:640px;margin:8vh auto;padding:28px}img{width:64px;height:64px}h1{font-size:clamp(32px,7vw,48px);line-height:1.15;letter-spacing:-.04em}p{color:#49665e}a{color:#006b53}nav{display:grid;gap:12px;margin:32px 0}nav a{padding:16px 22px;border:1px solid #006b53;border-radius:16px;text-decoration:none;font-weight:650;text-align:center}nav a:first-child{background:#006b53;color:white}small{display:block;margin:20px 0}a:focus-visible{outline:3px solid #ba7c00;outline-offset:5px}@media(prefers-color-scheme:dark){body{background:#10231e;color:#e7f5ec}p{color:#b3ccc2}a{color:#8edcbd}nav a{border-color:#8edcbd}}</style>
-<main><img src="/icon-192.png" alt=""><p>ÁREA METROPOLITANA DE MONTERREY</p><h1>Menos incertidumbre.<br>Más claridad para tu viaje.</h1><p>Explora RegioMóvil: planea conexiones entre Metro y autobuses, consulta recorridos y guarda tus trayectos.</p><nav aria-label="Acceso a RegioMóvil"><a href="/">Abrir la aplicación</a><a href="https://github.com/GioMax102/RegioMovil/releases/latest">Descargar para Android</a></nav><p>La web funciona en celular y computadora. Para instalarla, usa «Añadir a pantalla de inicio» en el menú del navegador; en iPhone, abre Safari y usa Compartir.</p><small>Piloto académico independiente. Los tiempos, la afluencia y las condiciones de unidades son simulados. La red combina fuentes públicas documentadas; no es un servicio oficial ni garantiza cobertura de todos los recorridos.</small><small>La primera búsqueda de lugares puede tardar cerca de un minuto mientras despierta el servidor gratuito. Puedes consultar estaciones y calcular trayectos con la red descargada mientras tanto.</small><a href="/privacidad.html">Privacidad y uso de datos</a></main></html>
+<html lang="es-MX">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#006b57" />
+    <meta
+      name="description"
+      content="Prueba RegioMóvil en la web: explora Metro y autobuses, planea trayectos y comparte mejoras para el transporte de Monterrey."
+    />
+    <title>Prueba la app en la web · RegioMóvil</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./acceso.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    <header class="site-header wrap">
+      <a class="brand" href="./?page=home" data-app-link aria-label="RegioMóvil, abrir inicio">
+        <img src="./icon.svg" width="42" height="42" alt="" />
+        <span
+          ><strong>Regio<span class="brand-light">Móvil</span></strong
+          ><small>Tu ciudad, a tu ritmo</small></span
+        >
+      </a>
+      <a class="header-link" href="#recorrido"
+        >Recorrido de evaluación <span aria-hidden="true">↗</span></a
+      >
+    </header>
+    <main id="contenido" class="wrap">
+      <section class="hero" aria-labelledby="presentacion">
+        <div>
+          <p class="eyebrow">Movilidad para la comunidad · Monterrey</p>
+          <h1 id="presentacion">
+            Menos incertidumbre.<br /><span>Más claridad para tu viaje.</span>
+          </h1>
+          <p class="intro">
+            Explora Metro y autobuses, conecta tu trayecto y comparte lo que puede mejorar. Prueba
+            la aplicación completa desde tu navegador.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="./?page=home" data-app-link
+              >Abrir app en la web <span aria-hidden="true">→</span></a
+            >
+            <a class="button secondary" href="./?page=plan" data-app-link>Planear un viaje</a>
+          </div>
+          <p class="caption">
+            En celular y computadora. Sin instalar y sin crear una cuenta ciudadana.
+          </p>
+        </div>
+        <aside class="purpose" aria-label="Propósito del proyecto">
+          <span class="purpose-mark" aria-hidden="true"
+            ><img src="./icon.svg" width="52" height="52" alt="" /><span>↗</span></span
+          >
+          <p>La ciudad es de todos.</p>
+          <h2>Hagamos más fácil<br />movernos por ella.</h2>
+          <span class="purpose-note"
+            >Piloto independiente con fuentes públicas y participación comunitaria.</span
+          >
+        </aside>
+      </section>
+
+      <section id="recorrido" class="tour" aria-labelledby="recorrido-titulo">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Explora a tu ritmo</p>
+            <h2 id="recorrido-titulo">Un recorrido por RegioMóvil</h2>
+          </div>
+          <p>Cada acceso abre una sección real de la app.</p>
+        </div>
+        <nav class="feature-grid" aria-label="Secciones para evaluar">
+          <a class="feature" href="./?page=stations&amp;network=routes" data-app-link>
+            <span class="feature-number">01 <span aria-hidden="true">↗</span></span>
+            <h3>Rutas y redes</h3>
+            <p>Filtra sistemas y explora los recorridos disponibles en el mapa.</p>
+          </a>
+          <a class="feature" href="./?page=stations&amp;network=stations" data-app-link>
+            <span class="feature-number">02 <span aria-hidden="true">↗</span></span>
+            <h3>Estaciones de Metro</h3>
+            <p>Consulta una estación, sus conexiones y la información del servicio.</p>
+          </a>
+          <a class="feature" href="./?page=plan" data-app-link>
+            <span class="feature-number">03 <span aria-hidden="true">↗</span></span>
+            <h3>Tu próximo trayecto</h3>
+            <p>Elige origen y destino, compara alternativas y abre la guía por etapas.</p>
+          </a>
+          <a class="feature feature-report" href="./?page=home&amp;report=1" data-app-link>
+            <span class="feature-number">04 <span aria-hidden="true">↗</span></span>
+            <h3>Comparte una mejora</h3>
+            <p>Describe lo que observaste en una estación, ruta o unidad y añade una foto.</p>
+          </a>
+          <a class="feature" href="./?page=mobility" data-app-link>
+            <span class="feature-number">05 <span aria-hidden="true">↗</span></span>
+            <h3>Tus viajes guardados</h3>
+            <p>Retoma trayectos que hayas guardado en este navegador.</p>
+          </a>
+          <a class="feature" href="./?page=home" data-app-link>
+            <span class="feature-number">06 <span aria-hidden="true">↗</span></span>
+            <h3>Tu punto de partida</h3>
+            <p>Prueba Inicio, cambia tu estación y consulta ajustes, datos y fuentes.</p>
+          </a>
+        </nav>
+      </section>
+
+      <section class="scope" aria-labelledby="alcance-titulo">
+        <div>
+          <p class="eyebrow">Para evaluar con contexto</p>
+          <h2 id="alcance-titulo">Lo que estás probando</h2>
+        </div>
+        <div class="scope-grid">
+          <article>
+            <h3>Red documentada</h3>
+            <p>
+              Recorridos de fuentes públicas. Algunas variantes siguen pendientes de confirmar; la
+              cobertura no es completa.
+            </p>
+          </article>
+          <article>
+            <h3>Simulación identificada</h3>
+            <p>
+              Tiempos, afluencia y condiciones de unidades son simulados. No son seguimiento ni
+              avisos del operador.
+            </p>
+          </article>
+          <article>
+            <h3>Comunidad con revisión</h3>
+            <p>
+              Los reportes se reciben en privado. Su publicación requiere consentimiento y revisión;
+              no se envían a emergencias.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="access-options" aria-label="Otras formas de acceso">
+        <article>
+          <p class="eyebrow">Llévala contigo</p>
+          <h2>También en tu celular</h2>
+          <p>
+            Puedes añadir la web a tu pantalla de inicio desde el menú del navegador. La descarga
+            Android publicada se consulta en GitHub y puede corresponder a una entrega anterior.
+          </p>
+          <a class="text-link" href="https://github.com/GioMax102/RegioMovil/releases/latest"
+            >Ver descarga publicada para Android <span aria-hidden="true">↗</span></a
+          >
+        </article>
+        <article>
+          <p class="eyebrow">Acceso del equipo</p>
+          <h2>Administración privada</h2>
+          <p>
+            Revisa reportes e indicadores en el servidor con administración habilitada. Requiere una
+            cuenta autorizada y autenticación en dos pasos.
+          </p>
+          <a class="text-link" href="./admin"
+            >Acceder a administración <span aria-hidden="true">→</span></a
+          >
+        </article>
+      </section>
+    </main>
+    <footer class="site-footer wrap">
+      <p>RegioMóvil · Iniciativa social independiente. No es un servicio oficial de transporte.</p>
+      <a href="./privacidad.html">Privacidad y uso de datos</a>
+    </footer>
+  </body>
+</html>

@@ -212,7 +212,7 @@ function mainNavigation() {
   return within(screen.getByRole('navigation', { name: 'Navegación principal' }));
 }
 async function navigate(name: string) {
-  await user.click(mainNavigation().getByRole('button', { name, exact: true }));
+  await user.click(mainNavigation().getByRole('link', { name, exact: true }));
   if (name === 'Planear viaje')
     await user.click(screen.getByRole('button', { name: 'Solo Metro', exact: true }));
 }
@@ -233,6 +233,75 @@ async function waitForMobilityMap() {
   await screen.findByRole('region', { name: 'Mapa del viaje', exact: true }, { timeout: 10000 });
 }
 
+test('web section links survive direct entry and reload; browser history restores the selected Metro tab', async () => {
+  dom.window.history.replaceState({}, '', '/?page=stations&network=stations');
+  const view = render(<App />);
+  const metro = await screen.findByRole('tab', { name: 'Estaciones de Metro' });
+  assert.equal(metro.getAttribute('aria-selected'), 'true');
+  const plan = mainNavigation().getByRole('link', { name: 'Planear viaje', exact: true });
+  assert.equal(plan.getAttribute('href'), '/?page=plan');
+  await user.click(plan);
+  await screen.findByRole('region', { name: 'Planear viaje' });
+  assert.equal(location.search, '?page=plan');
+  await user.click(mainNavigation().getByRole('link', { name: 'Mi movilidad', exact: true }));
+  await screen.findByRole('link', { name: 'Mi movilidad', exact: true });
+  await act(async () => history.back());
+  await screen.findByRole('region', { name: 'Planear viaje' });
+  await act(async () => history.back());
+  await waitFor(() =>
+    assert.equal(
+      screen.getByRole('tab', { name: 'Estaciones de Metro' }).getAttribute('aria-selected'),
+      'true',
+    ),
+  );
+  await act(async () => history.forward());
+  await screen.findByRole('region', { name: 'Planear viaje' });
+  view.unmount();
+  render(<App />);
+  await screen.findByRole('region', { name: 'Planear viaje' });
+  assert.equal(location.search, '?page=plan');
+});
+
+test('a public report link opens an unassigned form and closing it preserves the draft', async () => {
+  dom.window.history.replaceState({}, '', '/?page=home&report=1');
+  render(<App />);
+  const title = await screen.findByRole('textbox', { name: 'Título' });
+  assert.equal(
+    (screen.getByRole('combobox', { name: 'Estación de Metro' }) as HTMLSelectElement).value,
+    '',
+  );
+  await user.type(title, 'Falta señalización de acceso');
+  await waitFor(async () =>
+    assert.equal((await readReportDraft())?.title, 'Falta señalización de acceso'),
+  );
+  await closeDialog();
+  await waitFor(() => assert.equal(new URLSearchParams(location.search).has('report'), false));
+  await user.click(await screen.findByRole('button', { name: 'Continuar reporte' }));
+  assert.equal(
+    ((await screen.findByRole('textbox', { name: 'Título' })) as HTMLInputElement).value,
+    'Falta señalización de acceso',
+  );
+});
+
+test('kiosk mode stays consistent with Back and Forward and does not add a phantom section', async () => {
+  await mount();
+  await user.click(mainNavigation().getByRole('link', { name: 'Planear viaje', exact: true }));
+  await screen.findByRole('region', { name: 'Planear viaje' });
+  await user.click(mainNavigation().getByRole('link', { name: 'Red de transporte', exact: true }));
+  await user.click(screen.getByRole('button', { name: 'Modo parada' }));
+  assert.ok(screen.getByRole('heading', { name: 'Padre Mier', level: 1 }));
+  assert.equal(screen.queryByRole('navigation', { name: 'Navegación principal' }), null);
+  await act(async () => history.back());
+  await screen.findByRole('region', { name: 'Planear viaje' });
+  assert.ok(screen.getByRole('navigation', { name: 'Navegación principal' }));
+  await act(async () => history.forward());
+  await screen.findByRole('heading', { name: 'Padre Mier', level: 1 });
+  assert.equal(screen.queryByRole('navigation', { name: 'Navegación principal' }), null);
+  await user.click(screen.getByRole('button', { name: 'Salir del modo parada' }));
+  assert.ok(screen.getByRole('heading', { name: 'Muévete con más calma.' }));
+  assert.equal(new URLSearchParams(location.search).has('kiosk'), false);
+});
+
 test('screen changes from home, sidebar and mobile consistently reset scroll and focus the new heading', async () => {
   await mount();
   const originalScrollTo = window.scrollTo;
@@ -240,7 +309,7 @@ test('screen changes from home, sidebar and mobile consistently reset scroll and
   window.scrollTo = ((options: ScrollToOptions) => scrolls.push(options)) as typeof window.scrollTo;
   try {
     await user.click(
-      mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
+      mainNavigation().getByRole('link', { name: 'Red de transporte', exact: true }),
     );
     const title = screen.getByRole('heading', { name: 'Red de transporte.', exact: true });
     assert.equal(document.activeElement, title);
@@ -264,13 +333,13 @@ test('screen changes from home, sidebar and mobile consistently reset scroll and
     await user.type(search, 'Anahuac');
     assert.equal(document.activeElement, search);
     assert.equal(scrolls.length, 1);
-    await user.click(mainNavigation().getByRole('button', { name: 'Mi camino', exact: true }));
+    await user.click(mainNavigation().getByRole('link', { name: 'Mi camino', exact: true }));
     assert.equal(
       document.activeElement,
       screen.getByRole('heading', { name: 'Muévete con más calma.' }),
     );
     await user.click(
-      within(screen.getByRole('navigation', { name: 'Navegación móvil' })).getByRole('button', {
+      within(screen.getByRole('navigation', { name: 'Navegación móvil' })).getByRole('link', {
         name: 'Red',
         exact: true,
       }),
@@ -484,9 +553,7 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
   assert.ok(screen.getByRole('button', { name: /¿A dónde vamos\?/ }));
   assert.equal(screen.queryByRole('navigation', { name: 'Trayectos guardados' }), null);
   assert.equal(screen.queryByRole('combobox', { name: 'Buscar recorrido en el mapa' }), null);
-  await user.click(
-    mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
-  );
+  await user.click(mainNavigation().getByRole('link', { name: 'Red de transporte', exact: true }));
   await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
   assert.ok(screen.getByRole('heading', { name: 'Red de transporte.', exact: true }));
   assert.equal(screen.queryByRole('heading', { name: 'Próximas llegadas' }), null);
@@ -778,9 +845,7 @@ test('returning to a visible document refreshes the board immediately without wa
 test('context information remains available without a second brand header and restores focus', async () => {
   await mount();
   assert.ok(document.querySelector('.topbar .brand'));
-  await user.click(
-    mainNavigation().getByRole('button', { name: 'Red de transporte', exact: true }),
-  );
+  await user.click(mainNavigation().getByRole('link', { name: 'Red de transporte', exact: true }));
   assert.equal(document.querySelector('.topbar .brand'), null);
   const menu = screen.getByLabelText('Información y avisos').closest('details')!;
   await user.click(screen.getByLabelText('Información y avisos'));
@@ -816,7 +881,7 @@ test('a saved bus stop opens as the planning origin without an invented destinat
     ]),
   );
   await mount();
-  await user.click(mainNavigation().getByRole('button', { name: 'Mi movilidad', exact: true }));
+  await user.click(mainNavigation().getByRole('link', { name: 'Mi movilidad', exact: true }));
   const favorite = await screen.findByRole('button', { name: stop.name, exact: true });
   await user.click(favorite);
   await waitForMobilityMap();
@@ -870,7 +935,7 @@ for (const retired of [false, true]) {
     failRequests = () => true;
     try {
       await act(async () => window.dispatchEvent(new dom.window.Event('offline')));
-      await user.click(mainNavigation().getByRole('button', { name: 'Mi movilidad', exact: true }));
+      await user.click(mainNavigation().getByRole('link', { name: 'Mi movilidad', exact: true }));
       await user.click(await screen.findByRole('button', { name: stop.name, exact: true }));
       const originName = retired ? 'Elige un punto' : currentStop.name;
       await waitForMobilityMap();

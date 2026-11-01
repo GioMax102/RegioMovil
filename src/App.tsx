@@ -7,7 +7,6 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Flag,
   Heart,
   HelpCircle,
   House,
@@ -51,6 +50,7 @@ import { useStationFavorites } from './components/stationFavorites';
 import MetroStationBrowser from './components/MetroStationBrowser';
 import { getNextMetroOpening, isMetroOperating } from './components/metroServiceHours';
 import { scenarioLabels } from './scenarios';
+import { useAppNavigation } from './navigation';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
@@ -77,17 +77,17 @@ const dateTime = (date: string) =>
   }).format(new Date(date));
 
 export default function App() {
-  const params = new URLSearchParams(location.search);
-  const [kiosk, setKiosk] = useState(params.get('kiosk') === '1');
+  const [params] = useState(() => new URLSearchParams(location.search));
   const lockedKiosk = params.get('locked') === '1';
+  const navigation = useAppNavigation(lockedKiosk);
+  const { page, network: networkTab, navigate, kiosk } = navigation;
+  const setPage = (page: Page) => navigate({ page });
+  const setNetworkTab = (network: 'stations' | 'routes') => navigate({ page: 'stations', network });
   const appearance = useAppearance(!lockedKiosk);
-  const [station, setStation] = useState(
+  const [station, setStation] = useState(() =>
     validStation(
       params.get('station') || (kiosk ? 'padre-mier' : readStored('station', 'padre-mier')),
     ),
-  );
-  const [page, setPage] = useState<Page>(
-    !kiosk && params.get('page') === 'stations' ? 'stations' : 'home',
   );
   const pageTitle = usePageFocus(page);
   const [initialMobilityTrip, setInitialMobilityTrip] = useState<
@@ -98,27 +98,36 @@ export default function App() {
       }
     | undefined
   >();
-  const [networkTab, setNetworkTab] = useState<'stations' | 'routes'>('routes');
   const [scenario, setScenario] = useState<Scenario>('normal');
   const [boardSnapshot, setBoard] = useState<Board | null>(null);
   const [transport, setTransport] = useState<Transport>('local');
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<Modal>(() => {
+  const [modal, updateModal] = useState<Modal>(() => {
     try {
-      return !kiosk && Number(localStorage.getItem('regiomovil:report-open')) > Date.now()
+      return !kiosk &&
+        (params.get('report') === '1' ||
+          Number(localStorage.getItem('regiomovil:report-open')) > Date.now())
         ? 'report'
         : null;
     } catch {
       return null;
     }
   });
+  function setModal(next: Modal) {
+    if (next !== 'report' && new URLSearchParams(location.search).has('report')) {
+      const url = new URL(location.href);
+      url.searchParams.delete('report');
+      history.replaceState(history.state, '', url);
+    }
+    updateModal(next);
+  }
   const [reportTarget, setReportTarget] = useState<{ stationId?: string; routeId?: string }>({});
   const [arrival, setArrival] = useState<Arrival | null>(null);
   const [toast, setToast] = useState('');
   const [homeTrip, setHomeTrip] = useState<SavedMobilityTrip | null>(null);
-  const [largeText, setLargeText] = useState(readStored('largeText', false));
-  const [contrast, setContrast] = useState(readStored('contrast', false));
-  const [lowData, setLowData] = useState(readStored('lowData', false));
+  const [largeText, setLargeText] = useState(() => readStored('largeText', false));
+  const [contrast, setContrast] = useState(() => readStored('contrast', false));
+  const [lowData, setLowData] = useState(() => readStored('lowData', false));
   const {
     favorites,
     entries: favoriteStations,
@@ -217,7 +226,6 @@ export default function App() {
   }, [station, scenario, lowData, online]);
   useEffect(() => {
     if (kiosk) {
-      setPage('home');
       setModal(null);
       setArrival(null);
     }
@@ -230,18 +238,7 @@ export default function App() {
     setPage('plan');
   }
   function toggleKiosk() {
-    if (lockedKiosk) return;
-    const next = !kiosk;
-    setKiosk(next);
-    const url = new URL(location.href);
-    if (next) {
-      url.searchParams.set('kiosk', '1');
-      url.searchParams.set('station', station);
-    } else {
-      url.searchParams.delete('kiosk');
-      url.searchParams.delete('station');
-    }
-    history.replaceState({}, '', url);
+    navigation.toggleKiosk(station);
   }
   function toggleFavorite(id: string) {
     const result = toggleStoredFavorite(id);
@@ -300,12 +297,11 @@ export default function App() {
       {!kiosk && (
         <aside className="sidebar">
           <a
-            href="/"
+            href={navigation.href({ page: 'home' })}
             className="brand-link"
             aria-label="RegioMóvil, inicio"
             onClick={(e) => {
-              e.preventDefault();
-              setPage('home');
+              navigation.follow(e, { page: 'home' });
             }}
           >
             <Brand />
@@ -317,19 +313,20 @@ export default function App() {
           <span className="nav-caption">Tu movilidad</span>
           <nav aria-label="Navegación principal">
             {navItems.map((item) => (
-              <button
+              <a
                 key={item.id}
+                href={navigation.href({ page: item.id })}
                 aria-current={page === item.id ? 'page' : undefined}
                 className={`nav-item ${page === item.id ? 'active' : ''}`}
-                onClick={() => {
-                  setPage(item.id);
-                  setStationQuery('');
+                onClick={(event) => {
+                  navigation.follow(event, { page: item.id });
+                  if (event.defaultPrevented) setStationQuery('');
                 }}
               >
                 <item.icon size={20} />
                 {item.label}
                 {page === item.id && <span className="nav-dot" />}
-              </button>
+              </a>
             ))}
           </nav>
           <div className="sidebar-bottom">
@@ -565,12 +562,10 @@ export default function App() {
               onSavedTrip={setHomeTrip}
               onSaved={() => setPage('mobility')}
               onNetwork={() => {
-                setNetworkTab('routes');
-                setPage('stations');
+                navigate({ page: 'stations', network: 'routes' });
               }}
               onStationDetails={() => {
-                setNetworkTab('stations');
-                setPage('stations');
+                navigate({ page: 'stations', network: 'stations' });
                 setLineFilter('all');
                 setStationQuery(currentStation.name);
               }}
@@ -595,14 +590,8 @@ export default function App() {
                     <button
                       className="text-button"
                       onClick={() => {
-                        if (kiosk) {
-                          setStationQuery('');
-                          setModal('station');
-                        } else {
-                          setPage('stations');
-                          setNetworkTab('stations');
-                          setStationQuery('');
-                        }
+                        setStationQuery('');
+                        setModal('station');
                       }}
                     >
                       Explorar red
@@ -625,16 +614,10 @@ export default function App() {
                     <button
                       className="icon-button"
                       aria-label={`Guardar estación ${currentStation.name}`}
-                      aria-pressed={!kiosk && favorites.includes(station)}
-                      onClick={() => {
-                        if (!kiosk) toggleFavorite(station);
-                      }}
-                      disabled={kiosk}
+                      aria-pressed={false}
+                      disabled
                     >
-                      <Bookmark
-                        size={20}
-                        fill={favorites.includes(station) && !kiosk ? 'currentColor' : 'none'}
-                      />
+                      <Bookmark size={20} />
                     </button>
                   </div>
                 </section>
@@ -650,11 +633,8 @@ export default function App() {
                       {board?.advice.body ||
                         'Compara las siguientes unidades para elegir el viaje que te acomode.'}
                     </p>
-                    <button
-                      className="text-button"
-                      onClick={() => (kiosk ? speakBoard() : openMobilityPlanner())}
-                    >
-                      {kiosk ? 'Escuchar información' : 'Comparar mi trayecto'}
+                    <button className="text-button" onClick={speakBoard}>
+                      Escuchar información
                       <ArrowRight size={17} />
                     </button>
                     <div className="calm-decoration" aria-hidden="true">
@@ -691,7 +671,7 @@ export default function App() {
                       </p>
                     ) : board ? (
                       board.arrivals
-                        .slice(0, kiosk ? 4 : 3)
+                        .slice(0, 4)
                         .map((item) => (
                           <ArrivalCard
                             key={item.id}
@@ -710,18 +690,11 @@ export default function App() {
                   <button
                     className="all-arrivals"
                     onClick={() => {
-                      if (kiosk) {
-                        setStationQuery('');
-                        setModal('station');
-                      } else {
-                        setPage('stations');
-                        setNetworkTab('stations');
-                        setLineFilter('all');
-                        setStationQuery(currentStation.name);
-                      }
+                      setStationQuery('');
+                      setModal('station');
                     }}
                   >
-                    {kiosk ? 'Cambiar estación' : 'Ver estación y pronóstico'}
+                    Cambiar estación
                     <ArrowRight size={16} />
                   </button>
                 </section>
@@ -736,16 +709,6 @@ export default function App() {
                     </button>
                   </div>
                 </section>
-                {!kiosk && (
-                  <button
-                    className="report-link"
-                    onClick={() => openReport({ stationId: station })}
-                  >
-                    <Flag size={15} />
-                    ¿Algo no está bien? Compártelo
-                    <ArrowUpRight size={14} />
-                  </button>
-                )}
               </aside>
             </div>
           )}
@@ -965,8 +928,7 @@ export default function App() {
                               onClick={() => {
                                 if (entry.kind === 'metro') {
                                   setStation(entry.id);
-                                  setPage('stations');
-                                  setNetworkTab('stations');
+                                  navigate({ page: 'stations', network: 'stations' });
                                   setLineFilter('all');
                                   setStationQuery('');
                                 } else {
@@ -1066,18 +1028,19 @@ export default function App() {
       {!kiosk && (
         <nav className="mobile-nav" aria-label="Navegación móvil">
           {navItems.map((item) => (
-            <button
+            <a
               key={item.id}
+              href={navigation.href({ page: item.id })}
               className={page === item.id ? 'active' : ''}
               aria-current={page === item.id ? 'page' : undefined}
-              onClick={() => {
-                setPage(item.id);
-                setStationQuery('');
+              onClick={(event) => {
+                navigation.follow(event, { page: item.id });
+                if (event.defaultPrevented) setStationQuery('');
               }}
             >
               <item.icon size={21} />
               <span>{item.short}</span>
-            </button>
+            </a>
           ))}
           <button onClick={() => setModal('settings')} aria-label="Accesibilidad y ajustes">
             <Settings2 size={21} />

@@ -4,6 +4,8 @@ Base documental: **29 de octubre de 2026**, código `cc69761`. Permite reproduci
 
 ## Recorrido de evaluación
 
+Para probar el producto ejecutable, iniciar el servidor y abrir `/acceso.html`. La [entrega de evaluación web del 1 de noviembre](ENTREGA_EVALUADORES_2026-11-01.md) documenta enlaces directos, navegación, pruebas y límites de la candidata. El recorrido ciudadano no solicita cuenta; la administración sigue siendo privada y exige MFA.
+
 | Área                | Entradas                                                                                                      | Evidencia esperada                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Producto            | [README](../README.md), [propuesta social](propuesta-social.md), [pitch](pitch.md).                           | Capacidades demostrables, simulaciones visibles y promesas pendientes identificadas.  |

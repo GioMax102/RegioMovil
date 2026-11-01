@@ -11,7 +11,8 @@ Organización inicial: **29 de octubre de 2026**, base `cc69761`, integración d
 5. [Seguridad y operación](seguridad-y-operacion.md): controles, riesgos y preparación operativa.
 6. [Revisión técnica](revision-tecnica.md): recorrido de evaluación y evidencia.
 7. [Hoja de ruta](hoja-de-ruta.md): entregables y criterios de aceptación.
-8. [Plan vigente de producto y comunidad, 31 de octubre](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md): diez solicitudes, evidencia y punto de reanudación; implementación pendiente.
+8. [Plan de producto y comunidad, 31 de octubre](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md): diez solicitudes, implementación y pendientes vinculados a la [entrega](ENTREGA_PRODUCTO_2026-10-31.md).
+9. [Evaluación web y eficiencia, 1 de noviembre](ENTREGA_EVALUADORES_2026-11-01.md): portal, navegación, benchmark, regresiones y secuencia de revisión antes de main.
 
 ## Referencias especializadas
 

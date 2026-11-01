@@ -158,6 +158,23 @@ test('administration never replaces the passenger shell or enters its public off
   assert.equal(await (await harness.cached('/index.html')).text(), shell);
 });
 
+test('the evaluator portal cannot replace the offline app; section query links still open it offline', async () => {
+  const harness = workerHarness();
+  await harness.lifecycle('install');
+  const shell = await (await harness.cached('/index.html')).text();
+  harness.setNavigation('evaluator portal');
+  assert.equal((await harness.fetch('/acceso.html', { mode: 'navigate' })).intercepted, false);
+  assert.equal((await harness.fetch('/acceso.css')).intercepted, false);
+  assert.ok(!harness.added.some(path => path.startsWith('/acceso.')));
+  assert.equal(await (await harness.cached('/index.html')).text(), shell);
+  harness.setOffline();
+  for (const path of ['/?page=plan', '/?page=stations&network=stations', '/?page=mobility', '/?page=home&report=1']) {
+    const result = await harness.fetch(path, { mode: 'navigate' });
+    assert.equal(result.intercepted, true);
+    assert.equal(await result.response.text(), shell);
+  }
+});
+
 test('finalizer precaches hashed JavaScript, CSS and local fonts before any page visit', async () => {
   assert.ok(!worker.includes('/* BUILD_ASSETS */ []'));
   const harness = workerHarness();

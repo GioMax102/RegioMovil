@@ -40,6 +40,12 @@ Abrir [http://127.0.0.1:3001](http://127.0.0.1:3001). `pnpm start` lee `.env` si
 
 El lanzador `./regiomovil dev|build|start|test` admite las mismas tareas y puede localizar el Node 24 del entorno de Codex. En otros equipos se recomienda instalar los requisitos anteriores; ese runtime local no se distribuye con el proyecto.
 
+## Evaluar en la web
+
+Después de compilar e iniciar el servidor, abrir `/acceso.html`: ofrece un recorrido y acceso directo a la aplicación sin instalar. `/` continúa siendo la app. Inicio, Planear, Red y Viajes admiten enlaces, recarga y navegación Atrás/Adelante; Metro tiene acceso directo con `/?page=stations&network=stations`. `/?page=home&report=1` abre un reporte sin lugar asignado y conserva los borradores.
+
+La portada funciona junto al servidor y en el paquete estático. Administración requiere el mismo servidor API habilitado y MFA; no se habilita por publicar la portada. Consultar la [entrega, pruebas y continuidad del 1 de noviembre](docs/ENTREGA_EVALUADORES_2026-11-01.md) antes de integrar o publicar esta candidata.
+
 ## Qué está disponible
 
 - Catálogo, fuentes y mapas de redes, estaciones de Metro y rutas.
@@ -66,6 +72,7 @@ Inventario local revisado el **29 de octubre de 2026**: **214 servicios**, de el
 | `pnpm model:train`                                                         | Regenerar modelos sintéticos; revisar los cambios antes de incorporarlos.                             |
 | `pnpm android:build`                                                       | Compilar APK debug; requiere JDK 21 y Android SDK 36.                                                 |
 | `./regiomovil prepare-release`                                             | Preparar artefactos revisables; no despliega.                                                         |
+| `node --import tsx scripts/benchmark-route-search.mjs`                      | Comparar búsqueda anterior e indexada con el catálogo local y verificar resultados idénticos.       |
 
 Para Android con API remota, configurar `VITE_API_BASE_URL` con HTTPS **antes de compilar** y permitir `https://localhost` en el CORS del servidor. Sin API accesible no funcionan envíos de reportes ni consultas de lugares en línea. La [guía Android](docs/android.md) explica instalación y pruebas por USB; la [guía de publicación](docs/publicacion.md) conserva el procedimiento y antecedentes de despliegue, que deben verificarse en los proveedores antes de publicar otra versión.
 

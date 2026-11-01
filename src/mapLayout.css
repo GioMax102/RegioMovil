@@ -233,7 +233,7 @@ summary:focus-visible {
     gap: 0;
     padding: 7px;
   }
-  .mobile-nav button > span {
+  .mobile-nav > * > span {
     white-space: nowrap;
     overflow-wrap: normal;
     hyphens: none;
