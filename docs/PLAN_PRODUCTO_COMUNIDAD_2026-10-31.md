@@ -1,6 +1,6 @@
 # Plan de desarrollo y continuidad: mapas, reportes y administración
 
-Fecha: **31 de octubre de 2026**, America/Monterrey. Base: `2ccb661`, rama `codex/administracion-ciberseguridad`. **Plan preparado; P1–P10 pendientes de implementación.** Este lote conserva evidencia y define desarrollo: no modifica APK, servidor, cuentas, autenticadores ni bases reales.
+Fecha: **31 de octubre de 2026**, America/Monterrey. Base: `2ccb661`, rama `codex/administracion-ciberseguridad`. **Implementación en `codex/mapa-movil-reportes` y `codex/admin-mapa-reportes`.** La planificación inicial quedó en `0bba29e`. El [acta de implementación](ENTREGA_PRODUCTO_2026-10-31.md) conserva resultados nuevos y pendientes; las observaciones siguientes de la base son históricas.
 
 ## Objetivo y trazabilidad
 
@@ -8,17 +8,17 @@ Hacer del reporte una función principal y fiable: localizar el contexto, adjunt
 
 Este plan prioriza las diez solicitudes actuales. Conserva recuperación, privacidad, accesibilidad y procedencia del [plan del 27 de octubre](PLAN_PRODUCTO_COMUNIDAD_2026-10-27.md); sustituye su propuesta de tres botones de foto por una sola entrada. Los informes históricos no acreditan pruebas nuevas.
 
-| Solicitud | Entrega | Resultado y aceptación resumida | Estado inicial |
+| Solicitud | Entrega | Resultado y aceptación resumida | Estado actual |
 | --- | --- | --- | --- |
-| 1 · Visibilidad de estaciones/rutas al tocar mapa móvil | P1 | Ficha legible y operable, sin cruces con atribución, controles o barras Android. | Pendiente |
-| 2 · Fluidez del mapa de guía | P2 | Seguimiento/exploración no se disputan la cámara; encuadre útil y perfil antes/después. | Pendiente |
-| 3 · Trazos faltantes | P3 | Importación por variante con evidencia; pendientes individualizados y sin geometrías inventadas. | Pendiente |
-| 4 · Cámara/galería/archivos desde un botón | P4 | «Añadir foto» abre selección nativa compatible; cancelar/volver conserva borrador. | Pendiente |
-| 5 · Quitar texto gris del segundo aviso de descarte | P5 | Confirmación breve que conserva título, conservar/descartar y foco seguro. | Pendiente |
-| 6 · Administrador geográfico de aprobados | P6 | Mapa, filtros, indicadores y lista coherentes por categoría, periodo y entidad. | Pendiente |
-| 7 · Verificar con datos sintéticos | P7 | Demo aislada, reproducible y rotulada; conteos contrastados con manifiesto independiente. | Pendiente |
-| 8 · Reportes principales en Inicio | P8 | Tarjeta visible para crear/continuar; contexto general sin asignación errónea. | Pendiente |
-| 9 · Identidad visual de datos/simulación/ajustes | P9 | Tarjetas y controles consistentes, manteniendo los avisos esenciales. | Pendiente |
+| 1 · Visibilidad de estaciones/rutas al tocar mapa móvil | P1 | Ficha legible y operable, sin cruces con atribución, controles o barras Android. | Código y regresiones listos; QA física pendiente |
+| 2 · Fluidez del mapa de guía | P2 | Seguimiento/exploración no se disputan la cámara; encuadre útil y perfil antes/después. | Control de cámara/optimización listos; perfil físico pendiente |
+| 3 · Trazos faltantes | P3 | Importación por variante con evidencia; pendientes individualizados y sin geometrías inventadas. | Fuente externa pendiente; auditoría parcial renovada |
+| 4 · Cámara/galería/archivos desde un botón | P4 | «Añadir foto» abre selección nativa compatible; cancelar/volver conserva borrador. | Selector nativo y regresiones listos; QA física pendiente |
+| 5 · Quitar texto gris del segundo aviso de descarte | P5 | Confirmación breve que conserva título, conservar/descartar y foco seguro. | Verificado por comportamiento DOM |
+| 6 · Administrador geográfico de aprobados | P6 | Mapa, filtros, indicadores y lista coherentes por categoría, periodo y entidad. | Agregados/mapa implementados; segunda entrega y QA pendientes |
+| 7 · Verificar con datos sintéticos | P7 | Demo aislada, reproducible y rotulada; conteos contrastados con manifiesto independiente. | Generador aislado y conteos verificados; demo visual con MFA pendiente |
+| 8 · Reportes principales en Inicio | P8 | Tarjeta visible para crear/continuar; contexto general sin asignación errónea. | Implementado y verificado en DOM |
+| 9 · Identidad visual de datos/simulación/ajustes | P9 | Tarjetas y controles consistentes, manteniendo los avisos esenciales. | Implementado y verificado en DOM |
 | 10 · Propuesta VDP | P10 | Encuesta, NPS opcional, privacidad, informe mensual y alertas definidos por etapas. | Evaluación documentada; implementación pendiente |
 
 ## Evidencia y base real
@@ -108,7 +108,7 @@ Primera entrega útil **sin migración**: estaciones como puntos del catálogo y
 
 Migración propuesta: tabla 1:1 con parada, lat/lng anulables en pareja, fuente (`selected_stop`, `manual_pin`, `device_once`), precisión, hora observada/de registro y revisión de paquete. Antiguos permanecen sin punto propio. Validar fechas/coordenadas y pertenencia parada-ruta; GPS único voluntario. Decidir precisión/consentimiento público separadamente de publicar texto/foto.
 
-Contrato propuesto, **no implementado**: `GET /api/admin/report-map` con categoría, estado, periodo, tipo, estación, ruta, unidad revisada, bbox y zoom permitidos. Ampliar el router que hoy restringe query fuera de `/reports`. Respuesta: filtros normalizados, total/estados, localizables/sin ubicación, grupos acotados y truncamiento; lista paginada aparte (20, máximo 100). SQL parametrizado y geometrías locales autorizadas/diferidas. No bajar textos/fotos de 5.000 reportes para dibujar.
+Contrato inicial ya implementado (detalle en [API administrativa](api-administracion.md)): `GET /api/admin/report-map` con categoría, estado, periodo, tipo, estación, ruta y referencia declarada de unidad. `bbox`/`zoom` quedan fuera de esta primera entrega y se rechazan; indicadores globales filtrados. Ampliar el router que hoy restringe query fuera de `/reports`. Respuesta: filtros normalizados, total/estados, localizables/sin ubicación, grupos acotados y truncamiento; lista paginada aparte (20, máximo 100). SQL parametrizado y geometrías locales autorizadas/diferidas. No bajar textos/fotos de 5.000 reportes para dibujar.
 
 Conservar MFA, sesiones, origen, revocación, auditoría y no-store. `analyst`: agregados, sin texto/foto, referencias libres ni puntos precisos de observación. Moderador/admin: detalle autorizado. Sin GPS/unidad en Prometheus ni caché pública/Web Storage. Indicadores aclaran si describen viewport o conjunto global filtrado.
 
@@ -156,7 +156,7 @@ La [evaluación específica](propuesta-medicion-servicio.md) conserva la propues
 5. **P3** se entrega por variante; dependencia externa documentada sin detener otros trabajos.
 6. **P10**: protocolo/privacidad → encuesta piloto → informe reproducible; alertas y acuerdos en fase posterior.
 
-Ramas sugeridas desde commit integrado o base explícita: `codex/mapa-movil-reportes`, `codex/admin-mapa-reportes`, `codex/cobertura-pendiente`, `codex/encuestas-servicio`. No crearlas ni mezclar implementación con este lote documental. Conservar IDs P1–P10 al dividir PRs.
+Ramas sugeridas desde commit integrado o base explícita: `codex/mapa-movil-reportes`, `codex/admin-mapa-reportes`, `codex/cobertura-pendiente`, `codex/encuestas-servicio`. La implementación actual usa la primera rama y mantiene commits temáticos; las ramas adicionales siguen sugeridas para siguientes entregas. Conservar IDs P1–P10 al dividir PRs.
 
 Pruebas por riesgo: gestos/selección/áreas seguras, adaptador nativo y restauración/idempotencia; migración/filtros/RBAC en bases temporales; importación/identidad; fixture y exclusión sintética; cálculo de encuestas con datos conocidos. DOM no sustituye cámara o layout físico. Build y suite completa al integrar cambios de contratos compartidos; no escribir pruebas espejo para un mero cambio de texto.
 
@@ -166,8 +166,8 @@ Matriz física: M2103K19G y otro Android representativo; registrar Android/WebVi
 
 ## Punto de reanudación entre chats
 
-- **Realizado ahora:** lectura cruzada, evaluación metodológica, cinco capturas preservadas y plan. Sin cambios funcionales ni nuevas pruebas de app/cámara/mapa.
-- **Primer trabajo siguiente:** P1 y reproducción instrumentada de P4 en el teléfono; acta con viewport, fuente, Android/WebView y pasos exactos. No reconstruir desde cero borrador/recuperación existentes.
+- **Realizado ahora:** consultar el [acta de implementación](ENTREGA_PRODUCTO_2026-10-31.md). P1/P2/P4/P5/P8/P9 tienen código; P6/P7 agregan administración geográfica y demo. La aceptación física permanece abierta.
+- **Primer trabajo siguiente:** QA física P1/P2/P4 en el APK nuevo, medición de frames/memoria y demo P6 con MFA. P3 continúa en la [revisión parcial de fuentes del 31](auditoria-pendientes-2026-10-31.md). No cerrar criterios físicos con pruebas DOM.
 - **Antes de editar:** leer plan, evaluación VDP, hoja de ruta, últimas notas y `git status`; confirmar commit instalado/servido. Conservar `.env`, credenciales y bases privadas; no volcarlas en herramientas/documentos.
 - **Registro por entrega:** ID, rama/commit inicial/final, estado, archivos, comandos/pruebas con resultado real, capturas/fixture, limitaciones, dependencia externa y siguiente acción. Estados: pendiente, en curso, bloqueado por fuente concreta, verificado, entregado. Escribir código no basta para cerrar.
 - **Al finalizar interacción:** actualizar matriz/acta y referencias canónicas afectadas, revisar enlaces/diff, commit/push autorizados. Conservar informes históricos intactos.
