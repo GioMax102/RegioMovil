@@ -3,6 +3,7 @@ import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { sanitizeReportPhoto } from './report-photos.mjs';
+import { queryReportMap } from './report-map.mjs';
 
 export const REPORT_CATEGORIES = ['crowding', 'climate', 'accessibility', 'condition', 'infrastructure'];
 export const REPORT_RETENTION_DAYS = 90;
@@ -211,6 +212,15 @@ export function createReportStore(path = ':memory:') {
       return { ...row, reportLimit: MAX_REPORTS, photoBytesLimit: MAX_STORED_PHOTO_BYTES };
     },
     pruneExpired(date = new Date()) { return prune(date).changes; },
+    adminReportMap(filters, { canInspect = false, date = new Date(), locatedStationIds = [] } = {}) {
+      prune(date);
+      return queryReportMap(db, filters, canInspect, locatedStationIds);
+    },
+    datasetInfo() {
+      if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='report_dataset_metadata'").get()) return null;
+      const row = db.prepare('SELECT kind, label, seed, reference_date AS referenceDate FROM report_dataset_metadata LIMIT 1').get();
+      return row?.kind === 'synthetic' ? { ...row } : null;
+    },
     adminDashboard(date = new Date()) {
       prune(date);
       const counters = db.prepare(`SELECT COUNT(*) AS total,

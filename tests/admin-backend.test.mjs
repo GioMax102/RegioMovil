@@ -141,6 +141,50 @@ async function fixture(t, { adminOptions = options, ...appOptions } = {}) {
   };
 }
 
+test('approved report map enforces MFA and role privacy with bounded filters and fresh moderation', async t => {
+  const f = await fixture(t, { catalog: { routes: [{ id:'bus-a', name:'Ruta A', mode:'bus', geometryPack:'bus-a' }] } });
+  const add = (extra = {}) => f.app.store.add({ stationId:'a', targetType:'station', category:'condition', title:'Prueba privada', detail:'Descripción que no debe aparecer en agregados.', publicationConsent:true, ...extra });
+  const review = { reviewer:'test-reviewer', reviewed:true, note:'Revisión de prueba' };
+  const station = add();
+  f.app.store.moderate(station.id,'publish',review);
+  add();
+  add({publicationConsent:false});
+  for (const unitReference of ['Unidad A','Unidad B']) {
+    const unit = add({stationId:undefined, targetType:'unit', routeId:'bus-a', unitReference});
+    f.app.store.moderate(unit.id,'publish',review);
+  }
+  const anonymous = f.client();
+  assert.equal((await anonymous.request('/api/admin/report-map')).status,401);
+  await f.user('analyst');
+  await f.user('moderator');
+  const passwordOnly = f.client();
+  await passwordOnly.login('analyst@example.com');
+  assert.equal((await passwordOnly.request('/api/admin/report-map')).body.error.code,'MFA_REQUIRED');
+  const analyst = f.client();
+  await analyst.enroll('analyst@example.com');
+  const aggregate = await analyst.request('/api/admin/report-map');
+  assert.equal(aggregate.status,200);
+  assert.match(aggregate.headers.get('cache-control'),/no-store/);
+  assert.equal(aggregate.body.totals.total,3);
+  assert.equal(aggregate.body.totals.stationLocated,1);
+  assert.equal(aggregate.body.totals.withoutPoint,2);
+  assert.equal(aggregate.body.groups.length,2);
+  assert.equal(aggregate.body.dataset,null);
+  assert.ok(!JSON.stringify(aggregate.body).includes('Unidad A'));
+  assert.ok(!JSON.stringify(aggregate.body).includes('Prueba privada'));
+  assert.equal((await analyst.request('/api/admin/report-map?unitReference=Unidad%20A')).status,400);
+  for (const query of ['state=pending','category=unknown','category=condition&category=climate','zoom=8','from=2020-01-01T00%3A00%3A00.000Z'])
+    assert.equal((await analyst.request(`/api/admin/report-map?${query}`)).status,400);
+  const moderator = f.client();
+  await moderator.enroll('moderator@example.com');
+  const exact = await moderator.request('/api/admin/report-map?targetType=unit&unitReference=Unidad%20A');
+  assert.equal(exact.body.totals.total,1);
+  assert.equal(exact.body.groups[0].unitReference,'Unidad A');
+  assert.equal(exact.body.groups[0].position,null);
+  f.app.store.moderate(station.id,'unpublish',review);
+  assert.equal((await analyst.request('/api/admin/report-map')).body.totals.total,2);
+});
+
 test('administration is disabled by default and rejects unsafe configuration', async (t) => {
   assert.equal(adminOptionsFromEnv({}), null);
   assert.equal(adminOptionsFromEnv({ ADMIN_ENABLED: 'false' }), null);

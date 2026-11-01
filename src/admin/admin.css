@@ -1,3 +1,15 @@
+@import './reportMap.css';
+.admin-dataset-banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border: 1px solid #b3cebc;
+  border-radius: 12px;
+  background: #e8f3ed;
+  color: #183b38;
+}
 @font-face {
   font-family: Inter;
   font-style: normal;

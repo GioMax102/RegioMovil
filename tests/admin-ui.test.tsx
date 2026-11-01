@@ -119,6 +119,7 @@ beforeEach(() => {
         ? Response.json(currentSession)
         : Response.json({ error: { code: 'UNAUTHORIZED' } }, { status: 401 });
     if (path === '/api/admin/dashboard') return Response.json(dashboard);
+    if (path.startsWith('/api/admin/report-map?')) return Response.json({ totals: { total: 0, open: 0, resolved: 0, station: 0, route: 0, unit: 0, stationLocated: 0, withoutPoint: 0 }, groups: [], groupCount: 0, groupLimit: 250, truncated: false, filters: { from: new Date(Date.now() - 30 * 86400000).toISOString(), to: new Date().toISOString() }, scope: 'all-filtered-reports', dataset: null, locationNotice: 'Sin reportes aprobados.', generatedAt: new Date().toISOString() });
     if (path.startsWith('/api/admin/reports?'))
       return Response.json({ reports: [report], total: 1, limit: 20, offset: 0 });
     if (path === '/api/admin/reports/report-1') return Response.json({ report });
@@ -160,7 +161,7 @@ test('analyst only loads aggregate indicators; private evidence and moderation a
   await screen.findByRole('region', { name: 'Indicadores de reportes' });
   await screen.findByText('Reportes recibidos');
   assert.match(
-    screen.getByText(/Se cuentan reportes/).textContent || '',
+    screen.getByText(/Se cuentan reportes, no personas/).textContent || '',
     /no personas ni fallas únicas/,
   );
   assert.equal(screen.queryByRole('heading', { name: 'Bandeja de revisión' }), null);

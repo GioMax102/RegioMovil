@@ -1,5 +1,6 @@
 import { createAdminAuth } from './admin-auth.mjs';
 import { REPORT_CATEGORIES } from './storage.mjs';
+import { reportMapFilters, identifyReportMap } from './report-map.mjs';
 
 const AUTH_PATHS = new Map([
   ['/sign-in/email', ['email', 'password']],
@@ -94,7 +95,7 @@ export function createAdminRouter({
     response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     if (!authentication) fail(404, 'NOT_FOUND', 'No encontramos ese recurso.');
     await authentication.ready;
-    if (url.search && !url.pathname.endsWith('/reports'))
+    if (url.search && !['/api/admin/reports', '/api/admin/report-map'].includes(url.pathname))
       fail(400, 'INVALID_ADMIN_INPUT', 'Esta operación no acepta parámetros de consulta.');
     const origin = request.headers.origin;
     if (
@@ -221,6 +222,7 @@ export function createAdminRouter({
         csrfToken: authentication.csrfToken(current),
         mfaRequired: !authentication.mfaVerified(current),
         expiresAt: current.session.expiresAt,
+        dataset: authentication.mfaVerified(current) ? store.datasetInfo() : null,
       });
       return true;
     }
@@ -236,6 +238,17 @@ export function createAdminRouter({
         fail(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
       const dashboard = store.adminDashboard(date);
       send(response, 200, { ...dashboard, targets: dashboard.targets.map(identifyTarget) });
+      return true;
+    }
+    if (url.pathname === '/api/admin/report-map') {
+      if (request.method !== 'GET') fail(405, 'METHOD_NOT_ALLOWED', 'Ese método no está disponible.');
+      const canInspect = ['moderator', 'admin'].includes(current.user.role);
+      let filters;
+      try { filters = reportMapFilters(url.searchParams, { network, catalog, categories: REPORT_CATEGORIES, now: date, canInspect }); }
+      catch (error) { if (error instanceof RangeError) fail(400, 'INVALID_ADMIN_FILTER', error.message); throw error; }
+      const locatedStationIds = network.stations.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng)).map(s => s.id);
+      const result = store.adminReportMap(filters, { canInspect, date, locatedStationIds });
+      send(response, 200, { ...identifyReportMap(result, filters, { network, catalog, canInspect, date }), dataset: store.datasetInfo() });
       return true;
     }
     if (!['moderator', 'admin'].includes(current.user.role))

@@ -5,6 +5,7 @@ import type { AdminSession } from './types';
 import { Notice, roleNames, accessError, messageOf } from './ui';
 import { MfaChallenge, MfaEnrollment } from './Auth';
 import Dashboard from './Dashboard';
+import ReportMap from './ReportMap';
 import Inbox from './Inbox';
 import ReportDetail from './ReportDetail';
 
@@ -262,6 +263,11 @@ export default function AdminApp() {
           ))}
         {accessReady && (
           <>
+            {session.dataset?.kind === 'synthetic' && (
+              <p className="admin-dataset-banner" role="note">
+                <strong>Demostración · datos sintéticos.</strong> No describe hechos reales.
+              </p>
+            )}
             <div className="admin-page-heading">
               <div>
                 <p className="admin-eyebrow">Cuidado de la red</p>
@@ -271,6 +277,7 @@ export default function AdminApp() {
               <button onClick={() => setEpoch((value) => value + 1)}>Actualizar indicadores</button>
             </div>
             <Dashboard session={session} epoch={epoch} onError={handleError} />
+            <ReportMap session={session} epoch={epoch} onError={handleError} />
             {session.user.role !== 'analyst' && (
               <Inbox session={session} epoch={epoch} onError={handleError} onSelect={setSelected} />
             )}
