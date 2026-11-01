@@ -6,7 +6,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  CloudRain,
   ExternalLink,
   Flag,
   Heart,
@@ -21,7 +20,6 @@ import {
   Route,
   Settings2,
   ShieldCheck,
-  Sparkles,
   TrainFront,
   Users,
   Volume2,
@@ -33,6 +31,8 @@ import { loadBoard, network, readStored, writeStored, type Transport } from './a
 import type { Arrival, Board, Page, Preference, Scenario } from './types';
 const loadNetworkExplorer = () => import('./components/NetworkExplorer');
 const loadReportDialog = () => import('./components/ReportEntry');
+const loadSettingsDialog = () => import('./components/SettingsDialog');
+const loadSourcesDialog = () => import('./components/SourcesDialog');
 const MobilityPlanner = lazy(() => import('./mobility/MobilityPlanner'));
 const SavedMobilityTrips = lazy(() => import('./mobility/SavedMobilityTrips'));
 const SavedTripPreview = lazy(() => import('./mobility/SavedTripPreview'));
@@ -41,7 +41,6 @@ import type { MobilityEndpoint, SavedMobilityTrip } from './mobility/types';
 import { ArrivalCard, Brand, Dialog, Forecast, LineBadge } from './components/Primitives';
 import HomeDashboard from './components/HomeDashboard';
 import { useAppearance } from './appearance';
-import { AppearanceSettings } from './components/AppearanceSettings';
 import { ActionFeedback } from './components/ActionFeedback';
 import { DataPreferencesProvider } from './dataPreferences';
 import DeferredSection from './components/DeferredSection';
@@ -51,6 +50,7 @@ import MetroStationDetail from './components/MetroStationDetail';
 import { useStationFavorites } from './components/stationFavorites';
 import MetroStationBrowser from './components/MetroStationBrowser';
 import { getNextMetroOpening, isMetroOperating } from './components/metroServiceHours';
+import { scenarioLabels } from './scenarios';
 
 type Modal = 'station' | 'settings' | 'sources' | 'report' | 'alerts' | null;
 type SavedJourney = { from: string; to: string };
@@ -60,12 +60,6 @@ const navItems: { id: Page; label: string; short: string; icon: typeof House }[]
   { id: 'stations', label: 'Red de transporte', short: 'Red', icon: TrainFront },
   { id: 'mobility', label: 'Mi movilidad', short: 'Viajes', icon: Bookmark },
 ];
-const scenarioLabels: Record<Scenario, string> = {
-  normal: 'Día habitual',
-  peak: 'Hora pico',
-  rain: 'Con lluvia',
-  disruption: 'Servicio irregular',
-};
 const validStation = (id: string | null) =>
   network.stations.some((s) => s.id === id) ? id! : 'padre-mier';
 const stationName = (id: string) => network.stations.find((s) => s.id === id)?.name ?? id;
@@ -110,8 +104,13 @@ export default function App() {
   const [transport, setTransport] = useState<Transport>('local');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<Modal>(() => {
-    try { return !kiosk && Number(localStorage.getItem('regiomovil:report-open')) > Date.now() ? 'report' : null; }
-    catch { return null; }
+    try {
+      return !kiosk && Number(localStorage.getItem('regiomovil:report-open')) > Date.now()
+        ? 'report'
+        : null;
+    } catch {
+      return null;
+    }
   });
   const [reportTarget, setReportTarget] = useState<{ stationId?: string; routeId?: string }>({});
   const [arrival, setArrival] = useState<Arrival | null>(null);
@@ -575,7 +574,8 @@ export default function App() {
                 setLineFilter('all');
                 setStationQuery(currentStation.name);
               }}
-              onReport={() => openReport({ stationId: station })}
+              onReport={() => openReport({})}
+              reportOpen={modal === 'report'}
             />
           )}
           {page === 'home' && kiosk && (
@@ -1137,101 +1137,43 @@ export default function App() {
           </div>
         </Dialog>
       )}
-      {modal === 'settings' && (
-        <Dialog title="A tu manera" onClose={() => setModal(null)}>
-          {!lockedKiosk && <AppearanceSettings appearance={appearance} />}
-          <div className="setting-row">
-            <span>
-              <strong>Texto más grande</strong>
-              <small>Más espacio y mejor lectura.</small>
-            </span>
-            <button
-              role="switch"
-              aria-checked={largeText}
-              aria-label="Texto más grande"
-              className={`switch ${largeText ? 'on' : ''}`}
-              onClick={() => setLargeText(!largeText)}
-            >
-              <span />
-            </button>
-          </div>
-          <div className="setting-row">
-            <span>
-              <strong>Contraste alto</strong>
-              <small>Texto y bordes más definidos.</small>
-            </span>
-            <button
-              role="switch"
-              aria-checked={contrast}
-              aria-label="Contraste alto"
-              className={`switch ${contrast ? 'on' : ''}`}
-              onClick={() => setContrast(!contrast)}
-            >
-              <span />
-            </button>
-          </div>
-          <div className="setting-row">
-            <span>
-              <strong>Ahorrar datos</strong>
-              <small>
-                Mapa local y actualizaciones cada 3 minutos. La búsqueda sigue disponible.
-              </small>
-            </span>
-            <button
-              role="switch"
-              aria-checked={lowData}
-              aria-label="Ahorrar datos"
-              className={`switch ${lowData ? 'on' : ''}`}
-              onClick={() => setLowData(!lowData)}
-            >
-              <span />
-            </button>
-          </div>
-          <div className="settings-section">
-            <h3>Explora una situación</h3>
-            <p>
-              Este selector cambia las predicciones de demostración. No describe el estado actual
-              del servicio.
-            </p>
-            <div className="scenario-grid">
-              {(Object.keys(scenarioLabels) as Scenario[]).map((id) => (
-                <button
-                  key={id}
-                  className={scenario === id ? 'selected' : ''}
-                  aria-pressed={scenario === id}
-                  onClick={() => {
-                    setScenario(id);
-                  }}
-                >
-                  {id === 'rain' ? (
-                    <CloudRain size={18} />
-                  ) : id === 'peak' ? (
-                    <Users size={18} />
-                  ) : id === 'disruption' ? (
-                    <Info size={18} />
-                  ) : (
-                    <Leaf size={18} />
-                  )}{' '}
-                  {scenarioLabels[id]}
-                  {scenario === id && <Check size={15} />}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            className="primary-button full-width"
-            onClick={() => {
-              setModal(null);
-              toggleKiosk();
+      {(modal === 'settings' || modal === 'sources') && (
+        <Dialog
+          title={modal === 'settings' ? 'A tu manera' : 'Datos claros, decisiones propias'}
+          onClose={() => setModal(null)}
+          wide={modal === 'sources'}
+        >
+          <DeferredSection
+            key={modal}
+            load={modal === 'settings' ? loadSettingsDialog : loadSourcesDialog}
+            loadingLabel="Abriendo información…"
+            onRetry={() => location.reload()}
+            loadingFallback={<p role="status">Abriendo información…</p>}
+            errorFallback={
+              <p role="alert">
+                No pudimos abrir esta sección. Revisa tu conexión y vuelve a intentar.
+              </p>
+            }
+            componentProps={{
+              appearance,
+              lockedKiosk,
+              largeText,
+              contrast,
+              lowData,
+              scenario,
+              transport,
+              kiosk,
+              onLargeText: () => setLargeText(!largeText),
+              onContrast: () => setContrast(!contrast),
+              onLowData: () => setLowData(!lowData),
+              onScenario: setScenario,
+              onKiosk: () => {
+                setModal(null);
+                toggleKiosk();
+              },
             }}
-          >
-            <Monitor size={18} />
-            {kiosk ? 'Salir del modo parada' : 'Abrir modo parada'}
-          </button>
+          />
         </Dialog>
-      )}
-      {modal === 'sources' && (
-        <SourcesDialog onClose={() => setModal(null)} transport={transport} scenario={scenario} />
       )}
       {modal === 'report' && !kiosk && (
         <DeferredSection
@@ -1315,77 +1257,6 @@ export default function App() {
   return <DataPreferencesProvider enabled={lowData}>{content}</DataPreferencesProvider>;
 }
 
-function SourcesDialog({
-  onClose,
-  transport,
-  scenario,
-}: {
-  onClose: () => void;
-  transport: Transport;
-  scenario: Scenario;
-}) {
-  return (
-    <Dialog title="Datos claros, decisiones propias" onClose={onClose} wide>
-      <p className="dialog-intro">
-        RegioMóvil es un piloto independiente para explorar cómo reducir la incertidumbre del viaje.
-        No es una aplicación oficial.
-      </p>
-      <div className="source-summary">
-        <span>
-          <ShieldCheck size={22} />
-          <strong>Red real</strong>
-          <small>Nombres, conexiones y coordenadas de fuentes públicas.</small>
-        </span>
-        <span>
-          <Sparkles size={22} />
-          <strong>Operación simulada</strong>
-          <small>Arribos, afluencia, clima de unidad y condiciones de ejemplo.</small>
-        </span>
-      </div>
-      <h3>Fuentes de la red</h3>
-      <div className="source-list">
-        {network.sources.map((source) => (
-          <a key={source.id} href={source.url} target="_blank" rel="noreferrer">
-            <span>
-              <strong>{source.title}</strong>
-              <small>
-                {source.verifiedAt
-                  ? `Verificación: ${source.verifiedAt}`
-                  : 'Fuente pública de consulta'}
-              </small>
-            </span>
-            <ExternalLink size={16} />
-          </a>
-        ))}
-      </div>
-      <div className="methodology">
-        <h3>Cómo se hacen las predicciones</h3>
-        <p>
-          Dos modelos de regresión regularizada estiman tiempo de llegada y ocupación con variables
-          de horario, intervalos, centralidad, lluvia y disrupciones. Se entrenan y evalúan con
-          muestras sintéticas reproducibles.
-        </p>
-        <p>
-          Los rangos se calculan a partir del error de calibración sintético. Su desempeño no
-          demuestra precisión en las calles de Nuevo León. Hace falta validar con datos operativos
-          antes de usarlo para decisiones reales.
-        </p>
-        <p>
-          <strong>Situación elegida:</strong> {scenarioLabels[scenario]} · <strong>Cálculo:</strong>{' '}
-          {transport === 'api' ? 'API del piloto' : 'En este dispositivo, sin servidor'}.
-        </p>
-        <p>
-          El planificador combina Metro, Transmetro, RegioRuta, Ecovía/GMG y rutas urbanas con
-          puntos y trazos documentados. En autobuses, el orden y los sentidos se infieren del mapa y
-          siguen sin validación operativa. En Rutas y redes puedes consultar la fecha y fuente de
-          cada servicio. Las líneas en construcción y los servicios sin geometría suficiente quedan
-          fuera del cálculo. No hay tráfico en vivo, tarifas integradas, pagos ni navegación
-          peatonal.
-        </p>
-      </div>
-    </Dialog>
-  );
-}
 function MountainIllustration() {
   return (
     <svg className="mountain-illustration" viewBox="0 0 170 70" aria-hidden="true">

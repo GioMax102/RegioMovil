@@ -1,0 +1,113 @@
+.context-dialog {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+  color: var(--dark);
+}
+.context-dialog .dialog-intro {
+  margin: 0;
+}
+.settings-cards :is(.settings-card, .appearance-settings),
+.data-card {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.settings-cards legend {
+  padding: 0 6px;
+  color: var(--dark);
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+.settings-cards .setting-row {
+  padding: 12px 0;
+  gap: 12px;
+}
+.settings-cards .setting-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.settings-cards :is(.setting-row small, .settings-demo p) {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.settings-cards .scenario-grid button {
+  min-height: 48px;
+  padding: 10px;
+  border-radius: 12px;
+  color: var(--dark);
+  background: var(--white);
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+.settings-cards .scenario-grid button.selected {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--soft);
+}
+.data-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+  gap: 12px;
+}
+.data-card > svg {
+  color: var(--green);
+}
+.data-card h3 {
+  margin: 12px 0 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.data-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.data-card-demo {
+  background: var(--app-warning-surface);
+  border-color: var(--line);
+}
+.data-card-demo :is(svg, h3, p) {
+  color: var(--app-warning-text);
+}
+.source-disclosure {
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+}
+.source-disclosure > summary {
+  padding-block: 16px;
+  min-height: 48px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.source-disclosure .source-list {
+  border: 0;
+  margin-bottom: 8px;
+}
+.source-disclosure .source-list a {
+  padding-inline: 0;
+  border-color: var(--line);
+}
+.source-disclosure .methodology {
+  padding: 0 0 8px;
+}
+.context-dialog :is(button, summary, select, a):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+@media (max-width: 360px) {
+  .settings-cards .setting-row {
+    flex-wrap: wrap;
+  }
+  .settings-cards .scenario-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -11,7 +11,7 @@
     "dev": "node scripts/dev.mjs",
     "dev:web": "vite --host 0.0.0.0",
     "dev:api": "node --watch server/index.mjs",
-    "build": "tsc -b && node scripts/prepare-catalog.mjs && node scripts/prepare-mobility.mjs && vite build && node scripts/finalize-web.mjs",
+    "build": "tsc -b && node scripts/prepare-catalog.mjs && node scripts/prepare-mobility.mjs && node scripts/vite-build.mjs && node scripts/finalize-web.mjs",
     "catalog:build": "node scripts/prepare-catalog.mjs",
     "mobility:build": "node scripts/prepare-mobility.mjs",
     "start": "node --env-file-if-exists=.env server/index.mjs",
@@ -49,6 +49,7 @@
     "jsdom": "^26.1.0",
     "lightningcss": "^1.33.0",
     "prettier": "^3.9.10",
+    "terser": "5.51.2",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",
     "vite": "^7.0.0"

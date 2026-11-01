@@ -156,14 +156,6 @@
 .home-dashboard .all-arrivals {
   padding-bottom: 0;
 }
-.home-data-info {
-  padding: 0 2px;
-}
-.home-data-info summary {
-  width: fit-content;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
 .home-data-info a {
   display: block;
   width: fit-content;
@@ -173,12 +165,6 @@
   color: var(--dark);
   line-height: 1.5;
   text-underline-offset: 3px;
-}
-.home-report {
-  justify-self: start;
-  margin: 0;
-  min-height: 44px;
-  font-size: 0.82rem;
 }
 .home-shortcuts button:focus-visible,
 .home-dashboard summary:focus-visible {
@@ -196,4 +182,76 @@
   .home-outlook {
     padding: 0 16px;
   }
+}
+
+.home-report-cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 92px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--white);
+  background-image: var(--surface-grain);
+  color: var(--dark);
+  text-align: left;
+  box-shadow: var(--surface-shadow);
+}
+.home-report-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  background: var(--soft);
+  color: var(--green);
+}
+.home-report-cta > span:nth-child(2) {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.home-report-cta strong {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.home-report-cta > span > span {
+  color: var(--green);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.home-report-cta > svg {
+  flex-shrink: 0;
+  color: var(--green);
+}
+.home-report-cta:hover {
+  border-color: var(--green);
+}
+.home-report-cta:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.home-data-info {
+  padding: 0 16px 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+}
+.home-data-info summary {
+  min-height: 52px;
+  width: 100%;
+  color: var(--dark);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.home-data-info summary > svg {
+  color: var(--green);
+}
+.high-contrast .home-report-cta {
+  background-image: none;
+  border-color: var(--dark);
 }

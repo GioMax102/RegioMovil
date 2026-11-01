@@ -1,5 +1,13 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { ArrowRight, Info, Maximize2, Search, X } from 'lucide-react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
+import { ArrowRight, Maximize2, Search, X } from 'lucide-react';
 import { loadTransitCatalog } from '../api';
 import type { TransitCatalogData } from '../types';
 import { loadMobilityNetwork } from '../mobility/api';
@@ -61,8 +69,6 @@ export default function NetworkExplorer({
   const returnFocus = useRef<Element | null>(null);
   const overlay = useRef<HTMLDivElement>(null);
   const [overlayHeight, setOverlayHeight] = useState(118);
-  const [lowerOverlayHeight, setLowerOverlayHeight] = useState(70);
-  const selectedCard = useRef<HTMLButtonElement>(null);
   const expandedRef = useRef(expanded);
   expandedRef.current = expanded;
   function enterMapScreen() {
@@ -114,13 +120,13 @@ export default function NetworkExplorer({
   useLayoutEffect(() => {
     const measure = () => {
       const top = workspace.current?.getBoundingClientRect().top ?? 0;
-      setOverlayHeight(Math.ceil((overlay.current?.getBoundingClientRect().bottom ?? top) - top || 118));
-      setLowerOverlayHeight(Math.ceil(selectedCard.current?.getBoundingClientRect().height || 0) + 70);
+      setOverlayHeight(
+        Math.ceil((overlay.current?.getBoundingClientRect().bottom ?? top) - top || 118),
+      );
     };
     measure();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     if (overlay.current) observer?.observe(overlay.current);
-    if (selectedCard.current) observer?.observe(selectedCard.current);
     return () => observer?.disconnect();
   }, [expanded, routeId]);
   const [error, setError] = useState('');
@@ -254,6 +260,28 @@ export default function NetworkExplorer({
     setSearching(false);
     setActiveResult(-1);
   }
+  const selectedRouteCard = selectedService && (
+    <button
+      type="button"
+      className="network-selected-route"
+      onClick={() => setDetailId(selectedService.id)}
+      aria-label={`Ver ficha de ${selectedService.code}: ${selectedService.name}`}
+    >
+      <span
+        className="network-route-dot"
+        style={{
+          background: selectedRoute?.color ?? serviceColors[selectedService.networkId],
+        }}
+        aria-hidden="true"
+      />
+      <span>
+        <strong>{selectedService.code}</strong>
+        <span>{selectedService.name}</span>
+        {!selectedRoute && !selectedService.geometryPack && <small>Trazo pendiente</small>}
+      </span>
+      <ArrowRight size={19} aria-hidden="true" />
+    </button>
+  );
   const map =
     network && routes.length ? (
       <LocationMap
@@ -263,7 +291,21 @@ export default function NetworkExplorer({
         contextRoutes={displayedRoutes}
         compact
         inspectStops
-        viewportPadding={{ top: overlayHeight + 20, right: 76, bottom: selectedService ? Math.max(142, lowerOverlayHeight) : 70, left: 28 }}
+        viewportPadding={{ top: overlayHeight + 20, right: 76, bottom: 20, left: 16 }}
+        selectionOverlay={selectedRouteCard}
+        mapInfo={
+          <>
+            <strong>
+              {selectedRoute ? `Mostrando 1 de ${routes.length}` : routes.length} recorridos con
+              trazo disponible.
+            </strong>
+            <p>
+              Los trazos publicados no confirman el servicio de hoy, el sentido de abordaje ni las
+              condiciones de las paradas. Consulta la fuente de cada ficha. Los tiempos y la
+              afluencia del piloto son simulados.
+            </p>
+          </>
+        }
         preserveViewportOnResize
         onExpand={expanded ? undefined : enterMapScreen}
       />
@@ -313,139 +355,147 @@ export default function NetworkExplorer({
                 ref={expanded ? exitButton : expandButton}
                 type="button"
                 className="network-map-screen-toggle"
-                aria-label={expanded ? 'Salir del mapa a pantalla completa' : 'Ampliar mapa a pantalla completa'}
+                aria-label={
+                  expanded
+                    ? 'Salir del mapa a pantalla completa'
+                    : 'Ampliar mapa a pantalla completa'
+                }
                 aria-pressed={expanded}
                 onClick={expanded ? leaveMapScreen : enterMapScreen}
               >
-                {expanded ? <X size={19} aria-hidden="true" /> : <Maximize2 size={19} aria-hidden="true" />}
+                {expanded ? (
+                  <X size={19} aria-hidden="true" />
+                ) : (
+                  <Maximize2 size={19} aria-hidden="true" />
+                )}
               </button>
-            <div
-              className="network-search-wrap"
-              onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget)) setSearching(false);
-              }}
-            >
-              <label className="network-route-search">
-                <Search size={19} aria-hidden="true" />
-                <input
-                  ref={routeSearch}
-                  type="search"
-                  aria-label="Buscar recorrido en el mapa"
-                  placeholder="Buscar línea o ruta"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-controls={searchOpen ? resultId : undefined}
-                  aria-expanded={searchOpen}
-                  aria-activedescendant={
-                    searchOpen && visibleMatches[activeResult]
-                      ? `${resultId}-${activeResult}`
-                      : undefined
-                  }
-                  value={query}
-                  onFocus={() => setSearching(!selectedService)}
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setSearching(true);
-                    setActiveResult(-1);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape' && searchOpen) {
-                      event.stopPropagation();
-                      setSearching(false);
-                      setActiveResult(-1);
+              <div
+                className="network-search-wrap"
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) setSearching(false);
+                }}
+              >
+                <label className="network-route-search">
+                  <Search size={19} aria-hidden="true" />
+                  <input
+                    ref={routeSearch}
+                    type="search"
+                    aria-label="Buscar recorrido en el mapa"
+                    placeholder="Buscar línea o ruta"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls={searchOpen ? resultId : undefined}
+                    aria-expanded={searchOpen}
+                    aria-activedescendant={
+                      searchOpen && visibleMatches[activeResult]
+                        ? `${resultId}-${activeResult}`
+                        : undefined
                     }
-                    if (
-                      (event.key === 'ArrowDown' || event.key === 'ArrowUp') &&
-                      visibleMatches.length
-                    ) {
-                      event.preventDefault();
+                    value={query}
+                    onFocus={() => setSearching(!selectedService)}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
                       setSearching(true);
-                      setActiveResult((index) =>
-                        event.key === 'ArrowDown'
-                          ? (index + 1) % visibleMatches.length
-                          : index <= 0
-                            ? visibleMatches.length - 1
-                            : index - 1,
-                      );
-                    }
-                    const chosen = visibleMatches[activeResult] ?? visibleMatches[0];
-                    if (event.key === 'Enter' && chosen) {
-                      event.preventDefault();
-                      chooseRoute(chosen.id);
-                    }
-                  }}
-                />
-              </label>
-              {!!query && (
-                <button
-                  className="icon-button network-clear"
-                  type="button"
-                  aria-label="Limpiar búsqueda de rutas"
-                  onClick={clearSearch}
-                >
-                  <X size={18} />
-                </button>
-              )}
-              {searchOpen && (
-                <div className="network-search-results">
-                  <div id={resultId} role="listbox" aria-label="Recorridos encontrados">
-                    {visibleMatches.map((route, index) => (
+                      setActiveResult(-1);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape' && searchOpen) {
+                        event.stopPropagation();
+                        setSearching(false);
+                        setActiveResult(-1);
+                      }
+                      if (
+                        (event.key === 'ArrowDown' || event.key === 'ArrowUp') &&
+                        visibleMatches.length
+                      ) {
+                        event.preventDefault();
+                        setSearching(true);
+                        setActiveResult((index) =>
+                          event.key === 'ArrowDown'
+                            ? (index + 1) % visibleMatches.length
+                            : index <= 0
+                              ? visibleMatches.length - 1
+                              : index - 1,
+                        );
+                      }
+                      const chosen = visibleMatches[activeResult] ?? visibleMatches[0];
+                      if (event.key === 'Enter' && chosen) {
+                        event.preventDefault();
+                        chooseRoute(chosen.id);
+                      }
+                    }}
+                  />
+                </label>
+                {!!query && (
+                  <button
+                    className="icon-button network-clear"
+                    type="button"
+                    aria-label="Limpiar búsqueda de rutas"
+                    onClick={clearSearch}
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+                {searchOpen && (
+                  <div className="network-search-results">
+                    <div id={resultId} role="listbox" aria-label="Recorridos encontrados">
+                      {visibleMatches.map((route, index) => (
+                        <button
+                          id={`${resultId}-${index}`}
+                          key={route.id}
+                          type="button"
+                          role="option"
+                          aria-selected={
+                            activeResult >= 0 ? index === activeResult : route.id === routeId
+                          }
+                          onClick={() => chooseRoute(route.id)}
+                        >
+                          <span
+                            className="network-route-dot"
+                            style={{
+                              background:
+                                network?.routes.find((item) => item.id === route.id)?.color ??
+                                serviceColors[route.networkId],
+                            }}
+                            aria-hidden="true"
+                          />
+                          <span>
+                            <strong>{route.code}</strong>
+                            <span>{route.name}</span>
+                            {!route.geometryPack &&
+                              !network?.routes.some((item) => item.id === route.id) && (
+                                <small>Trazo pendiente</small>
+                              )}
+                          </span>
+                          <ArrowRight size={17} aria-hidden="true" />
+                        </button>
+                      ))}
+                      {!matches.length && (
+                        <p role="status">
+                          {catalog
+                            ? 'No encontramos esa ruta. Prueba otro nombre o cambia de red.'
+                            : catalogError || 'Cargando rutas…'}
+                        </p>
+                      )}
+                    </div>
+                    {matches.length > visibleMatches.length && (
                       <button
-                        id={`${resultId}-${index}`}
-                        key={route.id}
                         type="button"
-                        role="option"
-                        aria-selected={
-                          activeResult >= 0 ? index === activeResult : route.id === routeId
-                        }
-                        onClick={() => chooseRoute(route.id)}
+                        className="network-all-matches"
+                        onClick={() => {
+                          if (expanded) leaveMapScreen();
+                          setSearching(false);
+                          setCatalogQuery(query);
+                          setCatalogOpen(true);
+                        }}
                       >
-                        <span
-                          className="network-route-dot"
-                          style={{
-                            background:
-                              network?.routes.find((item) => item.id === route.id)?.color ??
-                              serviceColors[route.networkId],
-                          }}
-                          aria-hidden="true"
-                        />
-                        <span>
-                          <strong>{route.code}</strong>
-                          <span>{route.name}</span>
-                          {!route.geometryPack &&
-                            !network?.routes.some((item) => item.id === route.id) && (
-                              <small>Trazo pendiente</small>
-                            )}
-                        </span>
-                        <ArrowRight size={17} aria-hidden="true" />
+                        Ver las {matches.length} coincidencias en el catálogo{' '}
+                        <ArrowRight size={16} aria-hidden="true" />
                       </button>
-                    ))}
-                    {!matches.length && (
-                      <p role="status">
-                        {catalog
-                          ? 'No encontramos esa ruta. Prueba otro nombre o cambia de red.'
-                          : catalogError || 'Cargando rutas…'}
-                      </p>
                     )}
                   </div>
-                  {matches.length > visibleMatches.length && (
-                    <button
-                      type="button"
-                      className="network-all-matches"
-                      onClick={() => {
-                        if (expanded) leaveMapScreen();
-                        setSearching(false);
-                        setCatalogQuery(query);
-                        setCatalogOpen(true);
-                      }}
-                    >
-                      Ver las {matches.length} coincidencias en el catálogo{' '}
-                      <ArrowRight size={16} aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
             </div>
             <div
               className="network-system-filters"
@@ -459,47 +509,6 @@ export default function NetworkExplorer({
               ))}
             </div>
           </div>
-          {selectedService && (
-            <button
-              type="button"
-              className="network-selected-route"
-              ref={selectedCard}
-              onClick={() => setDetailId(selectedService.id)}
-              aria-label={`Ver ficha de ${selectedService.code}: ${selectedService.name}`}
-            >
-              <span
-                className="network-route-dot"
-                style={{
-                  background: selectedRoute?.color ?? serviceColors[selectedService.networkId],
-                }}
-                aria-hidden="true"
-              />
-              <span>
-                <strong>{selectedService.code}</strong>
-                <span>{selectedService.name}</span>
-                {!selectedRoute && !selectedService.geometryPack && <small>Trazo pendiente</small>}
-              </span>
-              <ArrowRight size={19} aria-hidden="true" />
-            </button>
-          )}
-          {network && (
-            <details className="network-coverage-info">
-              <summary aria-label="Información y cobertura de la red">
-                <Info size={18} aria-hidden="true" />
-              </summary>
-              <div>
-                <strong>
-                  {selectedRoute ? `Mostrando 1 de ${routes.length}` : routes.length} recorridos con
-                  trazo disponible.
-                </strong>
-                <p>
-                  Los trazos publicados no confirman el servicio de hoy, el sentido de abordaje ni
-                  las condiciones de las paradas. Consulta la fuente de cada ficha. Los tiempos y la
-                  afluencia del piloto son simulados.
-                </p>
-              </div>
-            </details>
-          )}
         </div>
       </section>
       <section

@@ -32,10 +32,6 @@
 .network-map-layer .location-map-canvas {
   border-radius: 0;
 }
-.network-map-layer .location-map-region,
-.network-map-layer .location-map-info {
-  display: none;
-}
 .network-map-layer .location-map-controls {
   top: calc(var(--network-overlay-height, 118px) + 18px);
 }
@@ -147,8 +143,7 @@
   display: grid;
   gap: 3px;
 }
-.network-search-results button > span:nth-child(2) > span,
-.network-selected-route > span:nth-child(2) > span {
+.network-search-results button > span:nth-child(2) > span {
   font-size: 0.8rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -170,50 +165,16 @@
   border: 1px solid #102c29;
 }
 .network-selected-route {
-  position: absolute;
-  bottom: 48px;
-  left: 14px;
-  width: calc(100% - 28px);
   border: 1px solid var(--line);
-  box-shadow: 0 3px 15px #132e2924;
-  border-radius: 15px;
-}
-.network-coverage-info {
-  position: absolute;
-  left: 12px;
-  bottom: 9px;
-  z-index: 4;
-}
-.network-coverage-info > summary {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  cursor: pointer;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--dark);
-  list-style: none;
-}
-.network-coverage-info > summary::-webkit-details-marker {
-  display: none;
-}
-.network-coverage-info > div {
-  position: absolute;
-  bottom: 50px;
-  left: 0;
-  width: min(330px, calc(100vw - 64px));
-  background: var(--surface);
-  border: 1px solid var(--line);
-  padding: 15px;
   border-radius: 14px;
-  box-shadow: 0 4px 22px #132e2924;
-  font-size: 0.8rem;
-  line-height: 1.6;
 }
-.network-coverage-info p {
-  margin: 8px 0 0;
+.network-selected-route > span:nth-child(2) > span {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.network-selected-route > svg {
+  flex-shrink: 0;
 }
 .network-map-empty {
   margin: 160px 20px 10px;
@@ -313,9 +274,6 @@
     padding-inline: 13px;
     font-size: 0.76rem;
   }
-  .network-selected-route {
-    bottom: 55px;
-  }
 }
 @media (max-height: 500px) and (orientation: landscape) {
   .network-map-layer .location-map-controls {
@@ -326,13 +284,6 @@
   }
   .network-system-filters {
     padding-top: 6px;
-  }
-  .network-selected-route {
-    right: 76px;
-    width: auto;
-    bottom: 25px;
-    min-height: 44px;
-    padding-block: 6px;
   }
 }
 
@@ -382,32 +333,16 @@
 .network-explorer[data-map-screen='true'] .network-catalog-sheet {
   display: none;
 }
-.network-explorer[data-map-screen='true'] .location-map-credit {
-  bottom: var(--app-safe-bottom, 0px);
-  right: var(--app-safe-right, 0px);
+.network-explorer[data-map-screen='true'] .location-map {
+  --map-safe-bottom: var(--app-safe-bottom, 0px);
+  --map-safe-left: var(--app-safe-left, 0px);
+  --map-safe-right: var(--app-safe-right, 0px);
 }
-.network-explorer[data-map-screen='true'] .network-coverage-info {
-  bottom: calc(9px + var(--app-safe-bottom, 0px));
-}
-body[data-network-map-screen='true'] .app-shell :is(.sidebar, .topbar, .mobile-nav, .network-section-tabs, .page-footer, .skip-link),
+body[data-network-map-screen='true']
+  .app-shell
+  :is(.sidebar, .topbar, .mobile-nav, .network-section-tabs, .page-footer, .skip-link),
 body[data-network-map-screen='true'] .app-shell::before {
   display: none;
-}
-.network-map-layer .single-route-map .location-map-info {
-  display: block;
-  inset: auto auto 9px 64px;
-}
-.network-map-layer .single-route-map .location-map-info > div {
-  position: absolute;
-  bottom: 50px;
-  left: -52px;
-  width: min(330px, calc(100vw - 84px));
-}
-.network-map-stage:has(.location-station-card) .network-selected-route {
-  display: none;
-}
-.network-map-layer .location-station-card {
-  bottom: 68px;
 }
 @media (max-height: 500px) and (orientation: landscape) {
   .network-explorer[data-map-screen='true'] .network-map-overlay {
