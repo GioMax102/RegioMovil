@@ -58,3 +58,14 @@ Con el teléfono conectado y depuración USB autorizada, mantener el servidor de
 ```
 
 `install -r` actualiza conservando datos; no desinstalar para resolver una firma diferente. Administración normal: `http://localhost:4173/admin`. La [demo](demo-administracion.md) usa otro puerto y cuenta, sin copiar identidades ni autenticadores existentes.
+
+## Instalación posterior · 1 de noviembre de 2026
+
+El teléfono se conectó después de la comprobación anterior. **APK instalado y proceso iniciado** en M2103K19G, Android 11 / API 30, WebView `156.0.8078.47`.
+
+- `adb install -r` terminó en `Success`, sin desinstalar ni borrar datos.
+- Se recuperó sólo el APK instalado para contrastar su SHA-256: coincide exactamente con `739e62ab39ac8a7cca0dc4658ae610193c61de0c3712c0f43284f4803929f569`. Sus fuentes corresponden a `138e959`; los commits posteriores eran documentación.
+- API normal y demo respondieron `200` en salud. CORS Android y reenvíos USB `4173→4173`, `4180→4180` verificados. Se envió la URL administrativa al navegador del teléfono, se inició la actividad de RegioMóvil y se comprobó su proceso activo.
+- Se conserva la cuenta administrativa existente y su MFA; no se copiaron identidades a la demo ni se cambiaron credenciales. La demo sigue requiriendo su propia cuenta.
+
+La instalación no acredita cámara, layout físico ni fluidez. El usuario realizará las pruebas: ficha normal/completa y nombres largos; explorar/seguir guía; Cámara/Galería/Archivos y cancelar sin perder borrador; crear un reporte desde Inicio y revisarlo/publicarlo desde administración para comprobar su grupo en el mapa. Registrar las nuevas anotaciones contra este APK y las versiones anteriores. Mantener el USB conectado para usar estos servidores locales; al reconectarlo repetir `./regiomovil android-connect` y, para la demo, `"$HOME/Android/Sdk/platform-tools/adb" reverse tcp:4180 tcp:4180`.
