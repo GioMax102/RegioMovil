@@ -1,4 +1,13 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { Info, LocateFixed, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import geography from '../data/monterrey-map.json';
 import { isRegionalCoordinate, simplifyOverviewGeometry } from './mapGeography';
@@ -36,6 +45,9 @@ export default function LocationMap({
   compact = false,
   viewportPadding,
   preserveViewportOnResize = false,
+  mapInfo,
+  selectionOverlay,
+  onExplore,
   onExpand,
   onPick,
   onStopSelect,
@@ -55,6 +67,12 @@ export default function LocationMap({
   compact?: boolean;
   viewportPadding?: { top?: number; right?: number; bottom?: number; left?: number };
   preserveViewportOnResize?: boolean;
+  /** Extra context shares the one map information entry. */
+  mapInfo?: ReactNode;
+  /** Selected route and inspected stop use the same measured sheet. */
+  selectionOverlay?: ReactNode;
+  /** A deliberate pan/pinch/fit takes camera control from GPS guidance. */
+  onExplore?: () => void;
   onExpand?: () => void;
   onPick?: (point: MapPosition) => void;
   onStopSelect?: (stop: MobilityStop) => void;
@@ -65,25 +83,45 @@ export default function LocationMap({
   const sizeRef = useRef(size);
   sizeRef.current = size;
   const [measured, setMeasured] = useState(false);
+  const footer = useRef<HTMLDivElement>(null);
+  const selection = useRef<HTMLDivElement>(null);
+  const [footerHeight, setFooterHeight] = useState(52);
+  const [selectionRight, setSelectionRight] = useState<number | null>(null);
+  const [overlayPadding, setOverlayPadding] = useState({ bottom: 64, right: 70, top: 0 });
   const paddingRef = useRef(viewportPadding);
-  paddingRef.current = viewportPadding;
+  paddingRef.current = {
+    ...viewportPadding,
+    top: Math.max(viewportPadding?.top ?? 0, overlayPadding.top),
+    bottom: Math.max(viewportPadding?.bottom ?? 0, overlayPadding.bottom),
+    right: Math.max(viewportPadding?.right ?? 0, overlayPadding.right),
+  };
+  const lastJourneyFit = useRef<string | null>(null);
   const lastContextFit = useRef<string | null>(null);
   function fit(positions: MapPosition[]) {
     const fullSize = sizeRef.current;
     const padding = paddingRef.current;
     if (!padding) return fitRegionalPositions(positions, fullSize);
-    const left = Math.max(0, padding.left ?? 0), right = Math.max(0, padding.right ?? 0);
-    const top = Math.max(0, padding.top ?? 0), bottom = Math.max(0, padding.bottom ?? 0);
+    const left = Math.max(0, padding.left ?? 0),
+      right = Math.max(0, padding.right ?? 0);
+    const top = Math.max(0, padding.top ?? 0),
+      bottom = Math.max(0, padding.bottom ?? 0);
     const useful = {
       width: Math.max(80, fullSize.width - left - right),
       height: Math.max(80, fullSize.height - top - bottom),
     };
     const fitted = fitRegionalPositions(positions, useful);
-    const center = worldPoint(fitted), scale = 256 * 2 ** fitted.zoom;
-    return constrainRegionalView({
-      ...worldPosition(center.x - (left - right) / 2 / scale, center.y - (top - bottom) / 2 / scale),
-      zoom: fitted.zoom,
-    }, fullSize);
+    const center = worldPoint(fitted),
+      scale = 256 * 2 ** fitted.zoom;
+    return constrainRegionalView(
+      {
+        ...worldPosition(
+          center.x - (left - right) / 2 / scale,
+          center.y - (top - bottom) / 2 / scale,
+        ),
+        zoom: fitted.zoom,
+      },
+      fullSize,
+    );
   }
   const [view, setView] = useState<RegionalView>(() =>
     constrainRegionalView(
@@ -95,8 +133,36 @@ export default function LocationMap({
     ),
   );
   const viewRef = useRef(view);
+  const gestureFrame = useRef<number | null>(null);
+  const pendingGesture = useRef<RegionalView | null>(null);
+  function flushGesture() {
+    if (gestureFrame.current !== null) window.cancelAnimationFrame(gestureFrame.current);
+    gestureFrame.current = null;
+    if (pendingGesture.current) setView(pendingGesture.current);
+    pendingGesture.current = null;
+  }
+  function gestureMove(next: RegionalView) {
+    const safe = constrainRegionalView(next, sizeRef.current);
+    viewRef.current = safe;
+    pendingGesture.current = safe;
+    if (gestureFrame.current === null)
+      gestureFrame.current = window.requestAnimationFrame(() => {
+        gestureFrame.current = null;
+        if (pendingGesture.current) setView(pendingGesture.current);
+        pendingGesture.current = null;
+      });
+  }
+  useEffect(
+    () => () => {
+      if (gestureFrame.current !== null) window.cancelAnimationFrame(gestureFrame.current);
+      pendingGesture.current = null;
+      pointers.current.clear();
+    },
+    [],
+  );
   const [tileFailed, setTileFailed] = useState(false);
   const [inspectedId, setInspectedId] = useState('');
+  const [infoOpen, setInfoOpen] = useState(false);
   const drag = useRef<{
     id: number;
     x: number;
@@ -143,6 +209,7 @@ export default function LocationMap({
     setInspectedId('');
   }, [contextSignature, journey?.id, field]);
   function move(next: RegionalView) {
+    flushGesture();
     const safe = constrainRegionalView(next, sizeRef.current);
     viewRef.current = safe;
     setView(safe);
@@ -169,20 +236,38 @@ export default function LocationMap({
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, []);
+  function centerPosition(position: MapPosition, zoom: number) {
+    const point = worldPoint(position),
+      scale = 256 * 2 ** zoom;
+    const padding = paddingRef.current;
+    return constrainRegionalView(
+      {
+        ...worldPosition(
+          point.x - ((padding?.left ?? 0) - (padding?.right ?? 0)) / 2 / scale,
+          point.y - ((padding?.top ?? 0) - (padding?.bottom ?? 0)) / 2 / scale,
+        ),
+        zoom,
+      },
+      sizeRef.current,
+    );
+  }
   useEffect(() => {
-    if (focus && isRegionalCoordinate([focus.lng, focus.lat])) move({ ...focus, zoom: 14 });
+    if (focus && isRegionalCoordinate([focus.lng, focus.lat]))
+      move(navigationMode ? centerPosition(focus, viewRef.current.zoom) : { ...focus, zoom: 14 });
   }, [focus?.lat, focus?.lng]);
   useEffect(() => {
     if (field) onPickRef.current?.(viewRef.current);
   }, [field]);
   useEffect(() => {
-    if (!journey || field) return;
+    if (!journey || field || !measured) return;
+    if (preserveViewportOnResize && lastJourneyFit.current === journey.id) return;
+    lastJourneyFit.current = journey.id;
     const points = journey.steps
       .flatMap((step) => step.geometry || [])
       .filter(isRegionalCoordinate)
       .map(([lng, lat]) => ({ lng, lat }));
-    move(fitRegionalPositions(points, sizeRef.current));
-  }, [journey?.id, field, size.width, size.height]);
+    move(fit(points));
+  }, [journey?.id, field, size.width, size.height, measured, preserveViewportOnResize]);
   useEffect(() => {
     if (!contextRoutes || journey || field || !measured) return;
     // A map becoming the screen keeps its camera. Only choosing a different set of
@@ -190,7 +275,15 @@ export default function LocationMap({
     if (preserveViewportOnResize && lastContextFit.current === contextSignature) return;
     lastContextFit.current = contextSignature ?? '';
     move(fit(contextPaths.flatMap((path) => path.geometry).map(([lng, lat]) => ({ lng, lat }))));
-  }, [contextSignature, journey?.id, field, size.width, size.height, measured, preserveViewportOnResize]);
+  }, [
+    contextSignature,
+    journey?.id,
+    field,
+    size.width,
+    size.height,
+    measured,
+    preserveViewportOnResize,
+  ]);
   useEffect(() => {
     if (online) setTileFailed(false);
   }, [online]);
@@ -244,7 +337,8 @@ export default function LocationMap({
       );
   }, [indexedStops, displayedRoutes, journey, routeById]);
   const visibleTransitStops = useMemo(() => {
-    const center = worldPoint(view), scale = 256 * 2 ** view.zoom;
+    const center = worldPoint(view),
+      scale = 256 * 2 ** view.zoom;
     const occupied = new Set<string>();
     const cellSize = view.zoom >= 14 ? 18 : 32;
     const selectedRoute = contextRoutes?.length === 1;
@@ -398,6 +492,7 @@ export default function LocationMap({
   }
   function release(event: React.PointerEvent<SVGSVGElement>, cancelled = false) {
     if (!pointers.current.has(event.pointerId)) return;
+    flushGesture();
     const active = drag.current;
     const multiTouch = multiplePointers.current;
     const startView = pinch.current?.view || active?.view;
@@ -433,10 +528,13 @@ export default function LocationMap({
       }
     } else if (!multiTouch && active?.id === event.pointerId && !active.moved) {
       const rect = event.currentTarget.getBoundingClientRect();
-      const hitStop = rect.width > 0 && rect.height > 0 && inspectNearest(
-        ((event.clientX - rect.left) * size.width) / rect.width,
-        ((event.clientY - rect.top) * size.height) / rect.height,
-      );
+      const hitStop =
+        rect.width > 0 &&
+        rect.height > 0 &&
+        inspectNearest(
+          ((event.clientX - rect.left) * size.width) / rect.width,
+          ((event.clientY - rect.top) * size.height) / rect.height,
+        );
       if (!hitStop) onExpand?.();
     }
     try {
@@ -466,6 +564,82 @@ export default function LocationMap({
       }),
     [journey?.steps, contextPaths],
   );
+  // Mercator projection is source work: GPS/gesture frames only apply the camera
+  // transform to these immutable points, without reprojecting every vertex.
+  const worldPaths = useMemo(
+    () =>
+      paths.map((path) => {
+        const points = new Float64Array(path.geometry.length * 2);
+        path.geometry.forEach(([lng, lat], index) => {
+          const point = worldPoint({ lng, lat });
+          points[index * 2] = point.x;
+          points[index * 2 + 1] = point.y;
+        });
+        return { ...path, points };
+      }),
+    [paths],
+  );
+  useLayoutEffect(() => {
+    const canvas = container.current;
+    if (!canvas) return;
+    const measure = () => {
+      const bounds = canvas.getBoundingClientRect();
+      const footerBounds = footer.current?.getBoundingClientRect();
+      const sheetBounds = selection.current?.getBoundingClientRect();
+      const controlBounds = canvas.querySelector('.location-map-controls')?.getBoundingClientRect();
+      const controlsCrossSheet =
+        sheetBounds &&
+        controlBounds &&
+        sheetBounds.height > 0 &&
+        sheetBounds.height < bounds.height &&
+        controlBounds.height < bounds.height &&
+        controlBounds.bottom + 8 > sheetBounds.top &&
+        controlBounds.top < sheetBounds.bottom;
+      const reservedRight = controlsCrossSheet
+        ? Math.ceil(bounds.right - controlBounds!.left + 8)
+        : null;
+      setSelectionRight(reservedRight);
+      const referenceBounds = canvas
+        .querySelector('.location-navigation-info > summary')
+        ?.getBoundingClientRect();
+      const measuredFooter =
+        footerBounds && footerBounds.height > 0 && footerBounds.height < bounds.height
+          ? Math.max(0, bounds.bottom - footerBounds.top)
+          : compact
+            ? 52
+            : 24;
+      setFooterHeight(Math.ceil(measuredFooter));
+      const bottom = Math.ceil(
+        Math.max(
+          measuredFooter,
+          sheetBounds?.height && sheetBounds.height < bounds.height
+            ? bounds.bottom - sheetBounds.top
+            : 0,
+        ) + 12,
+      );
+      const top =
+        referenceBounds && referenceBounds.height < bounds.height
+          ? Math.max(0, referenceBounds.bottom - bounds.top + 12)
+          : navigationMode
+            ? 68
+            : 0;
+      setOverlayPadding((previous) =>
+        previous.bottom === bottom &&
+        previous.top === top &&
+        previous.right === Math.max(70, reservedRight ?? 0)
+          ? previous
+          : { bottom, top, right: Math.max(70, reservedRight ?? 0) },
+      );
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    observer?.observe(canvas);
+    if (footer.current) observer?.observe(footer.current);
+    if (selection.current) observer?.observe(selection.current);
+    const controls = canvas.querySelector('.location-map-controls');
+    if (controls) observer?.observe(controls);
+    return () => observer?.disconnect();
+  }, [inspectedId, selectionOverlay, infoOpen, compact, navigationMode, size.width, size.height]);
   const stationCard = inspected && (
     <section
       className="location-station-card"
@@ -495,7 +669,10 @@ export default function LocationMap({
         type="button"
         className="icon-button"
         aria-label={`Centrar estación ${inspected.stop.name}`}
-        onClick={() => move({ ...inspected.stop, zoom: Math.max(view.zoom, 14) })}
+        onClick={() => {
+          onExplore?.();
+          move(centerPosition(inspected.stop, Math.max(viewRef.current.zoom, 14)));
+        }}
       >
         <LocateFixed size={18} />
       </button>
@@ -523,16 +700,19 @@ export default function LocationMap({
       </span>
     </div>
   );
-  const selectableStops = contextRoutes?.length === 1 || navigationMode ? transitStops : visibleTransitStops;
+  const selectableStops =
+    contextRoutes?.length === 1 || navigationMode ? transitStops : visibleTransitStops;
   const stopSelection = !field && !!selectableStops.length && (
     <>
-      <label htmlFor={`map-stop-${mapId}`}>{contextRoutes?.length === 1 ? 'Paradas de la ruta' : 'Estaciones y paradas visibles'}</label>
+      <label htmlFor={`map-stop-${mapId}`}>
+        {contextRoutes?.length === 1 ? 'Paradas de la ruta' : 'Estaciones y paradas visibles'}
+      </label>
       <select
         id={`map-stop-${mapId}`}
         value={inspectedId}
         onChange={(event) => {
           setInspectedId(event.target.value);
-          if (navigationMode && event.target.value) {
+          if ((navigationMode || compact) && event.target.value) {
             const references = event.currentTarget.closest('details');
             if (references) {
               references.open = false;
@@ -568,6 +748,15 @@ export default function LocationMap({
   );
   return (
     <div
+      style={
+        {
+          '--map-footer-height': `${footerHeight}px`,
+          '--map-selection-right':
+            selectionRight === null ? 'calc(12px + var(--map-safe-right))' : `${selectionRight}px`,
+          '--map-overlay-top': `${viewportPadding?.top ?? (navigationMode ? 68 : 12)}px`,
+          '--map-canvas-height': `${size.height}px`,
+        } as CSSProperties
+      }
       className={`location-map ${field ? 'choosing' : ''}${navigationMode ? ' navigating' : ''}${compact ? ' map-compact' : ''}${contextRoutes?.length === 1 ? ' single-route-map' : ''}`}
     >
       <div ref={container} className="location-map-canvas">
@@ -593,6 +782,7 @@ export default function LocationMap({
             };
             if (offsets[event.key]) {
               event.preventDefault();
+              onExplore?.();
               const [x, y] = offsets[event.key],
                 center = worldPoint(viewRef.current),
                 scale = 256 * 2 ** viewRef.current.zoom;
@@ -624,6 +814,7 @@ export default function LocationMap({
             };
             if (pointers.current.size >= 2) {
               multiplePointers.current = true;
+              onExplore?.();
               if (drag.current) drag.current.moved = true;
               const [a, b] = [...pointers.current.values()];
               pinch.current = {
@@ -650,7 +841,7 @@ export default function LocationMap({
               const start = pinch.current,
                 [a, b] = [...pointers.current.values()];
               if (active) active.moved = true;
-              move({
+              gestureMove({
                 ...start.view,
                 zoom:
                   start.view.zoom +
@@ -659,10 +850,12 @@ export default function LocationMap({
             } else if (active?.id === event.pointerId) {
               const dx = event.clientX - active.x,
                 dy = event.clientY - active.y;
-              if (Math.hypot(dx, dy) > 5) active.moved = true;
+              if (Math.hypot(dx, dy) <= 5 && !active.moved) return;
+              if (!active.moved) onExplore?.();
+              active.moved = true;
               const center = worldPoint(active.view),
                 scale = 256 * 2 ** active.view.zoom;
-              move({
+              gestureMove({
                 ...worldPosition(center.x - dx / scale, center.y - dy / scale),
                 zoom: active.view.zoom,
               });
@@ -728,14 +921,13 @@ export default function LocationMap({
                 })}
               </g>
             )}
-            {paths.map((step, index) => {
-              const points = (Array.isArray(step.geometry) ? step.geometry : [])
-                .filter(isRegionalCoordinate)
-                .map(([lng, lat]) => {
-                  const p = project({ lng, lat });
-                  return `${p.x},${p.y}`;
-                })
-                .join(' ');
+            {worldPaths.map((step, index) => {
+              const screenPoints: string[] = [];
+              for (let vertex = 0; vertex < step.points.length; vertex += 2)
+                screenPoints.push(
+                  `${(step.points[vertex] - camera.x) * pixels + size.width / 2},${(step.points[vertex + 1] - camera.y) * pixels + size.height / 2}`,
+                );
+              const points = screenPoints.join(' ');
               const width = step.mode === 'metro' ? 4.5 : step.mode === 'walk' ? 2.5 : 3.5;
               return (
                 <g key={`${step.lineId}-${index}`}>
@@ -932,18 +1124,6 @@ export default function LocationMap({
           </div>
         )}
         {!navigationMode && !compact && <div className="location-map-area">MONTERREY · ZMM</div>}
-        {compact && (
-          <details className="location-map-info">
-            <summary aria-label={contextRoutes?.length === 1 ? 'Consultar paradas de la ruta' : 'Información del mapa'}>
-              <Info size={19} aria-hidden="true" />
-            </summary>
-            <div>
-              {mapLegend}
-              {inspectStops && stopSelection}
-              {mapCaption}
-            </div>
-          </details>
-        )}
         {navigationMode && (
           <details className="location-stop-picker location-navigation-info">
             <summary>
@@ -984,6 +1164,7 @@ export default function LocationMap({
                   : 'Centrar mapa en el viaje'
             }
             onClick={() => {
+              onExplore?.();
               const positions = journey
                 ? journey.steps
                     .flatMap((step) => step.geometry)
@@ -1007,15 +1188,43 @@ export default function LocationMap({
             Reintentar calles
           </button>
         )}
-        {(navigationMode || compact) && stationCard}
-        <a
-          className="location-map-credit"
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noreferrer"
-        >
-          © OpenStreetMap · ODbL
-        </a>
+        {(navigationMode || compact) && (stationCard || selectionOverlay) && (
+          <div ref={selection} className="location-map-selection" hidden={infoOpen}>
+            {stationCard || selectionOverlay}
+          </div>
+        )}
+        <div ref={footer} className="location-map-footer">
+          {compact && !navigationMode && (
+            <details
+              className="location-map-info"
+              onToggle={(event) => setInfoOpen(event.currentTarget.open)}
+            >
+              <summary
+                aria-label={
+                  contextRoutes?.length === 1
+                    ? 'Consultar paradas de la ruta'
+                    : 'Información del mapa'
+                }
+              >
+                <Info size={19} aria-hidden="true" />
+              </summary>
+              <div>
+                {mapInfo}
+                {mapLegend}
+                {inspectStops && stopSelection}
+                {mapCaption}
+              </div>
+            </details>
+          )}
+          <a
+            className="location-map-credit"
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+          >
+            © OpenStreetMap · ODbL
+          </a>
+        </div>
       </div>
       {!navigationMode && !compact && stationCard}
       {!navigationMode && !compact && inspectStops && inspected && (

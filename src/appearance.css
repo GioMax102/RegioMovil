@@ -115,10 +115,6 @@
   ) {
   color: var(--muted);
 }
-:root[data-theme='dark'] .mobility-map-heading > div button[aria-pressed='true'] {
-  background: var(--white);
-  color: var(--green);
-}
 :root[data-theme='dark'] .mobility-mode.metro {
   color: #b2d4ff;
   background: #233b55;

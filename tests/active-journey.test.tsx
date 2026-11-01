@@ -923,3 +923,77 @@ test('a checkpoint for another step recovers the draft without inventing a guide
   assert.equal(watches.length, 0);
   assert.equal(spoken.length, 0);
 });
+
+test('dragging suspends following, GPS preserves the explored camera, and following resumes at the chosen zoom', async () => {
+  mount(true);
+  await waitFor(() => assert.equal(watches.length, 1));
+  const svg = document.querySelector<SVGSVGElement>('.active-journey-map svg[role="group"]')!;
+  const follow = screen.getByRole('button', { name: 'Seguirme en el mapa' });
+  const fix = (longitude: number, timestamp: number) =>
+    ({
+      coords: {
+        latitude: 25.75,
+        longitude,
+        accuracy: 8,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp,
+    }) as GeolocationPosition;
+  const now = Date.now();
+  await act(async () => watches[0].success(fix(-100.37, now)));
+  fireEvent.click(screen.getByRole('button', { name: 'Acercar mapa' }));
+  const chosenZoom = svg.dataset.mapZoom;
+  const pointer = (type: string, x: number, y: number, id = 1) => {
+    const event = new dom.window.MouseEvent(type, {
+      bubbles: true,
+      button: 0,
+      clientX: x,
+      clientY: y,
+    });
+    Object.defineProperty(event, 'pointerId', { value: id });
+    svg.dispatchEvent(event);
+  };
+  await act(async () => {
+    pointer('pointerdown', 180, 150);
+    pointer('pointermove', 250, 170);
+    pointer('pointerup', 250, 170);
+  });
+  assert.equal(follow.getAttribute('aria-pressed'), 'false');
+  assert.equal(
+    document.querySelector('.active-journey-map')?.getAttribute('data-camera-mode'),
+    'exploring',
+  );
+  const explored = svg.dataset.mapCenter;
+  await act(async () => watches[0].success(fix(-100.36995, now + 1000)));
+  assert.equal(svg.dataset.mapCenter, explored);
+  assert.equal(svg.dataset.mapZoom, chosenZoom);
+  try {
+    rect.height = 280;
+    rect.bottom = 280;
+    await act(async () => window.dispatchEvent(new dom.window.Event('resize')));
+    assert.equal(
+      svg.dataset.mapCenter,
+      explored,
+      'Resizing the same step preserves the explored camera.',
+    );
+    assert.equal(svg.dataset.mapZoom, chosenZoom);
+  } finally {
+    rect.height = 300;
+    rect.bottom = 300;
+  }
+  fireEvent.click(follow);
+  assert.equal(follow.getAttribute('aria-pressed'), 'true');
+  assert.notEqual(svg.dataset.mapCenter, explored);
+  assert.equal(svg.dataset.mapZoom, chosenZoom, 'Resuming GPS does not force zoom 14.');
+  await act(async () => {
+    pointer('pointerdown', 130, 150, 1);
+    pointer('pointerdown', 230, 150, 2);
+    pointer('pointermove', 270, 150, 2);
+    pointer('pointerup', 270, 150, 2);
+  });
+  assert.equal(follow.getAttribute('aria-pressed'), 'false', 'Pinch also yields camera control.');
+  assert.equal(watches.length, 1, 'Camera mode does not create another GPS watcher.');
+});

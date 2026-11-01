@@ -40,6 +40,7 @@ export default function HomeDashboard({
   onSavedTrip,
   onStationDetails,
   onReport,
+  reportOpen = false,
   now = new Date(),
 }: {
   station: Station;
@@ -53,9 +54,39 @@ export default function HomeDashboard({
   onSavedTrip?: (trip: SavedMobilityTrip) => void;
   onStationDetails: () => void;
   onReport: () => void;
+  reportOpen?: boolean;
   now?: Date;
 }) {
   const [savedTrips, setSavedTrips] = useState(readSavedMobilityTrips);
+  const [hasReportDraft, setHasReportDraft] = useState(false);
+  useEffect(() => {
+    let active = true;
+    let expiry: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      if (document.hidden) return;
+      void import('../reportDraft')
+        .then(({ readReportDraft }) => readReportDraft())
+        .then((draft) => {
+          if (!active) return;
+          clearTimeout(expiry);
+          setHasReportDraft(!!draft);
+          if (draft)
+            expiry = setTimeout(() => setHasReportDraft(false), draft.expiresAt - Date.now());
+        })
+        .catch(() => {
+          if (active) setHasReportDraft(false);
+        });
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      active = false;
+      clearTimeout(expiry);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [reportOpen]);
   useEffect(() => {
     const refresh = () => setSavedTrips(readSavedMobilityTrips());
     const storage = (event: StorageEvent) => {
@@ -80,6 +111,21 @@ export default function HomeDashboard({
   const hours = getMetroServiceWindow(now);
   return (
     <div className="home-dashboard">
+      <button
+        type="button"
+        className="home-report-cta"
+        aria-label={hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}
+        onClick={onReport}
+      >
+        <span className="home-report-icon">
+          <Flag size={23} aria-hidden="true" />
+        </span>
+        <span>
+          <strong>Mejoremos nuestro transporte</strong>
+          <span>{hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}</span>
+        </span>
+        <ArrowRight size={20} aria-hidden="true" />
+      </button>
       {onSavedTrip && savedTrips.length > 0 && (
         <nav className="home-shortcuts" aria-label="Trayectos guardados">
           {savedTrips.map((trip) => {
@@ -202,10 +248,6 @@ export default function HomeDashboard({
           </a>
         ))}
       </details>
-      <button type="button" className="report-link home-report" onClick={onReport}>
-        <Flag size={15} aria-hidden="true" />
-        Reportar
-      </button>
     </div>
   );
 }

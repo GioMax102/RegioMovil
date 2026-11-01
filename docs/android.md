@@ -75,6 +75,14 @@ adb shell am start -n mx.regiomovil.app/.MainActivity --ez kiosk false
 
 La vista se adapta a orientación vertical u horizontal sin bloquear la rotación. Un parámetro de URL oculta controles, pero no es un mecanismo de seguridad ni configura administración del dispositivo. El bloqueo a una sola aplicación, arranque automático, energía y mantenimiento pertenecen a Android Enterprise/MDM o a la fijación de pantalla de Android. Un despliegue público requiere probar contraste bajo luz exterior, altura y alcance del módulo, lector de pantalla, conectividad y visibilidad de los avisos de simulación.
 
+## Fotografías de reportes · 31 de octubre de 2026
+
+«Añadir foto» abre una sola entrada nativa con Cámara, Galería y Archivos mediante `RegioReportPhotoPlugin`. La captura usa un URI temporal `FileProvider` dentro de `cache/shared/reports`; no requiere permisos amplios de cámara/almacenamiento. Galería usa el selector de fotos en Android 13+ y `GET_CONTENT` en versiones anteriores; Archivos usa `OPEN_DOCUMENT`. La selección concede acceso temporal a una sola imagen.
+
+El adaptador conserva `requestId` y borrador antes de salir. Cancelar o fallar mantiene campos y foto previa; un resultado restaurado sólo se adjunta al borrador que lo inició. La copia nativa limita 8 MB/24 megapíxeles; el procesamiento existente reduce la evidencia y elimina metadatos antes del envío. Los temporales son privados, acotados y se liberan después de procesar.
+
+La revisión estática identifica una incompatibilidad en la captura anterior: el plugin de cámara escribía fuera del directorio que expone el proveedor. No equivale a reproducción física del fallo. Compilación y pruebas del adaptador no demuestran que una cámara OEM abra/retorne correctamente; probar Cámara/Galería/Archivos, cancelar/Atrás, orientación y recreación de proceso en el APK actualizado. En web se ofrece una hoja adaptativa: los navegadores no garantizan un selector universal con las tres opciones.
+
 ## Recursos visuales
 
 El icono representa una montaña y un trayecto con dos paradas, en verde y lima. Incluye recursos adaptativos, variante monocromática y PNG para Android anterior a los iconos adaptativos. Se regenera localmente con `python3 scripts/android-icons.py` (Pillow); no depende de una fuente, mapa o imagen remota.

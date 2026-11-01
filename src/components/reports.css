@@ -22,22 +22,21 @@
 }
 .report-photo-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .report-photo-actions button {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   min-height: 44px;
   gap: 6px;
-  padding: 10px 6px;
+  padding: 14px 16px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--white);
-  color: var(--dark);
-  font-size: 0.8rem;
+  background: var(--soft);
+  color: var(--green);
+  font-size: 0.95rem;
   line-height: 1.35;
   white-space: normal;
 }
@@ -48,6 +47,37 @@
 .report-photo-actions button:not(:disabled):hover {
   border-color: var(--green);
   background: var(--soft);
+}
+.report-photo-choices {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  background: var(--white);
+}
+.report-photo-choices button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dark);
+  font: inherit;
+  text-align: left;
+}
+.report-photo-choices button:hover {
+  background: var(--soft);
+}
+.report-photo-choices button > svg {
+  color: var(--green);
+}
+.report-photo-choices button:last-child {
+  justify-content: center;
+  color: var(--green);
 }
 .report-draft-choice {
   display: grid;

@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile, unlink, rmdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import { minify } from 'terser';
 const root = resolve('dist');
 async function collectAssets(directory, prefix = '') {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -42,6 +43,10 @@ if (manifest?.['index.html']) {
   }
   visit('index.html');
   visit('src/components/NetworkExplorer.tsx', true);
+  // Reading/accessibility preferences and provenance remain available on their
+  // first opening offline even though their UI is split out of the entry chunk.
+  visit('src/components/SettingsDialog.tsx');
+  visit('src/components/SourcesDialog.tsx');
   assets = allAssets.filter((asset) => initial.has(asset));
   if (!assets.some((asset) => asset.endsWith('.js')))
     throw new Error('The initial manifest has no JavaScript entry.');
@@ -64,9 +69,11 @@ files.forEach((file, index) =>
   digest.update(file).update('\0').update(contents[index]).update('\0'),
 );
 const version = digest.digest('hex').slice(0, 12);
-const worker = template
+const workerSource = template
   .replace("'regiomovil-shell-v1'", `'regiomovil-shell-${version}'`)
   .replace('/* BUILD_ASSETS */ []', JSON.stringify(assets));
+const { code: worker } = await minify(workerSource, { ecma: 2022, compress: { passes: 2 } });
+if (!worker) throw new Error('The offline worker could not be finalized.');
 await writeFile(resolve(root, 'sw.js'), worker);
 const sizes = files.map((file, index) => ({ file, bytes: contents[index].length }));
 sizes.push({ file: 'sw.js', bytes: Buffer.byteLength(worker) });

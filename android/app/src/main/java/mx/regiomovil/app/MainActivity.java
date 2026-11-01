@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         SplashScreen.installSplashScreen(this);
         EdgeToEdge.enable(this);
         registerPlugin(RegioLocationPlugin.class);
+        registerPlugin(RegioReportPhotoPlugin.class);
         super.onCreate(savedInstanceState);
         if (bridge != null) {
             WebSettings settings = bridge.getWebView().getSettings();

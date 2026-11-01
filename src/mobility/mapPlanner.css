@@ -522,10 +522,6 @@
   .mobility-map-stage .location-map-controls {
     inset-inline-end: 18px;
   }
-  .mobility-map-stage .location-map-info {
-    inset-inline-start: auto;
-    inset-inline-end: 76px;
-  }
   .map-experience[data-mode='map'] .map-sheet:not([data-size='peek']) {
     block-size: 190px;
     inset-block-start: auto;

@@ -463,10 +463,17 @@ test('el mapa general distingue las tres líneas del Metro y sus estaciones publ
     assert.equal(trace.getAttribute('opacity'), '1');
     assert.ok(Number(trace.getAttribute('stroke-width')) >= 4.5);
   }
-  assert.equal(svg.querySelectorAll('[data-stop]').length, 0, 'La vista regional conserva sólo los trazos.');
+  assert.equal(
+    svg.querySelectorAll('[data-stop]').length,
+    0,
+    'La vista regional conserva sólo los trazos.',
+  );
   await zoomTo(svg, 14);
   const markers = [...svg.querySelectorAll<SVGCircleElement>('circle.location-transit-stop')];
-  assert.ok(markers.length > 0 && markers.length <= 180, 'Acercarse revela las estaciones próximas.');
+  assert.ok(
+    markers.length > 0 && markers.length <= 180,
+    'Acercarse revela las estaciones próximas.',
+  );
   const metroStopIds = new Set(
     publishedNetwork.stops.filter((stop) => stop.mode === 'metro').map((stop) => stop.id),
   );
@@ -566,11 +573,17 @@ test('Planear conserva las calles en línea con un fondo atenuado para distingui
 
 async function centerOnCuauhtemoc() {
   const stop = publishedNetwork.stops.find((item) => item.id === 'metro:cuauhtemoc')!;
-  await act(async () => activeRoot!.render(<LocationMap
-    network={publishedNetwork} online={false} field={null}
-    contextRoutes={publishedNetwork.routes.filter((route) => route.mode === 'metro')}
-    focus={stop}
-  />));
+  await act(async () =>
+    activeRoot!.render(
+      <LocationMap
+        network={publishedNetwork}
+        online={false}
+        field={null}
+        contextRoutes={publishedNetwork.routes.filter((route) => route.mode === 'metro')}
+        focus={stop}
+      />,
+    ),
+  );
 }
 
 test('tocar una estación consulta sus conexiones sin cambiar origen ni destino', async () => {
@@ -803,7 +816,6 @@ test('journey geometry gaps stay disconnected and resizing a sheet refits a rout
   }
 });
 
-
 test('una parada seleccionada sigue visible al alejarse sin revelar todas las demás', async () => {
   const { svg, container } = await mount({
     network: publishedNetwork,
@@ -816,14 +828,19 @@ test('una parada seleccionada sigue visible al alejarse sin revelar todas las de
     select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
   });
   while (Number(svg.dataset.mapZoom) >= 13) await act(async () => key(svg, '-'));
-  assert.deepEqual([...svg.querySelectorAll('[data-stop]')].map((point) => point.getAttribute('data-stop')), ['metro:cuauhtemoc']);
+  assert.deepEqual(
+    [...svg.querySelectorAll('[data-stop]')].map((point) => point.getAttribute('data-stop')),
+    ['metro:cuauhtemoc'],
+  );
   assert.match(container.querySelector('.location-station-card')!.textContent!, /Cuauhtémoc/);
 });
 
 test('cambiar de tamaño preserva la cámara explorada de la red y centrar respeta el área útil', async () => {
   const routes = publishedNetwork.routes.filter((route) => route.id === 'L1');
   const { svg, container } = await mount({
-    network: publishedNetwork, contextRoutes: routes, field: null,
+    network: publishedNetwork,
+    contextRoutes: routes,
+    field: null,
     viewportPadding: { top: 125, bottom: 50, left: 12, right: 70 },
     preserveViewportOnResize: true,
   });
@@ -832,14 +849,140 @@ test('cambiar de tamaño preserva la cámara explorada de la red y centrar respe
   const explored = { zoom: svg.dataset.mapZoom, center: svg.dataset.mapCenter };
   assert.notDeepEqual(explored, original);
   try {
-    rect.height = 600; rect.bottom = 600;
+    rect.height = 600;
+    rect.bottom = 600;
     await act(async () => window.dispatchEvent(new dom.window.Event('resize')));
     assert.deepEqual({ zoom: svg.dataset.mapZoom, center: svg.dataset.mapCenter }, explored);
-    await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Centrar mapa en las rutas"]')!.click());
-    const positions = svg.querySelector('[data-line="L1"]')!.getAttribute('points')!.split(' ').map((pair) => pair.split(',').map(Number));
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('[aria-label="Centrar mapa en las rutas"]')!
+        .click(),
+    );
+    const positions = svg
+      .querySelector('[data-line="L1"]')!
+      .getAttribute('points')!
+      .split(' ')
+      .map((pair) => pair.split(',').map(Number));
     for (const [x, y] of positions) {
       assert.ok(x >= 12 && x <= rect.width - 70, `x=${x} está en el área libre.`);
       assert.ok(y >= 125 && y <= rect.height - 50, `y=${y} está debajo del buscador.`);
     }
-  } finally { rect.height = 420; rect.bottom = 420; }
+  } finally {
+    rect.height = 420;
+    rect.bottom = 420;
+  }
+});
+
+test('the common overlay dock measures attribution/safe inset and fits above the selected route', async () => {
+  const previousRect = dom.window.HTMLElement.prototype.getBoundingClientRect;
+  dom.window.HTMLElement.prototype.getBoundingClientRect = function () {
+    if (this.classList.contains('location-map-footer'))
+      return { ...rect, top: 360, y: 360, bottom: 404, height: 44 };
+    if (this.classList.contains('location-map-selection'))
+      return { ...rect, top: 270, y: 270, bottom: 348, height: 78 };
+    if (this.classList.contains('location-map-controls'))
+      return { ...rect, left: 650, right: 696, width: 46, top: 140, bottom: 278, height: 138 };
+    return rect;
+  };
+  try {
+    const { svg, container } = await mount({
+      network: publishedNetwork,
+      contextRoutes: publishedNetwork.routes.filter((route) => route.id === 'L1'),
+      field: null,
+      compact: true,
+      selectionOverlay: <button>Ruta con nombre completo de referencia</button>,
+      mapInfo: <p>Cobertura verificada por catálogo</p>,
+      viewportPadding: { top: 90, left: 12, right: 72 },
+    });
+    const map = container.querySelector<HTMLElement>('.location-map')!;
+    assert.equal(map.style.getPropertyValue('--map-footer-height'), '60px');
+    assert.equal(
+      map.style.getPropertyValue('--map-selection-right'),
+      '78px',
+      'A tall sheet reserves the intersecting control column.',
+    );
+    assert.ok(container.querySelector('.location-map-selection > button'));
+    assert.equal(container.querySelectorAll('.location-map-footer details').length, 1);
+    assert.ok(
+      container.querySelector('.location-map-info')?.textContent?.includes('Cobertura verificada'),
+    );
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('[aria-label="Centrar mapa en las rutas"]')!
+        .click(),
+    );
+    const positions = svg
+      .querySelector('[data-line="L1"]')!
+      .getAttribute('points')!
+      .split(' ')
+      .map((pair) => pair.split(',').map(Number));
+    for (const [x, y] of positions) {
+      assert.ok(x >= 12 && x <= rect.width - 72);
+      assert.ok(y >= 90 && y <= 258, `y=${y} stays above the measured selection sheet.`);
+    }
+    const info = container.querySelector<HTMLDetailsElement>('.location-map-info')!;
+    await act(async () => {
+      info.open = true;
+      info.dispatchEvent(new dom.window.Event('toggle'));
+    });
+    assert.equal(
+      container.querySelector<HTMLElement>('.location-map-selection')!.hidden,
+      true,
+      'Information temporarily replaces the sheet instead of covering its actions.',
+    );
+    await act(async () => {
+      info.open = false;
+      info.dispatchEvent(new dom.window.Event('toggle'));
+    });
+    assert.equal(container.querySelector<HTMLElement>('.location-map-selection')!.hidden, false);
+  } finally {
+    dom.window.HTMLElement.prototype.getBoundingClientRect = previousRect;
+  }
+});
+
+test('gestures batch camera paints per frame, ignore sub-threshold taps and release pending work', async () => {
+  const originalRequest = window.requestAnimationFrame;
+  const originalCancel = window.cancelAnimationFrame;
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0,
+    explorations = 0;
+  window.requestAnimationFrame = (callback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  };
+  window.cancelAnimationFrame = (id) => {
+    frames.delete(id);
+  };
+  try {
+    const { svg } = await mount({ field: null, onExplore: () => explorations++ });
+    const initial = svg.dataset.mapCenter;
+    await act(async () => {
+      pointer(svg, 'pointerdown', 360, 210);
+      pointer(svg, 'pointermove', 362, 211);
+    });
+    assert.equal(explorations, 0);
+    assert.equal(frames.size, 0);
+    assert.equal(svg.dataset.mapCenter, initial);
+    await act(async () => {
+      for (let x = 370; x < 470; x += 10) pointer(svg, 'pointermove', x, 220);
+    });
+    assert.equal(explorations, 1, 'Only a deliberate gesture suspends GPS camera control.');
+    assert.equal(frames.size, 1, 'Ten pointer moves schedule one camera paint.');
+    assert.equal(svg.dataset.mapCenter, initial, 'No synchronous React paint per pointer move.');
+    await act(async () => {
+      for (const [id, callback] of frames) {
+        frames.delete(id);
+        callback(0);
+      }
+    });
+    assert.notEqual(svg.dataset.mapCenter, initial);
+    await act(async () => pointer(svg, 'pointermove', 490, 230));
+    assert.equal(frames.size, 1);
+    await act(async () => activeRoot!.unmount());
+    activeRoot = null;
+    assert.equal(frames.size, 0, 'Unmount cancels the queued camera paint.');
+  } finally {
+    window.requestAnimationFrame = originalRequest;
+    window.cancelAnimationFrame = originalCancel;
+  }
 });

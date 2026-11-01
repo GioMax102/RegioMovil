@@ -254,7 +254,7 @@ test('changing public shell content changes the worker version even when asset f
   assert.equal(same, before, 'Identical inputs should produce an identical service worker.');
   await writeFile(join(directory, 'dist/icon.svg'), 'updated public icon with same filename');
   const changed = await finalize();
-  const version = source => source.match(/const CACHE = '([^']+)'/)[1];
+  const version = source => source.match(/regiomovil-shell-[a-f0-9]{12}/)[0];
   assert.notEqual(version(changed), version(before));
   const stats = JSON.parse(await readFile(join(directory, 'dist/bundle-stats.json'), 'utf8'));
   assert.equal(stats.totalBytes, stats.files.reduce((sum,file) => sum + file.bytes,0));
@@ -287,6 +287,8 @@ test('Red opens offline on first use with its static dependencies, while plannin
     '_geography.js': { file: 'assets/geography-Geo12345.js' },
     'src/mobility/MobilityPlanner.tsx': { file: 'assets/MobilityPlanner-Plan1234.js' },
     'src/mobility/ActiveJourney.tsx': { file: 'assets/ActiveJourney-Guide123.js' },
+    'src/components/SettingsDialog.tsx': { file: 'assets/SettingsDialog-Settings1.js', css: ['assets/contextDialogs-Context1.css'], imports: ['_shared.js'] },
+    'src/components/SourcesDialog.tsx': { file: 'assets/SourcesDialog-Sources1.js', css: ['assets/contextDialogs-Context1.css'], imports: ['_shared.js'] },
   };
   const required = [
     'index-Entry1234.js',
@@ -299,6 +301,9 @@ test('Red opens offline on first use with its static dependencies, while plannin
     'LocationMap-Map12345.js',
     'LocationMap-Map12345.css',
     'geography-Geo12345.js',
+    'SettingsDialog-Settings1.js',
+    'SourcesDialog-Sources1.js',
+    'contextDialogs-Context1.css',
   ].map((file) => `/assets/${file}`);
   const deferred = [
     'monterrey-map-Basemap1.svg',

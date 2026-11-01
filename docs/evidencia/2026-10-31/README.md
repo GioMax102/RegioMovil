@@ -11,3 +11,7 @@ Evidencia para el [plan de desarrollo](../../PLAN_PRODUCTO_COMUNIDAD_2026-10-31.
 | E5 | [Confirmación de descarte](05-descarte-borrador.png) | Párrafo secundario que se solicita retirar. |
 
 Conservar originales para comparación antes/después. Las capturas previas de configuración MFA no forman parte de esta evidencia ni deben incorporarse al repositorio.
+
+## Evidencia nueva de implementación
+
+[06 · Ficha corregida en mapa web a 390 × 844](06-mapa-ficha-corregida-web-390.png), capturada al continuar la integración el 1 de noviembre de 2026. Muestra San Nicolás, la atribución y controles separados. No pertenece a las cinco imágenes originales del usuario del manifiesto ni es una captura Android. No contiene fotografías/reportes privados.

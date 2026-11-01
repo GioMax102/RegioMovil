@@ -444,12 +444,20 @@ test('Red isolates a published route, expands one map and resets the selection w
   await waitFor(() => assert.equal(document.querySelectorAll('polyline[data-line]').length, 1));
   assert.ok(document.querySelector('polyline[data-line="L1"]'));
   assert.ok(screen.getByRole('button', { name: 'Metro', exact: true, pressed: true }));
-  const information = document.querySelector('.network-coverage-info') as HTMLDetailsElement;
+  const information = document.querySelector('.location-map-info') as HTMLDetailsElement;
   assert.equal(information.open, false, 'Coverage is available without filling the map with text.');
+  assert.equal(
+    document.querySelectorAll('.location-map-footer details').length,
+    1,
+    'Coverage, legend and stops share one information entry.',
+  );
+  assert.equal(document.querySelector('.network-coverage-info'), null);
   assert.ok(screen.getByText(/Mostrando 1 de 3 recorridos/));
   screen.getByRole('group', { name: /^Mapa interactivo/ }).focus();
   await user.keyboard('{Enter}');
-  const expanded = document.querySelector('.network-explorer[data-map-screen="true"]') as HTMLElement;
+  const expanded = document.querySelector(
+    '.network-explorer[data-map-screen="true"]',
+  ) as HTMLElement;
   assert.ok(expanded);
   assert.equal(screen.queryByRole('dialog'), null);
   assert.ok(within(expanded).getByRole('group', { name: /^Mapa interactivo/ }));
@@ -459,7 +467,9 @@ test('Red isolates a published route, expands one map and resets the selection w
     'Expansion does not render a second expensive map behind the dialog.',
   );
   assert.equal(document.body.style.overflow, 'hidden');
-  await user.click(within(expanded).getByRole('button', { name: 'Salir del mapa a pantalla completa' }));
+  await user.click(
+    within(expanded).getByRole('button', { name: 'Salir del mapa a pantalla completa' }),
+  );
   await waitFor(() => assert.equal(expanded.getAttribute('data-map-screen'), 'false'));
   assert.equal(document.body.style.overflow, '');
   assert.equal(
@@ -588,7 +598,10 @@ test('catalog slides from its bar without trapping focus, closes with Escape and
       .value,
     '223 juarez',
   );
-  assert.ok(screen.getByRole('group', { name: /^Mapa interactivo/ }) === map, 'La instancia del mapa se conserva.');
+  assert.ok(
+    screen.getByRole('group', { name: /^Mapa interactivo/ }) === map,
+    'La instancia del mapa se conserva.',
+  );
   await user.click(screen.getByRole('button', { name: 'Cerrar catálogo de rutas' }));
   assert.equal(document.activeElement, toggle);
   assert.equal(
@@ -619,7 +632,12 @@ test('broad map searches stay short and hand their complete query to the paginat
 test('el mapa ocupa la pantalla con la misma instancia y vuelve con Escape o Atrás sin perder cámara ni filtros', async () => {
   render(<NetworkExplorer onPlanLine={() => {}} />);
   const map = await screen.findByRole('group', { name: /^Mapa interactivo/ });
-  await user.click(within(screen.getByRole('group', { name: 'Sistema en el mapa y catálogo' })).getByRole('button', { name: 'Integradas', exact: true }));
+  await user.click(
+    within(screen.getByRole('group', { name: 'Sistema en el mapa y catálogo' })).getByRole(
+      'button',
+      { name: 'Integradas', exact: true },
+    ),
+  );
   const zoom = screen.getByRole('button', { name: 'Acercar mapa' });
   await user.click(zoom);
   map.focus();
@@ -634,14 +652,29 @@ test('el mapa ocupa la pantalla con la misma instancia y vuelve con Escape o Atr
   assert.equal(screen.getByRole('group', { name: /^Mapa interactivo/ }), map);
   assert.equal(document.querySelectorAll('.location-map-canvas').length, 1);
   assert.ok(document.querySelector('.network-catalog-sheet')!.hasAttribute('hidden'));
-  assert.deepEqual([map.getAttribute('data-map-zoom'), map.getAttribute('data-map-center')], camera);
-  assert.ok(document.activeElement === screen.getByRole('button', { name: 'Salir del mapa a pantalla completa' }), 'El foco pasa al control de salida.');
+  assert.deepEqual(
+    [map.getAttribute('data-map-zoom'), map.getAttribute('data-map-center')],
+    camera,
+  );
+  assert.ok(
+    document.activeElement ===
+      screen.getByRole('button', { name: 'Salir del mapa a pantalla completa' }),
+    'El foco pasa al control de salida.',
+  );
   await user.keyboard('{Escape}');
   await waitFor(() => assert.equal(explorer.getAttribute('data-map-screen'), 'false'));
   assert.equal(document.body.dataset.networkMapScreen, undefined);
   assert.ok(document.activeElement === expand, 'Escape devuelve el foco al control de ampliación.');
-  assert.deepEqual([map.getAttribute('data-map-zoom'), map.getAttribute('data-map-center')], camera);
-  assert.equal(within(screen.getByRole('group', { name: 'Sistema en el mapa y catálogo' })).getByRole('button', { name: 'Integradas', exact: true }).getAttribute('aria-pressed'), 'true');
+  assert.deepEqual(
+    [map.getAttribute('data-map-zoom'), map.getAttribute('data-map-center')],
+    camera,
+  );
+  assert.equal(
+    within(screen.getByRole('group', { name: 'Sistema en el mapa y catálogo' }))
+      .getByRole('button', { name: 'Integradas', exact: true })
+      .getAttribute('aria-pressed'),
+    'true',
+  );
   map.focus();
   assert.ok(document.activeElement === map, 'El mapa recibe foco antes de entrar.');
   await user.keyboard('{Enter}');
@@ -649,5 +682,8 @@ test('el mapa ocupa la pantalla con la misma instancia y vuelve con Escape o Atr
   await act(async () => window.history.back());
   await waitFor(() => assert.equal(explorer.getAttribute('data-map-screen'), 'false'));
   assert.ok(document.activeElement === map, 'Atrás devuelve el foco al mapa que abrió la vista.');
-  assert.deepEqual([map.getAttribute('data-map-zoom'), map.getAttribute('data-map-center')], camera);
+  assert.deepEqual(
+    [map.getAttribute('data-map-zoom'), map.getAttribute('data-map-center')],
+    camera,
+  );
 });

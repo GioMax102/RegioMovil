@@ -221,6 +221,12 @@ async function closeDialog() {
     within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar ventana' }),
   );
 }
+async function openHomeReport() {
+  await user.click(screen.getByRole('button', { name: /^(Crear|Continuar) reporte$/ }));
+  await screen.findByRole('textbox', { name: 'Título' });
+  const station = screen.getByRole('combobox', { name: 'Estación de Metro' }) as HTMLSelectElement;
+  if (!station.value) await user.selectOptions(station, 'padre-mier');
+}
 async function waitForMobilityMap() {
   // Loading the public graph includes its download, JSON decoding and render.
   // Match readPublicDocument's 10-second budget instead of the default 1-second query.
@@ -419,7 +425,16 @@ test('accessibility settings persist and the peak scenario refreshes prediction 
     .getByRole('img', { name: /Afluencia simulada por hora/ })
     .getAttribute('aria-label');
   await user.click(screen.getByRole('button', { name: 'Accesibilidad', exact: true }));
+  await screen.findByRole('combobox', { name: 'Tema' });
   const dialog = screen.getByRole('dialog', { name: 'A tu manera' });
+  for (const name of [
+    'Apariencia',
+    'Lectura y accesibilidad',
+    'Consumo de datos',
+    'Escenario de demostración',
+  ])
+    assert.ok(within(dialog).getByRole('group', { name }));
+  assert.ok(within(dialog).getByText(/ni modifica reportes de la comunidad/));
   await user.click(within(dialog).getByRole('switch', { name: 'Texto más grande' }));
   await user.click(within(dialog).getByRole('switch', { name: 'Contraste alto' }));
   assert.ok(document.documentElement.classList.contains('large-text'));
@@ -447,6 +462,7 @@ test('accessibility settings persist and the peak scenario refreshes prediction 
 test('appearance controls persist a dark theme and allow disabling navigation motion', async () => {
   await mount();
   await user.click(screen.getByRole('button', { name: 'Accesibilidad', exact: true }));
+  await screen.findByRole('combobox', { name: 'Tema' });
   const dialog = screen.getByRole('dialog', { name: 'A tu manera' });
   await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Tema' }), 'dark');
   await user.click(within(dialog).getByRole('switch', { name: 'Animaciones', exact: true }));
@@ -480,10 +496,46 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
   );
 });
 
+test('Home highlights reports after planning, asks for the place and resumes a saved draft without submitting it', async () => {
+  await mount();
+  const plan = screen.getByRole('button', { name: /¿A dónde vamos\?/ });
+  const report = screen.getByRole('button', { name: 'Crear reporte', exact: true });
+  assert.ok(plan.compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const guidanceRequests = requests.filter((request) =>
+    request.path.includes('/api/reports'),
+  ).length;
+  await user.click(report);
+  const title = await screen.findByRole('textbox', { name: 'Título' });
+  const stationSelector = screen.getByRole('combobox', {
+    name: 'Estación de Metro',
+  }) as HTMLSelectElement;
+  assert.equal(stationSelector.value, '', 'General reporting must never inherit the home station.');
+  await user.selectOptions(stationSelector, 'universidad');
+  await user.type(title, 'Falta una banca');
+  await user.type(
+    screen.getByRole('textbox', { name: /Cuéntanos un poco/ }),
+    'No hay banca en esta estación para esperar.',
+  );
+  await closeDialog();
+  await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
+  await user.click(await screen.findByRole('button', { name: 'Continuar reporte', exact: true }));
+  const restoredTitle = (await screen.findByRole('textbox', {
+    name: 'Título',
+  })) as HTMLInputElement;
+  assert.equal(restoredTitle.value, 'Falta una banca');
+  assert.equal(
+    (screen.getByRole('combobox', { name: 'Estación de Metro' }) as HTMLSelectElement).value,
+    'universidad',
+  );
+  assert.equal(
+    requests.filter((request) => request.path.includes('/api/reports')).length,
+    guidanceRequests,
+  );
+});
+
 test('a report is submitted through the UI and stays private and pending in SQLite', async () => {
   await mount();
-  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
-  await screen.findByRole('textbox', { name: 'Título' });
+  await openHomeReport();
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   await user.selectOptions(
     within(dialog).getByRole('combobox', { name: '¿Qué observaste?' }),
@@ -510,8 +562,7 @@ test('a report is submitted through the UI and stays private and pending in SQLi
 
 test('failed report submission preserves its text and does not claim success', async () => {
   await mount();
-  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
-  await screen.findByRole('textbox', { name: 'Título' });
+  await openHomeReport();
   const dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const description = 'La puerta no cerró durante la observación de este viaje.';
   await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Puerta con una falla');
@@ -540,7 +591,7 @@ test('kiosk allows station consultation and speech while hiding report/planning/
   assert.ok(screen.getByRole('heading', { name: 'Padre Mier', level: 1 }));
   assert.equal(screen.queryByRole('navigation', { name: 'Navegación principal' }), null);
   assert.equal(screen.queryByRole('navigation', { name: 'Navegación móvil' }), null);
-  assert.equal(screen.queryByRole('button', { name: 'Reportar', exact: true }), null);
+  assert.equal(screen.queryByRole('button', { name: /^(Crear|Continuar) reporte$/ }), null);
   assert.equal(screen.queryByRole('button', { name: 'Encontrar mi ruta' }), null);
   assert.ok(
     screen.getByRole('button', { name: 'Salir del modo parada' }),
@@ -572,8 +623,7 @@ test('kiosk allows station consultation and speech while hiding report/planning/
 
 test('a late response from a closed report cannot close or erase a new draft', async () => {
   await mount();
-  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
-  await screen.findByRole('textbox', { name: 'Título' });
+  await openHomeReport();
   let dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const oldText = 'Observé saturación al abordar en esta estación durante la mañana.';
   await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Saturación al abordar');
@@ -583,14 +633,12 @@ test('a late response from a closed report cannot close or erase a new draft', a
   await waitFor(() => assert.equal(heldRequests.length, 1));
   await closeDialog();
   await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
-  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
-  await screen.findByRole('textbox', { name: 'Título' });
+  await openHomeReport();
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   await user.click(within(dialog).getByRole('button', { name: 'Descartar borrador' }));
   await user.click(screen.getByRole('button', { name: 'Descartar definitivamente' }));
   await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
-  await user.click(screen.getByRole('button', { name: 'Reportar', exact: true }));
-  await screen.findByRole('textbox', { name: 'Título' });
+  await openHomeReport();
   dialog = screen.getByRole('dialog', { name: 'Tu experiencia cuenta' });
   const newText = 'Este borrador nuevo describe una puerta y todavía no se ha enviado.';
   await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Borrador nuevo');
@@ -667,7 +715,7 @@ test('a locked public kiosk never reads personal station, journeys or favorites 
     assert.ok(screen.getByRole('heading', { name: 'Padre Mier', level: 1 }));
     assert.equal(screen.queryByRole('button', { name: 'Salir del modo parada' }), null);
     assert.equal(screen.queryByRole('navigation', { name: 'Navegación principal' }), null);
-    assert.equal(screen.queryByRole('button', { name: 'Reportar', exact: true }), null);
+    assert.equal(screen.queryByRole('button', { name: /^(Crear|Continuar) reporte$/ }), null);
     const favorite = screen.getByRole('button', {
       name: 'Guardar estación Padre Mier',
     }) as HTMLButtonElement;
@@ -739,7 +787,15 @@ test('context information remains available without a second brand header and re
   assert.equal(menu.open, true);
   await user.click(within(menu).getByRole('button', { name: 'Datos y simulación' }));
   assert.equal(menu.open, false);
-  await screen.findByRole('dialog', { name: 'Datos claros, decisiones propias' });
+  const sourcesDialog = await screen.findByRole('dialog', {
+    name: 'Datos claros, decisiones propias',
+  });
+  await within(sourcesDialog).findByRole('region', { name: 'Observaciones comunitarias' });
+  assert.ok(within(sourcesDialog).getByText(/No alimentan la simulación/));
+  assert.equal(
+    within(sourcesDialog).getByText('Cómo se hacen las predicciones').closest('details')?.open,
+    false,
+  );
   await closeDialog();
   assert.ok(document.activeElement === menu.querySelector('summary'));
   await user.click(screen.getByLabelText('Información y avisos'));

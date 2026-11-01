@@ -466,17 +466,27 @@ test('cancel bubbling from a file picker never closes the surrounding dialog', (
   assert.equal(closes, 1, 'Escape on the dialog itself still closes it.');
 });
 
-test('cancelling each web photo source preserves text and the previously processed photo', async () => {
+test('one photo entry offers sources; cancelling each preserves text and the previous photo', async () => {
   let closes = 0;
   render(<ReportDialog {...dialogProps()} onClose={() => closes++} />);
   await fillText();
+  assert.ok(screen.getByRole('button', { name: 'Añadir foto' }));
+  assert.equal(screen.queryByRole('button', { name: 'Cámara' }), null);
+  assert.equal(screen.queryByRole('button', { name: 'Galería' }), null);
+  assert.equal(screen.queryByRole('button', { name: 'Archivos' }), null);
   await user.upload(
     screen.getByLabelText('Elegir archivo'),
     new dom.window.File(['original'], 'saved.jpg', { type: 'image/jpeg' }),
   );
   await screen.findByRole('img', { name: 'Vista previa de la foto adjunta' });
   const previous = screen.getByRole('img').getAttribute('src');
-  for (const source of ['Tomar foto', 'Elegir de galería', 'Elegir archivo']) {
+  for (const [source, input] of [
+    ['Cámara', 'Tomar foto'],
+    ['Galería', 'Elegir de galería'],
+    ['Archivos', 'Elegir archivo'],
+  ]) {
+    await user.click(screen.getByRole('button', { name: 'Cambiar foto' }));
+    await screen.findByRole('group', { name: 'Elige cómo añadir la foto' });
     await user.click(screen.getByRole('button', { name: source }));
     await waitFor(() =>
       assert.equal(
@@ -485,7 +495,7 @@ test('cancelling each web photo source preserves text and the previously process
       ),
     );
     fireEvent(
-      screen.getByLabelText(source),
+      screen.getByLabelText(input),
       new dom.window.Event('cancel', { bubbles: true, cancelable: true }),
     );
     await waitFor(() =>
@@ -501,6 +511,30 @@ test('cancelling each web photo source preserves text and the previously process
     );
     assert.equal(screen.getByRole('img').getAttribute('src'), previous);
   }
+});
+
+test('photo source dismissal returns focus and never closes or discards the report', async () => {
+  let closes = 0;
+  render(<ReportDialog {...dialogProps()} onClose={() => closes++} />);
+  await fillText();
+  const trigger = screen.getByRole('button', { name: 'Añadir foto' });
+  await user.click(trigger);
+  await screen.findByRole('group', { name: 'Elige cómo añadir la foto' });
+  assert.equal((await persistedDraft())?.title, 'Falla observada');
+  await user.click(screen.getByRole('button', { name: 'Cancelar selección' }));
+  assert.equal(document.activeElement, trigger);
+  assert.equal(closes, 0);
+  await user.click(trigger);
+  await screen.findByRole('group', { name: 'Elige cómo añadir la foto' });
+  fireEvent(
+    screen.getByRole('dialog'),
+    new dom.window.Event('cancel', { bubbles: true, cancelable: true }),
+  );
+  await waitFor(() =>
+    assert.equal(screen.queryByRole('group', { name: 'Elige cómo añadir la foto' }), null),
+  );
+  assert.equal(closes, 0);
+  assert.equal((await persistedDraft())?.title, 'Falla observada');
 });
 
 test('a remounted form restores processed photo, fields and the same draft id; success removes the local draft', async () => {
@@ -625,6 +659,8 @@ test('discarding requires confirmation; keeping or Escape preserves text and pro
   await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
   const confirmation = await screen.findByRole('alertdialog', { name: 'Descartar este borrador' });
   assert.ok(confirmation);
+  assert.equal(confirmation.querySelector('p'), null, 'The redundant second paragraph is removed.');
+  assert.equal(confirmation.getAttribute('aria-describedby'), null);
   assert.ok(document.activeElement === screen.getByRole('button', { name: 'Conservar borrador' }));
   await user.click(screen.getByRole('button', { name: 'Conservar borrador' }));
   assert.equal(closes, 0);
@@ -660,6 +696,8 @@ test('closing with unavailable storage asks before losing edits and permits cont
     await fillText();
     await user.click(screen.getByRole('button', { name: 'Cerrar ventana' }));
     let warning = await screen.findByRole('alertdialog', { name: 'Cerrar sin guardar' });
+    assert.match(warning.textContent || '', /Si cierras, perderás los cambios sin guardar/);
+    assert.ok(document.getElementById(warning.getAttribute('aria-describedby') || ''));
     assert.equal(closes, 0);
     await user.click(within(warning).getByRole('button', { name: 'Seguir editando' }));
     assert.equal(

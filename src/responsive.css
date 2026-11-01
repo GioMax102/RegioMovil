@@ -78,10 +78,6 @@
     width: 32px;
     height: 32px;
   }
-  .brand small {
-    font-size: 6px;
-    letter-spacing: 1.3px;
-  }
   .sidebar-location {
     font-size: max(0.68rem, 12px);
     margin-left: 5px;
@@ -100,9 +96,6 @@
   }
   .workspace main {
     padding: 28px 26px 0;
-  }
-  .page-heading h1 {
-    font-size: 1.8rem;
   }
   .dashboard-grid {
     grid-template-columns: minmax(0, 1fr) 281px;
@@ -137,7 +130,6 @@
     margin-left: 15px;
     margin-right: 15px;
     font-size: max(0.47rem, 12px);
-    flex-wrap: wrap;
     gap: 5px;
   }
   .forecast-bars {
@@ -252,10 +244,6 @@
     width: 30px;
     height: 30px;
   }
-  .brand small {
-    font-size: 5.8px;
-    letter-spacing: 1px;
-  }
   .sidebar-location {
     font-size: max(0.6rem, 12px);
     gap: 4px;
@@ -266,23 +254,13 @@
   .community-card > span:not(.community-mini) {
     font-size: max(0.76rem, 12px);
   }
-  .community-card p {
-    font-size: max(0.69rem, 12px);
-  }
-  .community-mini {
-    font-size: 5.6px;
-  }
   .sidebar-utility {
     font-size: max(0.72rem, 12px);
     padding-left: 10px;
   }
   .sidebar-version {
-    font-size: max(0.54rem, 12px);
     margin-left: 4px;
     margin-right: 4px;
-  }
-  .page-heading h1 {
-    font-size: 1.6rem;
   }
   .page-heading .eyebrow {
     font-size: max(0.53rem, 12px);
@@ -359,12 +337,6 @@
     left: 9px;
     padding: 6px;
   }
-  .map-key > span {
-    font-size: 7px;
-  }
-  .map-caption {
-    font-size: 5.8px;
-  }
   .arrivals-panel h2 {
     font-size: 0.87rem;
   }
@@ -434,9 +406,6 @@
     gap: 8px;
     padding: 11px 7px;
   }
-  .station-circle {
-    display: none;
-  }
   .station-list-item strong {
     font-size: max(0.72rem, 12px);
   }
@@ -491,7 +460,6 @@
     padding: 12px 21px;
     gap: 12px;
     flex-wrap: wrap;
-    background: #fff;
   }
   .breadcrumb {
     font-size: max(0.76rem, 12px);
@@ -514,8 +482,6 @@
   .notification-button {
     width: 35px;
     height: 35px;
-    min-width: 35px;
-    min-height: 35px;
   }
   .workspace main {
     padding: 25px 20px calc(92px + var(--app-safe-bottom));
@@ -531,8 +497,6 @@
     letter-spacing: 1.5px;
   }
   .page-heading h1 {
-    font-size: 1.67rem;
-    letter-spacing: -0.8px;
     line-height: 1.4;
     margin: 8px 0 6px;
   }
@@ -545,7 +509,6 @@
     gap: 11px;
     padding: 8px 12px;
     border-radius: 9px;
-    box-shadow: none;
   }
   .location-icon {
     width: 33px;
@@ -596,18 +559,6 @@
   }
   .demo-banner > button > span {
     display: none;
-  }
-  .swap-button {
-    position: absolute;
-    right: 14px;
-    top: 43px;
-    border: 1px solid var(--line);
-    background: #fff;
-    z-index: 1;
-    border-radius: 50%;
-    height: 38px;
-    width: 38px;
-    color: var(--muted);
   }
   .dashboard-grid {
     grid-template-columns: 1fr;
@@ -694,7 +645,6 @@
   .report-link {
     font-size: max(0.66rem, 12px);
     margin-top: 7px;
-    min-height: 43px;
     gap: 8px;
   }
   .map-panel .panel-heading {
@@ -729,23 +679,15 @@
     top: 13px;
     right: 12px;
   }
-  .map-controls button {
-    width: 33px;
-    height: 35px;
-  }
   .map-key {
     bottom: 19px;
     left: 12px;
     padding: 7px 9px;
     gap: 11px;
   }
-  .map-key > span {
-    font-size: 7px;
-  }
   .map-caption {
     right: 7px;
     bottom: 4px;
-    font-size: 6px;
   }
   .map-location {
     padding: 14px 16px;
@@ -797,9 +739,6 @@
   .bar-hour {
     font-size: max(0.6rem, 12px);
   }
-  .bar-value {
-    font-size: max(0.57rem, 12px);
-  }
   .forecast-foot {
     font-size: max(0.59rem, 12px);
     margin: 16px 20px 19px;
@@ -834,7 +773,6 @@
     padding: 23px 0 6px;
     flex-wrap: wrap;
     gap: 8px;
-    font-size: max(0.59rem, 12px);
   }
   .page-footer > span:nth-child(2) {
     display: none;
@@ -934,30 +872,11 @@
     line-height: 1.7;
     max-width: 235px;
   }
-  .settings-section h3 {
-    font-size: 0.9rem;
-  }
-  .settings-section p {
-    font-size: max(0.7rem, 12px);
-  }
   .scenario-grid button {
     font-size: max(0.68rem, 12px);
     min-height: 49px;
     gap: 7px;
     padding: 9px;
-  }
-  .source-summary {
-    gap: 10px;
-  }
-  .source-summary > span {
-    padding: 14px;
-    gap: 8px;
-  }
-  .source-summary strong {
-    font-size: max(0.78rem, 12px);
-  }
-  .source-summary small {
-    font-size: max(0.65rem, 12px);
   }
   .source-list > a {
     padding: 12px;
@@ -1006,11 +925,6 @@
   }
   .station-list-item small {
     font-size: max(0.62rem, 12px);
-  }
-  .station-circle {
-    display: grid;
-    width: 32px;
-    height: 34px;
   }
   .station-arrivals {
     padding: 0 12px 12px;
@@ -1144,16 +1058,6 @@
   .large-text .arrivals-meta {
     font-size: max(0.5rem, 12px);
   }
-  .large-text .arrival-top h3 {
-    font-size: max(0.7rem, 12px);
-  }
-  .large-text .arrival-bottom {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .large-text .source-summary {
-    grid-template-columns: 1fr;
-  }
   .kiosk .topbar {
     padding: 0 20px;
     height: 76px;
@@ -1213,9 +1117,6 @@
     padding-left: 15px;
     padding-right: 15px;
   }
-  .page-heading h1 {
-    font-size: 1.5rem;
-  }
   .demo-label {
     font-size: max(0.45rem, 12px);
     letter-spacing: 0.4px;
@@ -1245,9 +1146,6 @@
   .location-button strong {
     font-size: max(0.72rem, 12px);
   }
-  .source-summary {
-    grid-template-columns: 1fr;
-  }
   .mobile-nav button {
     font-size: max(0.5rem, 12px);
   }
@@ -1275,11 +1173,8 @@
   padding: 24px;
   margin-bottom: 24px;
   border: 1px solid #06734f;
-  border-radius: 16px;
   background: var(--green);
-  color: white;
   text-align: left;
-  box-shadow: 0 5px 14px #087f5b16;
 }
 .home-plan-cta:hover {
   background: #066447;
@@ -1291,9 +1186,6 @@
 .home-plan-cta .soft-icon {
   width: 46px;
   height: 46px;
-  color: white;
-  background: #ffffff20;
-  border-radius: 13px;
 }
 .home-plan-cta strong {
   display: block;
@@ -1314,10 +1206,6 @@
 .high-contrast .home-plan-cta small {
   color: #d5f8e9;
 }
-.map-controls button {
-  width: 44px;
-  height: 44px;
-}
 .report-link {
   min-height: 44px;
 }
@@ -1330,9 +1218,6 @@
   content: '';
   position: absolute;
   inset: -8px;
-}
-.through-service {
-  margin-bottom: 8px;
 }
 @media (max-width: 760px) {
   .topbar .breadcrumb {
@@ -1359,9 +1244,6 @@
   }
   .topbar-actions {
     gap: 8px;
-  }
-  .home-planner {
-    display: none;
   }
   .mobile-plan-cta {
     gap: 13px;
@@ -1393,9 +1275,6 @@
   }
   .page-heading {
     margin-bottom: 17px;
-  }
-  .page-heading h1 {
-    font-size: 1.6rem;
   }
   .page-heading.compact-heading h1 {
     margin: 0;
@@ -1451,20 +1330,6 @@
 }
 .bar-hour {
   letter-spacing: -0.4px;
-}
-.through-service {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  background: var(--soft);
-  padding: 8px 10px;
-  border-radius: 5px;
-  color: var(--green) !important;
-  line-height: 1.7;
-}
-.through-service svg {
-  flex-shrink: 0;
-  margin-top: 3px;
 }
 .payment-card > p,
 .payment-card .payment-note,
@@ -1598,9 +1463,6 @@
   }
 }
 @media (max-width: 760px) {
-  .page-heading h1 {
-    font-size: 1.65rem;
-  }
   .demo-banner p {
     font-size: 12px;
   }
@@ -1678,10 +1540,6 @@
   .line-badge {
     font-size: 12px;
   }
-  .dialog .source-summary {
-    grid-template-columns: 1fr;
-  }
-  .source-summary small,
   .methodology p {
     font-size: 13px;
   }

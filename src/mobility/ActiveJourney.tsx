@@ -385,12 +385,15 @@ export default function ActiveJourney({
             </p>
           )}
       </div>
-      <div className="active-journey-map">
+      <div className="active-journey-map" data-camera-mode={following ? 'following' : 'exploring'}>
         <LocationMap
           network={network}
           online={online}
           journey={mapJourney}
           navigationMode
+          preserveViewportOnResize
+          onExplore={() => setFollowing(false)}
+          viewportPadding={{ top: 68, right: 72, bottom: 28, left: 24 }}
           field={null}
           origin={originPoint ? { lng: originPoint[0], lat: originPoint[1] } : null}
           destination={
@@ -459,7 +462,7 @@ export default function ActiveJourney({
               aria-label="Seguirme en el mapa"
               onClick={() => setFollowing((value) => !value)}
             >
-              <LocateFixed size={17} aria-hidden="true" /> Seguirme
+              <LocateFixed size={17} aria-hidden="true" /> {following ? 'Siguiendo' : 'Seguirme'}
             </button>
             <button
               type="button"

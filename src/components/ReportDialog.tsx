@@ -86,6 +86,10 @@ export default function ReportDialog({
   const [draftContext, setDraftContext] = useState(context);
   const [storageStatus, setStorageStatus] = useState('');
   const [picking, setPicking] = useState(false);
+  const [photoChoices, setPhotoChoices] = useState(false);
+  const photoTrigger = useRef<HTMLButtonElement>(null);
+  const photoChoicesRef = useRef<HTMLDivElement>(null);
+  const photoChoicesId = useId();
   const pickerOpen = useRef(false);
   const cameraInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
@@ -99,6 +103,9 @@ export default function ReportDialog({
   const keepButton = useRef<HTMLButtonElement>(null);
   const discardTrigger = useRef<HTMLElement | null>(null);
   const discardDescriptionId = useId();
+  useEffect(() => {
+    if (photoChoices) photoChoicesRef.current?.querySelector('button')?.focus();
+  }, [photoChoices]);
   useEffect(() => {
     if (discardChoice) keepButton.current?.focus();
   }, [discardChoice]);
@@ -147,6 +154,7 @@ export default function ReportDialog({
       event.stopPropagation();
       pickerOpen.current = false;
       setPicking(false);
+      photoTrigger.current?.focus({ preventScroll: true });
     };
     for (const input of inputs) input?.addEventListener('cancel', cancelled);
     return () => {
@@ -348,7 +356,7 @@ export default function ReportDialog({
     setPicking(false);
     if (file) void processPhoto(file);
   }
-  async function openPhoto(source: 'camera' | 'gallery' | 'file') {
+  async function addPhoto() {
     if (pickerOpen.current) return;
     pickerOpen.current = true;
     setPicking(true);
@@ -357,9 +365,10 @@ export default function ReportDialog({
     } catch {
       setStorageStatus('No pudimos guardar en este dispositivo. Mantén abierto el formulario.');
     }
-    if (source !== 'file' && nativeReportCamera()) {
+    if (!mounted.current) return;
+    if (nativeReportCamera()) {
       try {
-        const file = await pickReportPhoto(source, draftId);
+        const file = await pickReportPhoto(draftId);
         if (mounted.current && file) await processPhoto(file);
       } catch (cause) {
         if (mounted.current)
@@ -369,16 +378,32 @@ export default function ReportDialog({
         if (mounted.current) setPicking(false);
       }
     } else {
-      (source === 'camera'
-        ? cameraInput
-        : source === 'gallery'
-          ? galleryInput
-          : fileInput
-      ).current?.click();
+      // The next source button is a fresh user gesture. Opening a file input
+      // after awaiting IndexedDB here can lose transient activation in browsers.
+      pickerOpen.current = false;
+      setPicking(false);
+      setPhotoChoices(true);
     }
+  }
+  function openWebPhoto(source: 'camera' | 'gallery' | 'file') {
+    if (pickerOpen.current) return;
+    pickerOpen.current = true;
+    setPicking(true);
+    setPhotoChoices(false);
+    (source === 'camera'
+      ? cameraInput
+      : source === 'gallery'
+        ? galleryInput
+        : fileInput
+    ).current?.click();
   }
   async function close() {
     if (pickerOpen.current || closing.current) return;
+    if (photoChoices) {
+      setPhotoChoices(false);
+      photoTrigger.current?.focus({ preventScroll: true });
+      return;
+    }
     if (discardChoice) {
       keepDraft();
       return;
@@ -733,33 +758,47 @@ export default function ReportDialog({
               <strong>Foto</strong>
               <div className="report-photo-actions">
                 <button
+                  ref={photoTrigger}
                   type="button"
                   className="secondary-button"
                   disabled={busy || attempted || picking}
-                  onClick={() => void openPhoto('camera')}
+                  aria-expanded={photoChoices}
+                  aria-controls={photoChoices ? photoChoicesId : undefined}
+                  onClick={() => void addPhoto()}
                 >
-                  <Camera size={18} />
-                  Tomar foto
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  disabled={busy || attempted || picking}
-                  onClick={() => void openPhoto('gallery')}
-                >
-                  <ImagePlus size={18} />
-                  Elegir de galería
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  disabled={busy || attempted || picking}
-                  onClick={() => void openPhoto('file')}
-                >
-                  <FolderOpen size={18} />
-                  Elegir archivo
+                  <ImagePlus size={20} />
+                  {photo ? 'Cambiar foto' : 'Añadir foto'}
                 </button>
               </div>
+              {photoChoices && (
+                <div
+                  id={photoChoicesId}
+                  ref={photoChoicesRef}
+                  className="report-photo-choices"
+                  role="group"
+                  aria-label="Elige cómo añadir la foto"
+                >
+                  <button type="button" onClick={() => openWebPhoto('camera')}>
+                    <Camera size={20} /> Cámara
+                  </button>
+                  <button type="button" onClick={() => openWebPhoto('gallery')}>
+                    <ImagePlus size={20} /> Galería
+                  </button>
+                  <button type="button" onClick={() => openWebPhoto('file')}>
+                    <FolderOpen size={20} /> Archivos
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => {
+                      setPhotoChoices(false);
+                      photoTrigger.current?.focus({ preventScroll: true });
+                    }}
+                  >
+                    Cancelar selección
+                  </button>
+                </div>
+              )}
               <label className="sr-only">
                 Tomar foto
                 <input
@@ -836,14 +875,14 @@ export default function ReportDialog({
                   )}
                 </div>
               )}
-              {(photoFile || photo) && (
+              {(photoFile || photo || photoError) && (
                 <button
                   className="text-button"
                   type="button"
                   onClick={removePhoto}
                   disabled={busy || attempted}
                 >
-                  <Trash2 size={16} /> Quitar foto
+                  <Trash2 size={16} /> {photoFile || photo ? 'Quitar foto' : 'Continuar sin foto'}
                 </button>
               )}
             </div>
@@ -897,18 +936,19 @@ export default function ReportDialog({
           role="alertdialog"
           aria-modal="true"
           aria-label={discardChoice === 'leave' ? 'Cerrar sin guardar' : 'Descartar este borrador'}
-          aria-describedby={discardDescriptionId}
+          aria-describedby={discardChoice === 'leave' ? discardDescriptionId : undefined}
         >
           <strong>
             {discardChoice === 'leave'
               ? 'No pudimos guardar los cambios'
               : '¿Descartar este borrador?'}
           </strong>
-          <p id={discardDescriptionId}>
-            {discardChoice === 'leave'
-              ? 'Si cierras, perderás los cambios sin guardar. El borrador guardado anteriormente no se elimina.'
-              : 'Se borrarán el texto y la foto guardados en este dispositivo. Esta acción no retira un reporte que ya se haya enviado.'}
-          </p>
+          {discardChoice === 'leave' && (
+            <p id={discardDescriptionId}>
+              Si cierras, perderás los cambios sin guardar. El borrador guardado anteriormente no se
+              elimina.
+            </p>
+          )}
           <div>
             <button
               ref={keepButton}
