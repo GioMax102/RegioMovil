@@ -23,6 +23,7 @@ const requiredFiles = [
   'sw.js',
   '_headers',
   'acceso.html',
+  'acceso.css',
   'privacidad.html',
   'manifest.webmanifest',
   'bundle-stats.json',

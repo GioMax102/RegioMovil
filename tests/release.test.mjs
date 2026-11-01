@@ -39,7 +39,8 @@ function fixture(t) {
     'index.html': '<!doctype html><script type="module" src="/assets/app.js"></script>',
     'sw.js': '// public worker',
     _headers: `/*\n  Content-Security-Policy: default-src 'self'; connect-src 'self' ${PUBLIC_API}`,
-    'acceso.html': '<a href="/">Abrir</a>',
+    'acceso.html': '<link rel="stylesheet" href="./acceso.css"><a href="./?page=home">Abrir app</a>',
+    'acceso.css': ':root { color: #142d36; background: #f4f5f7; }',
     'privacidad.html': 'Privacidad',
     'manifest.webmanifest': '{}',
     'bundle-stats.json': '{}',
@@ -143,6 +144,14 @@ test('an HTTPS link in help or headers cannot conceal an offline runtime API bui
   assert.throws(() => validateReleaseInputs({ ...f, webAssets, metadata }), /API de producción/);
 });
 
+test('release preparation rejects a missing evaluator stylesheet even when bundle metadata matches', (t) => {
+  const f = fixture(t);
+  rmSync(path.join(f.root, 'dist/acceso.css'));
+  const webAssets = collectPublicFiles(path.join(f.root, 'dist'));
+  const metadata = { ...f.metadata, webAssets, webBundleSha256: hash(JSON.stringify(webAssets)) };
+  assert.throws(() => validateReleaseInputs({ ...f, webAssets, metadata }), /Falta dist\/acceso\.css/);
+});
+
 test('web ZIP contains root-level public bytes and stays reproducible across filesystem times', (t) => {
   const f = fixture(t);
   const first = path.join(f.root, 'first.zip');
@@ -155,16 +164,17 @@ test('web ZIP contains root-level public bytes and stays reproducible across fil
   const args = [
     ...(process.platform === 'win32' ? ['-3'] : []),
     '-c',
-    'import json,sys,zipfile; print(json.dumps(zipfile.ZipFile(sys.argv[1]).namelist()))',
+    'import json,sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print(json.dumps({"files":z.namelist(),"portal":z.read("acceso.html").decode(),"css":z.read("acceso.css").decode()}))',
     first,
   ];
   const result = spawnSync(python, args, { encoding: 'utf8', timeout: 10000 });
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(
-    JSON.parse(result.stdout),
-    f.webAssets.map((file) => file.path),
-  );
-  assert.ok(JSON.parse(result.stdout).includes('index.html'));
+  const archive = JSON.parse(result.stdout);
+  assert.deepEqual(archive.files, f.webAssets.map((file) => file.path));
+  for (const required of ['index.html', 'acceso.html', 'acceso.css'])
+    assert.ok(archive.files.includes(required), `Missing root resource: ${required}`);
+  assert.equal(archive.portal, readFileSync(path.join(f.root, 'dist/acceso.html'), 'utf8'));
+  assert.equal(archive.css, readFileSync(path.join(f.root, 'dist/acceso.css'), 'utf8'));
   f.write('dist/index.html', 'changed during packaging');
   assert.throws(
     () => createWebArchive(path.join(f.root, 'dist'), path.join(f.root, 'bad.zip'), f.webAssets),

@@ -318,7 +318,7 @@ after(async () => {
 
 async function openModel() {
   const navigation = within(screen.getByRole('navigation', { name: 'Navegación principal' }));
-  await user.click(navigation.getByRole('button', { name: 'Planear viaje', exact: true }));
+  await user.click(navigation.getByRole('link', { name: 'Planear viaje', exact: true }));
   await screen.findByRole('button', { name: 'Origen: Padre Mier' });
   return screen.getByRole('region', { name: 'Planear viaje' });
 }

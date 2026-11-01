@@ -15,6 +15,7 @@ import LocationMap from '../mobility/LocationMap';
 import type { MobilityNetwork } from '../mobility/types';
 import TransitCatalog, { serviceColors } from './TransitCatalog';
 import useMapWorkspaceHeight from '../useMapWorkspaceHeight';
+import { indexRouteSearch, searchIndexedRoutes } from './routeSearch';
 import './networkExplorer.css';
 
 const systems = [
@@ -26,13 +27,6 @@ const systems = [
   ['ecovia', 'Ecovía / GMG'],
   ['troncales-integradas', 'Integradas'],
 ] as const;
-const normalize = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ');
-
 export default function NetworkExplorer({
   onPlanLine,
   onReportRoute,
@@ -193,6 +187,7 @@ export default function NetworkExplorer({
         ),
     [catalog, networkId],
   );
+  const searchIndex = useMemo(() => indexRouteSearch(catalog?.routes ?? []), [catalog]);
   const routes = useMemo(
     () =>
       (
@@ -211,18 +206,10 @@ export default function NetworkExplorer({
     () => (selectedRoute ? [selectedRoute] : routes),
     [selectedRoute, routes],
   );
-  const matches = useMemo(() => {
-    const terms = normalize(query).trim().split(/\s+/).filter(Boolean);
-    return terms.length
-      ? catalogRoutes.filter((route) =>
-          terms.every((term) =>
-            normalize(
-              `${route.code} ${route.name} ${route.from ?? ''} ${route.to ?? ''} ${route.municipalities.join(' ')} ${route.via.join(' ')}`,
-            ).includes(term),
-          ),
-        )
-      : [];
-  }, [query, catalogRoutes]);
+  const matches = useMemo(
+    () => searchIndexedRoutes(catalogRoutes, searchIndex, query),
+    [query, catalogRoutes, searchIndex],
+  );
   const visibleMatches = matches.slice(0, 8);
   const searchOpen = searching && !!query.trim();
   useEffect(() => {

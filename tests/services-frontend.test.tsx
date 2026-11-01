@@ -260,7 +260,7 @@ test('App exposes Rutas y redes, filters seven RegioRuta services and loads maps
   await screen.findByText('En línea');
   assert.ok(!requests.some((path) => path.startsWith('/transit-catalog.json')));
   const navigation = within(screen.getByRole('navigation', { name: 'Navegación principal' }));
-  await user.click(navigation.getByRole('button', { name: 'Red de transporte', exact: true }));
+  await user.click(navigation.getByRole('link', { name: 'Red de transporte', exact: true }));
   await user.click(screen.getByRole('tab', { name: 'Estaciones de Metro' }));
   screen.getByRole('tab', { name: 'Estaciones de Metro' }).focus();
   await user.keyboard('{ArrowRight}');
@@ -432,7 +432,7 @@ test('Red isolates a published route, expands one map and resets the selection w
   render(<App />);
   await screen.findByText('En línea');
   await user.click(
-    within(screen.getByRole('navigation', { name: 'Navegación principal' })).getByRole('button', {
+    within(screen.getByRole('navigation', { name: 'Navegación principal' })).getByRole('link', {
       name: 'Red de transporte',
       exact: true,
     }),
@@ -490,6 +490,30 @@ test('Red isolates a published route, expands one map and resets the selection w
   );
   assert.equal(document.querySelector('polyline[data-line="L1"]'), null);
   assert.ok(screen.getByText('7 rutas · 6 redes'));
+});
+
+test('planning from a fullscreen map returns to Red with one Back and no orphan fullscreen entry', async () => {
+  history.pushState({}, '', '/?page=stations&network=routes');
+  render(<App />);
+  await user.click(await screen.findByRole('button', { name: 'Ampliar mapa a pantalla completa' }));
+  const search = screen.getByRole('combobox', { name: 'Buscar recorrido en el mapa' });
+  await user.type(search, 'linea 1');
+  await user.click(await screen.findByRole('option', { name: /L1/ }));
+  await user.click(
+    await screen.findByRole('button', { name: 'Ver ficha de L1: Línea 1' }, { timeout: 10000 }),
+  );
+  await user.click(await screen.findByRole('button', { name: 'Planear esta línea' }));
+  await screen.findByRole('region', { name: 'Planear viaje' });
+  assert.equal(document.body.dataset.networkMapScreen, undefined);
+  assert.equal(history.state.regioNetworkMap, undefined);
+  await act(async () => history.back());
+  await screen.findByRole('button', { name: 'Ampliar mapa a pantalla completa' });
+  assert.equal(location.search, '?page=stations&network=routes');
+  assert.equal(
+    document.querySelector('.network-explorer')?.getAttribute('data-map-screen'),
+    'false',
+  );
+  assert.equal(history.state.regioNetworkMap, undefined);
 });
 
 test('map route search opens a compact source-backed detail while the catalog stays collapsed', async () => {

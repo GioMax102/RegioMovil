@@ -134,7 +134,25 @@ export default function ReportMap({
   const [mapWidth, setMapWidth] = useState(640);
   const canvas = useRef<SVGSVGElement>(null);
   const listSelection = useRef<HTMLLIElement>(null);
-  const drag = useRef<{ x: number; y: number; view: View; pointerId: number } | null>(null);
+  const drag = useRef<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    view: View;
+    pointerId: number;
+  } | null>(null);
+  const panFrame = useRef<number | null>(null);
+  const pendingView = useRef<View | null>(null);
+  function stopPan(commit = false) {
+    if (panFrame.current !== null) window.cancelAnimationFrame(panFrame.current);
+    panFrame.current = null;
+    const next = pendingView.current;
+    pendingView.current = null;
+    drag.current = null;
+    if (commit && next) setView(next);
+  }
+  useEffect(() => () => stopPan(), []);
   const canInspect = session.user.role !== 'analyst';
   const routePaths = useMemo(
     () => segments.map((segment) => segment.map((point) => project(point).join(',')).join(' ')),
@@ -174,6 +192,7 @@ export default function ReportMap({
 
   useEffect(() => {
     const controller = new AbortController();
+    stopPan();
     setLoading(true);
     setError('');
     setData(null);
@@ -276,6 +295,7 @@ export default function ReportMap({
     setQuery(params.toString());
   }
   function select(group: ReportMapGroup, fromMap = false) {
+    stopPan();
     setSelectedKey(group.key);
     if (group.position && group.targetType === 'station')
       setView(constrained(fit([project([group.position.lng, group.position.lat])])));
@@ -285,6 +305,7 @@ export default function ReportMap({
       );
   }
   function zoom(factor: number) {
+    stopPan(true);
     setView((current) => {
       const width = current[2] * factor,
         height = current[3] * factor;
@@ -297,6 +318,7 @@ export default function ReportMap({
     });
   }
   function move(x: number, y: number) {
+    stopPan(true);
     setView((current) =>
       constrained([
         current[0] + x * current[2],
@@ -308,22 +330,39 @@ export default function ReportMap({
   }
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
     if ((event.target as Element).closest('[role="button"]')) return;
-    drag.current = { x: event.clientX, y: event.clientY, view, pointerId: event.pointerId };
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    const current = pendingView.current ?? view;
+    stopPan(true);
+    drag.current = {
+      x: event.clientX,
+      y: event.clientY,
+      width: bounds.width,
+      height: bounds.height,
+      view: current,
+      pointerId: event.pointerId,
+    };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
   function pointerMove(event: PointerEvent<SVGSVGElement>) {
     if (!drag.current || drag.current.pointerId !== event.pointerId) return;
-    const start = drag.current,
-      bounds = event.currentTarget.getBoundingClientRect();
-    if (!bounds.width || !bounds.height) return;
-    setView(
-      constrained([
-        start.view[0] - ((event.clientX - start.x) * start.view[2]) / bounds.width,
-        start.view[1] - ((event.clientY - start.y) * start.view[3]) / bounds.height,
-        start.view[2],
-        start.view[3],
-      ]),
-    );
+    const start = drag.current;
+    pendingView.current = constrained([
+      start.view[0] - ((event.clientX - start.x) * start.view[2]) / start.width,
+      start.view[1] - ((event.clientY - start.y) * start.view[3]) / start.height,
+      start.view[2],
+      start.view[3],
+    ]);
+    if (panFrame.current === null)
+      panFrame.current = window.requestAnimationFrame(() => {
+        panFrame.current = null;
+        const next = pendingView.current;
+        pendingView.current = null;
+        if (next) setView(next);
+      });
+  }
+  function pointerEnd(event: PointerEvent<SVGSVGElement>) {
+    if (drag.current?.pointerId === event.pointerId) stopPan(true);
   }
   const scale = view[2] / mapWidth;
   return (
@@ -527,7 +566,8 @@ export default function ReportMap({
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    stopPan();
                     setView(
                       constrained(
                         fit(
@@ -536,8 +576,8 @@ export default function ReportMap({
                           ),
                         ),
                       ),
-                    )
-                  }
+                    );
+                  }}
                 >
                   Ver estaciones
                 </button>
@@ -570,12 +610,9 @@ export default function ReportMap({
                 aria-label="Estaciones con reportes aprobados; las rutas y unidades se consultan en la lista"
                 onPointerDown={pointerDown}
                 onPointerMove={pointerMove}
-                onPointerUp={() => {
-                  drag.current = null;
-                }}
-                onPointerCancel={() => {
-                  drag.current = null;
-                }}
+                onPointerUp={pointerEnd}
+                onPointerCancel={pointerEnd}
+                onLostPointerCapture={pointerEnd}
               >
                 <image
                   href={basemap}

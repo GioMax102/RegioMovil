@@ -10,8 +10,7 @@
   font-style: normal;
   font-weight: 300 750;
   font-display: swap;
-  src: url('./assets/fonts/montserrat-latin-300-750.woff2')
-    format('woff2');
+  src: url('./assets/fonts/montserrat-latin-300-750.woff2') format('woff2');
 }
 :root {
   font-family: 'Inter Variable', sans-serif;
@@ -1076,14 +1075,6 @@ strong {
   font-size: max(0.66rem, 12px);
   margin-top: 7px;
 }
-.report-link {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin: 12px auto 0;
-  font-size: max(0.66rem, 12px);
-  color: var(--muted);
-}
 .page-footer {
   display: flex;
   align-items: center;
@@ -1399,7 +1390,6 @@ strong {
   margin-bottom: 25px;
 }
 .payment-card .eyebrow {
-  color: var(--muted);
   font-size: max(0.57rem, 12px);
 }
 .payment-card h2 {
@@ -1410,7 +1400,6 @@ strong {
   color: white;
 }
 .payment-card > p {
-  color: var(--muted);
   font-size: 0.8rem;
   line-height: 1.85;
   max-width: 330px;
@@ -1431,7 +1420,6 @@ strong {
 }
 .payment-card .payment-note {
   font-size: max(0.61rem, 12px);
-  color: var(--muted);
   margin-top: 25px;
   padding-top: 19px;
   border-top: 1px solid #ffffff30;

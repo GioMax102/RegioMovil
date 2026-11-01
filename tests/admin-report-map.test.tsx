@@ -175,6 +175,37 @@ const renderMap = (
 ) => render(<ReportMap session={session(role)} epoch={0} onError={onError} />);
 const mapRequests = () => requests.filter(({ path }) => path.startsWith('/api/admin/report-map?'));
 
+function pointer(svg: SVGSVGElement, type: string, x: number, y: number, pointerId = 1) {
+  const event = new dom.window.Event(type, { bubbles: true });
+  Object.assign(event, { clientX: x, clientY: y, pointerId });
+  svg.dispatchEvent(event);
+}
+function controlledFrames() {
+  const request = dom.window.requestAnimationFrame;
+  const cancel = dom.window.cancelAnimationFrame;
+  let next = 0;
+  const frames = new Map<number, FrameRequestCallback>();
+  dom.window.requestAnimationFrame = (callback) => {
+    frames.set(++next, callback);
+    return next;
+  };
+  dom.window.cancelAnimationFrame = (id) => {
+    frames.delete(id);
+  };
+  return {
+    frames,
+    flush() {
+      const pending = [...frames.values()];
+      frames.clear();
+      for (const callback of pending) callback(0);
+    },
+    restore() {
+      dom.window.requestAnimationFrame = request;
+      dom.window.cancelAnimationFrame = cancel;
+    },
+  };
+}
+
 test('approved totals, catalog points and unlocated groups stay distinct without fetching evidence or route geometry', async () => {
   const { container } = renderMap();
   await screen.findByRole('heading', { name: 'Grupos aprobados' });
@@ -343,4 +374,108 @@ test('unmount aborts the private map request and ignores a late aggregate respon
     finish!(Response.json(fixture()));
   });
   assert.equal(screen.queryByRole('heading', { name: 'Grupos aprobados' }), null);
+});
+
+test('an administrative pan coalesces ten pointer moves into one paint and measures bounds once', async () => {
+  let paints = 0;
+  const rendered = render(
+    <React.Profiler id="map" onRender={() => paints++}>
+      <ReportMap session={session()} epoch={0} onError={() => {}} />
+    </React.Profiler>,
+  );
+  await screen.findByRole('heading', { name: 'Grupos aprobados' });
+  // The response body renders before the request's finally clears loading.
+  // Finish that initial render before counting only gesture-driven commits.
+  await waitFor(() => assert.equal(screen.queryByText('Actualizando mapa de reportes…'), null));
+  const svg = rendered.container.querySelector<SVGSVGElement>('.admin-map-canvas')!;
+  let measurements = 0;
+  svg.getBoundingClientRect = () => {
+    measurements++;
+    return {
+      width: 640,
+      height: 480,
+      x: 0,
+      y: 0,
+      left: 0,
+      right: 640,
+      top: 0,
+      bottom: 480,
+      toJSON() {},
+    };
+  };
+  const clock = controlledFrames();
+  try {
+    const initial = svg.getAttribute('viewBox')!;
+    const initialPaints = paints;
+    await act(async () => pointer(svg, 'pointerdown', 100, 100));
+    for (let move = 1; move <= 10; move++)
+      await act(async () => pointer(svg, 'pointermove', 100 + move * 5, 100 + move * 3));
+    assert.equal(svg.getAttribute('viewBox'), initial);
+    assert.equal(paints, initialPaints, 'Pointer events do not repaint between animation frames.');
+    assert.equal(clock.frames.size, 1);
+    assert.equal(measurements, 1, 'No repeated layout reads while dragging.');
+    await act(async () => clock.flush());
+    assert.equal(paints, initialPaints + 1);
+    const before = initial.split(' ').map(Number),
+      after = svg.getAttribute('viewBox')!.split(' ').map(Number);
+    assert.equal(after[0], before[0] - (50 * before[2]) / 640);
+    assert.equal(after[1], before[1] - (30 * before[3]) / 480);
+    await act(async () => pointer(svg, 'pointerup', 150, 130));
+    assert.equal(clock.frames.size, 0);
+  } finally {
+    rendered.unmount();
+    clock.restore();
+  }
+});
+
+test('pan release flushes the last position and reset/unmount discard pending animation work', async () => {
+  const rendered = renderMap();
+  await screen.findByRole('heading', { name: 'Grupos aprobados' });
+  await waitFor(() => assert.equal(screen.queryByText('Actualizando mapa de reportes…'), null));
+  const svg = rendered.container.querySelector<SVGSVGElement>('.admin-map-canvas')!;
+  svg.getBoundingClientRect = () => ({
+    width: 640,
+    height: 480,
+    x: 0,
+    y: 0,
+    left: 0,
+    right: 640,
+    top: 0,
+    bottom: 480,
+    toJSON() {},
+  });
+  const clock = controlledFrames();
+  try {
+    const initial = svg.getAttribute('viewBox');
+    await act(async () => {
+      pointer(svg, 'pointerdown', 100, 100);
+      pointer(svg, 'pointermove', 150, 130);
+      pointer(svg, 'pointerup', 150, 130, 2);
+    });
+    assert.equal(clock.frames.size, 1, 'Another pointer cannot end the active gesture.');
+    await act(async () => pointer(svg, 'pointerup', 150, 130));
+    assert.notEqual(svg.getAttribute('viewBox'), initial);
+    assert.equal(
+      clock.frames.size,
+      0,
+      'Release commits the pending position without a delayed frame.',
+    );
+    await act(async () => {
+      pointer(svg, 'pointerdown', 100, 100);
+      pointer(svg, 'pointermove', 140, 130);
+      screen.getByRole('button', { name: 'Ver estaciones', exact: true }).click();
+    });
+    assert.equal(svg.getAttribute('viewBox'), initial);
+    assert.equal(clock.frames.size, 0, 'Explicit fit supersedes pending pan work.');
+    await act(async () => {
+      pointer(svg, 'pointerdown', 100, 100);
+      pointer(svg, 'pointermove', 140, 130);
+    });
+    assert.equal(clock.frames.size, 1);
+    rendered.unmount();
+    assert.equal(clock.frames.size, 0, 'Unmount cancels animation and releases transient data.');
+  } finally {
+    rendered.unmount();
+    clock.restore();
+  }
 });
