@@ -1,6 +1,6 @@
 # API de administración
 
-Contrato del lote `codex/administracion-ciberseguridad`, **29 de octubre de 2026**, contrastado con [router](../server/admin.mjs), [autenticación](../server/admin-auth.mjs), [almacenamiento](../server/storage.mjs) y [cliente administrativo](../src/admin/AdminApp.tsx). Complementa la [API ciudadana](api.md); no describe un servidor remoto actualizado.
+Contrato actualizado el **31 de octubre de 2026**, contrastado con [router](../server/admin.mjs), [autenticación](../server/admin-auth.mjs), [almacenamiento](../server/storage.mjs) y [cliente administrativo](../src/admin/AdminApp.tsx). Complementa la [API ciudadana](api.md); no describe un servidor remoto actualizado.
 
 ## Activación, origen y permisos
 
@@ -32,7 +32,7 @@ JSON UTF-8, excepto fotos; errores `{"error":{"code":"…","message":"…"}}`. T
 | Cuerpo JSON de autenticación/moderación        | 2048 bytes; rechaza campos adicionales                                         |
 | Código de segundo factor                       | Cadena de hasta 30 caracteres; interfaz TOTP de 6 dígitos                      |
 
-Los límites por socket no coordinan réplicas y pueden agrupar usuarios detrás de un proxy. Los headers de IP reenviada no se aceptan como identidad. Las demás consultas, salvo la bandeja, rechazan query strings. No se ofrecen métodos distintos de `GET` y `POST`; `HEAD` no sustituye a `GET` en este contrato.
+Los límites por socket no coordinan réplicas y pueden agrupar usuarios detrás de un proxy. Los headers de IP reenviada no se aceptan como identidad. Sólo bandeja y mapa de reportes admiten query strings validadas. No se ofrecen métodos distintos de `GET` y `POST`; `HEAD` no sustituye a `GET` en este contrato.
 
 ## Autenticación
 
@@ -46,6 +46,8 @@ Los límites por socket no coordinan réplicas y pueden agrupar usuarios detrás
 | `GET /api/admin/session`                             | `{user:{id,name,email,role,twoFactorEnabled},csrfToken,mfaRequired,expiresAt}`. Sin sesión válida: `401`.                                                                                                  |
 
 Después de verificar MFA, volver a consultar `/session`. No guardar ni registrar contraseñas, URI TOTP, códigos o cookies en ejemplos, logs o tickets. Un `401 AUTH_FAILED` de contraseña/TOTP no debe confundirse con una sesión confirmada: permite reintentar el desafío con las restricciones del servidor. Los códigos de recuperación permanecen sólo en memoria de la vista de enrolamiento y se retiran al salir/completar; perder autenticador y códigos requiere recuperación privada por CLI con identidad comprobada.
+
+`/session` añade `dataset:null` en bases normales. Después de MFA, una base de demostración devuelve `{kind:"synthetic",label,seed,referenceDate}` para conservar el rótulo sintético en todo el panel. Antes de MFA el campo es `null`.
 
 ## Indicadores
 
@@ -86,6 +88,29 @@ Después de verificar MFA, volver a consultar `/session`. No guardar ni registra
 Ejemplo ilustrativo. Los conteos abarcan reportes retenidos, con ventana de 90 días. `review` calcula tiempo a primera decisión registrada, con mediana y p95; `null` indica ausencia de datos. `capacity` refleja almacenamiento activo. Cada destino incluye `targetType`, `stationId`, `routeId`, nombres legibles `stationName`/`routeName` cuando se resuelven y `count`, `pending`, `published`, `resolved`, `rejected`. Los consumidores admiten nombres opcionales y conservan IDs como respaldo.
 
 La distribución devuelve hasta **100 grupos con más reportes**; `targetGroupsTotal` indica todos los grupos y `targetsTruncated` si se omitieron filas. Los indicadores generales incluyen los destinos omitidos. Los grupos son por tipo/estación/ruta; no representan identificación de daños únicos ni personas distintas. No exporta títulos, descripciones, fotografías, referencias de unidad ni notas al perfil analista. No comparar prioridad de inversión sin duplicados, gravedad, cobertura y denominadores de exposición.
+
+## Mapa de reportes aprobados
+
+`GET /api/admin/report-map`, para los tres roles con MFA, devuelve agregados consentidos y aprobados. Implementación: [consulta parametrizada](../server/report-map.mjs), [vista](../src/admin/ReportMap.tsx), [pruebas de contrato](../tests/report-map.test.mjs).
+
+| Filtro | Valores y límites |
+| --- | --- |
+| `state` | `open` predeterminado: publicados abiertos; `approved`: publicados y resueltos; `resolved`: sólo resueltos. Nunca pendientes/rechazados. |
+| `category` | `all` predeterminado o una categoría de reportes. |
+| `targetType` | `all` predeterminado o `station`, `route`, `unit`. |
+| `stationId`, `routeId` | Identificador del catálogo correspondiente. |
+| `unitReference` | Coincidencia exacta declarada, 1–80 caracteres sin controles; sólo moderador/admin. No acredita identidad de flota. |
+| `from`, `to` | ISO UTC canónico con milisegundos. Intervalo de recepción `[from,to)`, máximo 90 días y dentro de retención. Predeterminado últimos 30 días. |
+
+Rechaza parámetros desconocidos/repetidos, fechas inválidas y referencias privadas de analista con `400 INVALID_ADMIN_FILTER`. No acepta `bbox`/`zoom`: el periodo y los indicadores describen **todo el conjunto filtrado**, no el viewport.
+
+Respuesta: `{totals,groups,groupCount,groupLimit,truncated,filters,rangeBasis,timeZone,scope,generatedAt,locationNotice,dataset}`. `totals` incluye `total,open,resolved,station,route,unit,stationLocated,withoutPoint`. Los tipos son excluyentes; `stationLocated + withoutPoint = total`. `scope` es `all-filtered-reports`; `rangeBasis` es `received`; las fechas se presentan en `America/Monterrey`.
+
+Cada grupo tiene tipo, IDs/nombres de catálogo, conteo/estados, última recepción, clave de selección y `geometryPack`. Sólo estaciones con coordenadas conocidas reciben `position:{lat,lng,source:"station-catalog"}`. La ruta se carga al seleccionar su grupo como **trazo de referencia**, sin situar el daño o una unidad. Las unidades sin ubicación observada permanecen en la lista y los totales; no se crean pines en centroides. El analista recibe unidades agrupadas por ruta, sin referencias libres, textos, fotos o claves de borrador. Moderación/admin puede distinguir referencias exactas declaradas.
+
+Se devuelven los 250 grupos con mayor conteo, con orden estable por entidad para empates; los totales abarcan todos los resultados. `groupCount` y `truncated` explican los omitidos. La lista contigua contiene esos mismos grupos, no expedientes individuales. Las opciones de estación/ruta se obtienen del resultado; limpiar filtros amplía la consulta. La bandeja paginada y su detalle conservan su contrato separado. Pendientes de una segunda entrega: enlace desde grupo a expedientes con el mismo periodo, paginación de grupos y ubicación observada validada.
+
+Retirar una publicación la excluye en la siguiente consulta. El cliente cancela cargas anteriores, omite respuestas tardías y elimina agregados al cerrar/expirar sesión. Conserva `no-store` y la CSP privada sin permitir estilos inline. La [demo aislada](demo-administracion.md) permite revisar filtros sin usar datos reales.
 
 ## Bandeja y evidencia privada
 

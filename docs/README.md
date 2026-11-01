@@ -46,3 +46,5 @@ Los demás documentos fechados y CSV de `docs/` son evidencia de sus lotes. Se m
 ## Mantenimiento
 
 Actualizar la referencia canónica cuando cambie un contrato o comportamiento. Registrar cada entrega por separado, con commit, fecha, comandos, resultados y límites. Explicar decisiones que sustituyan las anteriores. Derivar cifras del inventario y ejecutar `pnpm docs:check` antes de proponer cambios.
+
+Actualización P1–P10: [entrega y pendientes del 31 de octubre](ENTREGA_PRODUCTO_2026-10-31.md), [demo administrativa aislada](demo-administracion.md) y [revisión parcial de trazos](auditoria-pendientes-2026-10-31.md).

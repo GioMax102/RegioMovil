@@ -86,7 +86,7 @@ if (!process.argv.includes('--skip-web')) {
   run(process.execPath, ['node_modules/typescript/bin/tsc', '-b']);
   run(process.execPath, ['scripts/prepare-catalog.mjs']);
   run(process.execPath, ['scripts/prepare-mobility.mjs']);
-  run(process.execPath, ['node_modules/vite/bin/vite.js', 'build']);
+  run(process.execPath, ['scripts/vite-build.mjs']);
   run(process.execPath, ['scripts/finalize-web.mjs']);
 }
 if (!existsSync(path.join(root, 'dist', 'index.html'))) fail('Falta dist/index.html. Ejecuta pnpm build antes de --skip-web.');

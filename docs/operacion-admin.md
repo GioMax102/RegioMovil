@@ -30,6 +30,8 @@ Para desarrollo en esta computadora, usar `ADMIN_ORIGIN=http://localhost:3001` y
 
 ## Roles y decisiones
 
+Para probar el mapa y los conteos sin alterar reportes reales, seguir la [demostración aislada P6/P7](demo-administracion.md). Tiene puerto, bases, cuenta y MFA propios. No cargar datos sintéticos en `.data/regiomovil.sqlite`.
+
 | Rol | Acceso |
 | --- | --- |
 | `analyst` | Indicadores agregados y destinos con más reportes. No puede leer descripciones, fotos ni expedientes individuales. |

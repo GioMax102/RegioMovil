@@ -20,6 +20,7 @@
     "model:train": "node server/train-model.mjs",
     "test:backend": "node --test tests/backend*.test.mjs",
     "admin:user": "node --env-file-if-exists=.env scripts/admin-user.mjs",
+    "admin:demo": "node scripts/admin-demo.mjs",
     "backup:reports": "node scripts/backup-reports.mjs",
     "android:sync": "pnpm build && cap sync android",
     "android:open": "cap open android",

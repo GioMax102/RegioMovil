@@ -1,0 +1,425 @@
+{
+  "version": 1,
+  "checkedAt": "2026-10-31",
+  "scope": "targeted-follow-up-not-complete-live-audit-of-all-18-services",
+  "baselineRecord": "route-pending-audit-2026-10-28.json",
+  "baseline": {
+    "busCatalog": 209,
+    "busGeometry": 191,
+    "pendingBus": 18,
+    "catalogAllModes": 214,
+    "mapsAllModes": 194,
+    "noMapAllModes": 20
+  },
+  "result": {
+    "newGeometries": 0,
+    "catalogChanged": false,
+    "graphChanged": false,
+    "all18LiveOperationRevalidated": false
+  },
+  "sourceChecks": [
+    {
+      "id": "stcm-csv",
+      "url": "https://catalogodatos.nl.gob.mx/dataset/cf7095a0-5126-4bad-a046-35d5ba2b7968/resource/48931e85-c95a-42ed-8022-345cdf755592/download/rutaempresa_stcm_2024_2025.csv",
+      "method": "direct-public-download",
+      "checkedAt": "2026-10-31",
+      "httpStatus": 200,
+      "bytes": 4654,
+      "sha256": "22bd0b35380a0423f68246bb4e6108f83d33050425ef05b2a01c7b8f276ff26b",
+      "unchangedSince": "2026-10-28",
+      "rowCount": 36,
+      "period": {
+        "year": "2025",
+        "month": "9"
+      },
+      "fieldNames": [
+        "periodo",
+        "mes",
+        "modalidad_SETME",
+        "tipo_servicio",
+        "nombre_ruta",
+        "cantidad_unidades",
+        "nombre_concesionario",
+        "fecha_permiso",
+        "tarifa",
+        "horario_funcionamiento",
+        "pasajeros_periodo",
+        "km_prestados_periodo",
+        "cumplimiento",
+        "IPK_promedio_periodo",
+        "tiempo_recorrido"
+      ],
+      "result": "historical-identities-confirmed-no-geographic-fields",
+      "limits": "Confirma contenido del archivo, no vigencia operativa de sus nombres ni equivalencia con mapas de otros servicios."
+    },
+    {
+      "id": "route-50-kml",
+      "url": "https://www.google.com/maps/d/kml?mid=1jKAR-OjeaEvt9VqKcAYCZ5jJYJO3fn0&forcekml=1",
+      "method": "direct-public-download",
+      "checkedAt": "2026-10-31",
+      "httpStatus": 200,
+      "bytes": 14494,
+      "sha256": "9f375b440db27fd0f83ad30066780cbcbb63d868e59c92fa3129d06972b2aa9e",
+      "unchangedSince": "2026-10-28",
+      "title": "Ruta 50 Remanente Mas Palomas",
+      "segments": 1,
+      "publishedMarkers": 2,
+      "vertices": 290,
+      "bounds": {
+        "lat": [
+          25.615945,
+          25.684275
+        ],
+        "lng": [
+          -100.320098,
+          -100.265928
+        ]
+      },
+      "result": "unchanged-candidate-no-proof-of-san-angel-extension",
+      "rights": "Mapa público enlazado; no se le atribuye automáticamente la licencia del CSV."
+    },
+    {
+      "id": "route-50-announcement",
+      "url": "https://www.nl.gob.mx/es/boletines/entrega-samuel-garcia-nuevas-unidades-la-ruta-50-mas-palomas-que-restructura-su-recorrido",
+      "method": "web-readable-indexed-page",
+      "checkedAt": "2026-10-31",
+      "publishedAt": "2025-11-21",
+      "result": "extension-to-san-angel-described-no-georeferenced-itinerary",
+      "limits": "Lectura mediada por herramienta web; sin hash del HTML ni comprobación de operación actual."
+    },
+    {
+      "id": "routes-128-227-announcement",
+      "url": "https://www.nl.gob.mx/es/boletines/renueva-samuel-garcia-con-30-nuevas-unidades-las-rutas-227-y-128",
+      "method": "web-readable-indexed-page",
+      "checkedAt": "2026-10-31",
+      "publishedAt": "2026-09-09",
+      "result": "names-three-variants-no-georeferenced-itinerary",
+      "limits": "El boletín acredita el anuncio y sus nombres, no una secuencia de calles, giros o paradas."
+    },
+    {
+      "id": "routes-5-405-announcement",
+      "url": "https://www.nl.gob.mx/es/boletines/entrega-gobernador-nuevas-unidades-de-transporte-fortalece-sectores-en-el-sur-de",
+      "method": "web-open",
+      "checkedAt": "2026-10-31",
+      "httpStatus": 403,
+      "result": "access-blocked-content-not-revalidated",
+      "limits": "El error de acceso no prueba ausencia de información publicada."
+    },
+    {
+      "id": "garza-sada-announcement",
+      "url": "https://beta.nl.gob.mx/es/boletines/inicia-gobernador-operaciones-de-la-ruta-transmetro-garza-sada-carretera-nacional",
+      "method": "web-readable-indexed-page",
+      "checkedAt": "2026-10-31",
+      "publishedAt": "2025-05-08",
+      "result": "distinguishes-garza-sada-mederos-and-mederos-el-uro-circuits-no-complete-geographic-sequence",
+      "limits": "Avenidas y extremos no autorizan inventar giros, puntos de abordaje, sentidos ni equivalencias."
+    },
+    {
+      "id": "stcm-25-page",
+      "url": "https://nl.gob.mx/es/licitacion-publica-de-metrorrey-no-stcm-25-2024-daf",
+      "method": "web-readable-indexed-page",
+      "checkedAt": "2026-10-31",
+      "result": "technical-sheet-download-url-recovered",
+      "limits": "Convocatoria de contratación, no certificación de operación actual."
+    },
+    {
+      "id": "stcm-25-technical-sheet",
+      "url": "https://nl.gob.mx/sites/default/files/repositorio/Dependencias/Sistema%20de%20Transporte%20Colectivo%20%28Metrorrey%29/Convocatorias/STCM_25_2024/20241128_ficha_tecnica_stcm25.pdf",
+      "method": "direct-public-download",
+      "checkedAt": "2026-10-31",
+      "httpStatus": 403,
+      "result": "access-blocked-pdf-not-inspected",
+      "limits": "No se descargó un PDF legible; no se afirma que contenga plano, coordenadas o paradas."
+    },
+    {
+      "id": "ima-218-plutarco-page",
+      "url": "https://www.imanuevoleon.mx/copy-2-of-projects",
+      "method": "web-open",
+      "checkedAt": "2026-10-31",
+      "httpStatus": 404,
+      "result": "linked-variant-page-not-found",
+      "limits": "El error del enlace no prueba inexistencia del servicio ni autoriza usar218Fleteros."
+    },
+    {
+      "id": "ima-38-310-linked-page",
+      "url": "https://www.imanuevoleon.mx/projects/enchanted-echoes",
+      "method": "web-readable-indexed-page",
+      "checkedAt": "2026-10-31",
+      "visibleHeading": "Ruta 213 Directa Soriana Sendero Quinta Colonial",
+      "result": "linked-page-identifies-different-service",
+      "limits": "Se inspeccionó el encabezado de la página enlazada, no se importó su mapa como38/310."
+    }
+  ],
+  "routes": [
+    {
+      "id": "ima-128-remanente-ermita-cananea-centro",
+      "name": "Ruta 128 Remanente Ermita – Cananea – Centro",
+      "networkId": "muevo-leon",
+      "status": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "routes-128-227-announcement"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener mapa o secuencia georreferenciada de la variante Ermita–Cananea–Centro; el boletín de renovación no resuelve calles, sentidos ni paradas."
+    },
+    {
+      "id": "ima-218-directa-santa-maria-rosita-plutarco-e-calles",
+      "name": "Ruta 218 Directa Santa Maria Rosita Plutarco E. Calles",
+      "networkId": "muevo-leon",
+      "status": "pending",
+      "baselineReason": "official-page-download-failed",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "ima-218-plutarco-page"
+      ],
+      "reviewScope": "exact-linked-page-rechecked",
+      "geometryImported": false,
+      "nextAction": "Recuperar enlace corregido desde IMA para la variante Plutarco E. Calles; no usar Fleteros ni el troncal por compartir el código 218."
+    },
+    {
+      "id": "ima-227-remanente-clouthier",
+      "name": "Ruta 227 Remanente Clouthier",
+      "networkId": "muevo-leon",
+      "status": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "routes-128-227-announcement"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener mapa diferenciado de Clouthier; conservar identidad separada de Emiliano Zapata."
+    },
+    {
+      "id": "ima-227-remanente-emiliano-zapata",
+      "name": "Ruta 227 Remanente Emiliano Zapata",
+      "networkId": "muevo-leon",
+      "status": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "routes-128-227-announcement"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener mapa diferenciado de Emiliano Zapata; conservar identidad separada de Clouthier."
+    },
+    {
+      "id": "ima-38-310-troncal-lincoln-ruiz-cortines-centro",
+      "name": "Ruta 38/310 Troncal Lincoln Ruiz Cortines Centro",
+      "networkId": "troncales-integradas",
+      "status": "pending",
+      "baselineReason": "official-page-identity-mismatch",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "ima-38-310-linked-page"
+      ],
+      "reviewScope": "exact-linked-page-rechecked",
+      "geometryImported": false,
+      "nextAction": "Solicitar corrección pública del vínculo 38/310 o fuente inequívoca; descartar el mapa 213 como sustituto."
+    },
+    {
+      "id": "ima-405-alimentadora-felix-u-gomez-estanzuela",
+      "name": "Ruta 405 Alimentadora Félix U. Gómez – Estanzuela",
+      "networkId": "muevo-leon",
+      "status": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "routes-5-405-announcement"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener mapa específico de la ruta IMA 405; no copiar el Transmetro FUG–Carretera Nacional–La Estanzuela sin equivalencia oficial."
+    },
+    {
+      "id": "ima-5-remanente-estanzuela-los-cristales",
+      "name": "Ruta 5 Remanente Estanzuela – Los Cristales",
+      "networkId": "muevo-leon",
+      "status": "pending",
+      "baselineReason": "no-matching-official-map-page",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "routes-5-405-announcement"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Confirmar si el alimentador Los Cristales–La Estanzuela de Metrorrey corresponde a esta ruta IMA 5 antes de reutilizarlo; obtener código, variante, sentido y paradas oficiales."
+    },
+    {
+      "id": "ima-50-mas-palomas-san-angel",
+      "name": "Ruta 50 Más Palomas – San Ángel",
+      "networkId": "muevo-leon",
+      "status": "pending",
+      "baselineReason": "candidate-map-does-not-confirm-san-angel-extension",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "route-50-kml",
+        "route-50-announcement"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener el mapa posterior a la extensión San Ángel de noviembre de 2025; el KML Más Palomas inspeccionado conserva el recorrido previo y no acredita la extensión."
+    },
+    {
+      "id": "transmetro-exposicion-juarez-valle-del-roble",
+      "name": "Exposición – Juárez – Valle del Roble",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Confirmar vigencia y mapa de esta identidad histórica frente a la ruta IMA 182 Valle del Roble–Exposición; no duplicar automáticamente su geometría."
+    },
+    {
+      "id": "transmetro-felix-u-gomez-monte-cristal",
+      "name": "Félix U. Gómez – Monte Cristal",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Confirmar vigencia y mapa de esta identidad histórica frente a las variantes IMA 224; un nombre parecido no acredita equivalencia."
+    },
+    {
+      "id": "transmetro-garza-sada-carretera-nacional",
+      "name": "Garza Sada – Carretera Nacional",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv",
+        "garza-sada-announcement",
+        "stcm-25-page",
+        "stcm-25-technical-sheet"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Revisar ficha técnica STCM-25-2024 y distinguir el circuito Garza Sada–Mederos del mapa publicado FUG–Carretera Nacional–La Estanzuela; validar itinerario y paradas."
+    },
+    {
+      "id": "transmetro-hospital-metropolitano-prados-del-nogalar",
+      "name": "Hospital Metropolitano – Prados del Nogalar",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener mapa georreferenciado inequívoco de Prados del Nogalar; no sustituirlo por Casa Blanca, Anillo Eléctrico o Diego Díaz."
+    },
+    {
+      "id": "transmetro-mederos-el-uro",
+      "name": "Mederos – El Uro",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv",
+        "garza-sada-announcement",
+        "stcm-25-page",
+        "stcm-25-technical-sheet"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener mapa o paradas georreferenciadas del circuito Mederos–El Uro inaugurado en mayo de 2025; el boletín sólo enumera avenidas y no identifica cada giro/parada."
+    },
+    {
+      "id": "transmetro-palmiras-buenavista-villas-san-francisco",
+      "name": "Palmiras – Buenavista / Villas San Francisco",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Obtener mapa exacto del alimentador Palmiras y sus puntos de enlace; no reutilizar el recorrido completo Mitras–Villas de San Francisco ni la ruta IMA 226."
+    },
+    {
+      "id": "transmetro-sendero-buenavista",
+      "name": "Sendero – Buenavista",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Confirmar vigencia y mapa del servicio histórico Sendero–Buenavista; distinguirlo de la nueva ruta IMA 226 Palmiras–Sendero."
+    },
+    {
+      "id": "transmetro-sendero-fernando-amilpa",
+      "name": "Sendero – Fernando Amilpa",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Confirmar variante Fernando Amilpa y la posible extensión Amarantos con mapa propio; no sustituir por Sendero–Metroplex."
+    },
+    {
+      "id": "transmetro-universidad-asarco-nuevo-sur-mederos",
+      "name": "Universidad – Asarco – Nuevo Sur – Mederos",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Confirmar vigencia e identidad frente a IMA 301 Revolución–UANL; pedir mapa exacto del corredor histórico antes de compartir geometría."
+    },
+    {
+      "id": "transmetro-y-griega-dos-rios",
+      "name": "Y Griega – Dos Ríos",
+      "networkId": "transmetro",
+      "status": "pending",
+      "baselineReason": "official-csv-has-no-coordinate-or-map-fields",
+      "baselineCheckedAt": "2026-10-28",
+      "sourceChecks": [
+        "stcm-csv"
+      ],
+      "reviewScope": "shared-source-or-announcement-only",
+      "geometryImported": false,
+      "nextAction": "Confirmar equivalencia o sustitución por FUG–Dos Ríos; el desplazamiento del extremo requiere evidencia oficial antes de copiar su trazo."
+    }
+  ],
+  "externalRequestDraft": {
+    "sent": false,
+    "recipients": "IMA / STCM Metrorrey, canal público oficial por confirmar por el responsable",
+    "request": [
+      "Enlace corregido o mapa exacto de 218 Plutarco E. Calles y 38/310, sin sustituir variantes.",
+      "KML, GeoJSON, GTFS o plano georreferenciado de las siete urbanas pendientes, incluida extensión San Ángel de50.",
+      "Copia accesible de ficha STCM-25-2024 y evidencia de equivalencia vigente para los diez nombres históricos Transmetro.",
+      "Para cada variante: identificador estable, fecha de vigencia, sentidos, orden de paradas, coordenadas, enlaces, derechos de reutilización y cambios de operador."
+    ],
+    "acceptance": "Identidad exacta, geometría revisable y derechos documentados; habilitación del grafo depende además de paradas, orden y sentido suficientes."
+  }
+}
