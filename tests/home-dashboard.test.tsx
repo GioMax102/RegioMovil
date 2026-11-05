@@ -37,7 +37,7 @@ const styles = registerHooks({
   },
 });
 const { default: HomeDashboard } = await import('../src/components/HomeDashboard');
-const { render, screen, cleanup, act } = await import('@testing-library/react');
+const { render, screen, cleanup, act, within } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
 afterEach(cleanup);
 beforeEach(() => dom.window.localStorage.clear());
@@ -138,6 +138,7 @@ function savedTrip(label: string): SavedMobilityTrip {
 test('secondary outlook and provenance start collapsed, with simulation still available on demand', async () => {
   const user = userEvent.setup({ document: dom.window.document });
   const { container } = mount();
+  await screen.findByRole('button', { name: 'Ver estación', exact: true });
   const outlook = container.querySelector('.home-outlook') as HTMLDetailsElement;
   const info = container.querySelector('.home-data-info') as HTMLDetailsElement;
   assert.equal(outlook.open, false);
@@ -151,12 +152,17 @@ test('secondary outlook and provenance start collapsed, with simulation still av
   assert.ok(info.querySelectorAll('a[href^="https:"]').length > 0);
 });
 
-test('home never invents saved destinations or retains the old verbose shortcut cards', () => {
+test('home never invents saved destinations or retains the old verbose shortcut cards', async () => {
   const { container } = mount(null);
+  await screen.findByRole('button', { name: 'Ver estación', exact: true });
   assert.equal(container.querySelector('.home-shortcuts'), null);
   assert.equal(screen.queryByText('Tus rutas guardadas'), null);
-  assert.equal(screen.queryByText('Explorar la red'), null);
-  assert.match(screen.getByRole('status').textContent!, /Preparando/);
+  assert.ok(screen.getByRole('tab', { name: /Autobús/ }));
+  assert.match(
+    within(container.querySelector('.home-departure') as HTMLElement).getByRole('status')
+      .textContent!,
+    /Preparando/,
+  );
 });
 
 test('one-tap saved trip shortcuts use the actual label, open their snapshot and refresh after deletion', async () => {
@@ -202,8 +208,13 @@ test('home hides imminent Metro units while closed and keeps future operating ho
   };
   const user = userEvent.setup({ document: dom.window.document });
   const { container } = mount(closedBoard, undefined, new Date(closedBoard.generatedAt));
+  await screen.findByRole('button', { name: 'Ver estación', exact: true });
   assert.equal(container.querySelectorAll('.arrival-card').length, 0);
-  assert.match(screen.getByRole('status').textContent!, /Fuera de horario.*05:00/);
+  assert.match(
+    within(container.querySelector('.home-departure') as HTMLElement).getByRole('status')
+      .textContent!,
+    /Fuera de horario.*05:00/,
+  );
   assert.equal(screen.queryByRole('heading', { name: 'Próximas llegadas' }), null);
   await user.click(screen.getByText('Afluencia por hora'));
   assert.deepEqual(

@@ -13,6 +13,7 @@ Organización inicial: **29 de octubre de 2026**, base `cc69761`, integración d
 7. [Hoja de ruta](hoja-de-ruta.md): entregables y criterios de aceptación.
 8. [Plan de producto y comunidad, 31 de octubre](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md): diez solicitudes, implementación y pendientes vinculados a la [entrega](ENTREGA_PRODUCTO_2026-10-31.md).
 9. [Evaluación web y eficiencia, 1 de noviembre](ENTREGA_EVALUADORES_2026-11-01.md): portal, navegación, benchmark, regresiones y secuencia de revisión antes de main.
+10. [Inicio según boceto, 5 de noviembre](PLAN_INICIO_2026-11-05.md): Metro/autobús, selección cercana o manual, esquema y comunidad; pruebas y siguiente paso de P8.
 
 ## Referencias especializadas
 

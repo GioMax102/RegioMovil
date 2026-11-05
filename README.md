@@ -48,6 +48,7 @@ La portada funciona junto al servidor y en el paquete estático. Administración
 
 ## Qué está disponible
 
+- Inicio con selección de Metro/autobús, estación o parada manual/cercana, esquema del recorrido y observaciones públicas del lugar. [Entrega y continuidad del boceto](docs/PLAN_INICIO_2026-11-05.md).
 - Catálogo, fuentes y mapas de redes, estaciones de Metro y rutas.
 - Planificación local en un Web Worker, alternativas multimodales y guía por etapas en primer plano.
 - Viajes guardados y paquetes para consulta sin conexión, sujetos a descarga y almacenamiento disponibles.

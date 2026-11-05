@@ -399,40 +399,6 @@ strong {
   font-size: 1.8rem;
   margin: 0;
 }
-.location-button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 10px 13px;
-  min-width: 194px;
-  text-align: left;
-}
-.location-icon {
-  background: var(--soft);
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  color: var(--muted);
-}
-.location-button small {
-  display: block;
-  font-size: max(0.64rem, 12px);
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-.location-button strong {
-  display: block;
-  font-size: 0.8rem;
-}
-.location-button > svg {
-  margin-left: auto;
-  color: var(--muted);
-}
 .demo-banner {
   display: flex;
   align-items: center;

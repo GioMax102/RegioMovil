@@ -6,6 +6,26 @@
   gap: 14px;
   margin-top: 16px;
 }
+.home-page .page-heading {
+  margin-bottom: 14px;
+  align-items: center;
+}
+.home-page .page-heading .eyebrow {
+  display: none;
+}
+.home-page .page-heading h1 {
+  font-size: clamp(1.15rem, 3vw, 1.6rem);
+}
+.home-page .home-plan-cta {
+  min-height: 58px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+.home-page .home-plan-cta .soft-icon {
+  width: 34px;
+  height: 34px;
+}
 .home-shortcuts {
   display: flex;
   gap: 10px;

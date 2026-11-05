@@ -563,13 +563,41 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
   );
 });
 
+test('Home explores one chosen bus route without loading the regional graph and reports its actual context', async () => {
+  await mount();
+  await screen.findByRole('tab', { name: /Metro/ });
+  assert.ok(!requests.some(({ path }) => path.startsWith('/mobility-network.json')));
+  assert.ok(!requests.some(({ path }) => path.startsWith('/transit-catalog.json')));
+  await user.click(screen.getByRole('tab', { name: /Autobús/ }));
+  const routes = await screen.findByRole('combobox', { name: 'Ruta', exact: true });
+  await user.selectOptions(routes, 'transmetro-san-bernabe-no-reeleccion');
+  await screen.findByRole('button', { name: 'Explorar la red: San Bernabé – No Reelección' });
+  assert.ok(
+    requests.some(({ path }) =>
+      path.startsWith('/route-packs/transmetro-san-bernabe-no-reeleccion.json'),
+    ),
+  );
+  assert.ok(!requests.some(({ path }) => path.startsWith('/mobility-network.json')));
+  assert.equal(screen.queryByRole('button', { name: /llegada simulada/ }), null);
+  assert.equal(screen.queryByText('Afluencia por hora'), null);
+  await user.click(screen.getByRole('button', { name: /Reportar aquí/ }));
+  await screen.findByRole('textbox', { name: 'Título' });
+  assert.equal(
+    ((await screen.findByRole('combobox', { name: 'Ruta o línea observada' })) as HTMLSelectElement)
+      .value,
+    'transmetro-san-bernabe-no-reeleccion',
+  );
+  assert.equal(screen.queryByRole('combobox', { name: 'Estación de Metro' }), null);
+  assert.ok(!requests.some(({ path, method }) => path === '/api/reports' && method === 'POST'));
+});
+
 test('Home highlights reports after planning, asks for the place and resumes a saved draft without submitting it', async () => {
   await mount();
   const plan = screen.getByRole('button', { name: /¿A dónde vamos\?/ });
   const report = screen.getByRole('button', { name: 'Crear reporte', exact: true });
   assert.ok(plan.compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING);
-  const guidanceRequests = requests.filter((request) =>
-    request.path.includes('/api/reports'),
+  const guidanceRequests = requests.filter(
+    (request) => request.path.includes('/api/reports') && request.method === 'POST',
   ).length;
   await user.click(report);
   const title = await screen.findByRole('textbox', { name: 'Título' });
@@ -595,7 +623,8 @@ test('Home highlights reports after planning, asks for the place and resumes a s
     'universidad',
   );
   assert.equal(
-    requests.filter((request) => request.path.includes('/api/reports')).length,
+    requests.filter((request) => request.path.includes('/api/reports') && request.method === 'POST')
+      .length,
     guidanceRequests,
   );
 });

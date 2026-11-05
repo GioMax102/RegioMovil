@@ -4,7 +4,6 @@ import {
   ArrowUpRight,
   Bookmark,
   Check,
-  ChevronDown,
   ChevronRight,
   ExternalLink,
   Heart,
@@ -289,7 +288,7 @@ export default function App() {
 
   const content = (
     <div
-      className={`app-shell ${!kiosk && page !== 'home' ? 'context-page' : ''} ${kiosk ? 'kiosk' : ''} ${!kiosk && page === 'stations' ? 'network-page' : ''} ${!kiosk && (page === 'plan' || (page === 'stations' && networkTab === 'routes')) ? 'map-page' : ''}`}
+      className={`app-shell ${!kiosk && page !== 'home' ? 'context-page' : ''} ${kiosk ? 'kiosk' : ''} ${!kiosk && page === 'stations' ? 'network-page' : ''} ${!kiosk && page === 'home' ? 'home-page' : ''} ${!kiosk && (page === 'plan' || (page === 'stations' && networkTab === 'routes')) ? 'map-page' : ''}`}
     >
       <a className="skip-link" href="#main-content">
         Saltar al contenido
@@ -498,24 +497,6 @@ export default function App() {
               </h1>
               {kiosk && <p>Llegadas y afluencia simuladas.</p>}
             </div>
-            {!kiosk && page === 'home' && (
-              <button
-                className="location-button"
-                onClick={() => {
-                  setStationQuery('');
-                  setModal('station');
-                }}
-              >
-                <span className="location-icon">
-                  <MapPin size={20} />
-                </span>
-                <span>
-                  <small>Tu punto de partida</small>
-                  <strong>{currentStation.name}</strong>
-                </span>
-                <ChevronDown size={16} />
-              </button>
-            )}
             {kiosk && (
               <button className="primary-button" onClick={speakBoard}>
                 <Volume2 size={22} />
@@ -570,6 +551,12 @@ export default function App() {
                 setStationQuery(currentStation.name);
               }}
               onReport={() => openReport({})}
+              onChooseStation={() => {
+                setStationQuery('');
+                setModal('station');
+              }}
+              onSelectStation={setStation}
+              onReportTarget={openReport}
               reportOpen={modal === 'report'}
             />
           )}

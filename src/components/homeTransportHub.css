@@ -1,0 +1,384 @@
+.home-transport-hub {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.home-transport-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.home-transport-modes > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 108px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+  background-image: var(--surface-grain);
+  color: var(--dark);
+  text-align: left;
+  box-shadow: var(--surface-shadow);
+}
+.home-transport-modes > button[aria-selected='true'] {
+  border-color: var(--green);
+  background-color: var(--soft);
+  box-shadow: inset 0 -3px var(--green);
+}
+.home-transport-modes > button > svg {
+  flex: none;
+  color: var(--green);
+}
+.home-transport-modes span,
+.home-transport-station span,
+.home-transport-report span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.home-transport-modes strong {
+  font-size: 1.1rem;
+}
+.home-transport-hub small {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.home-transport-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.home-transport-panel > .home-departure {
+  margin: 0;
+}
+.home-transport-select-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.home-transport-station {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+  color: var(--dark);
+  text-align: left;
+}
+.home-transport-station > svg {
+  flex: none;
+  color: var(--green);
+}
+.home-transport-station span {
+  flex: 1;
+}
+.home-transport-station strong {
+  overflow-wrap: anywhere;
+}
+.home-transport-locate {
+  display: grid;
+  place-items: center;
+  flex: 0 0 52px;
+  min-width: 52px;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--green);
+}
+.home-transport-locate:disabled {
+  opacity: 0.55;
+}
+.home-transport-field {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  color: var(--dark);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.home-transport-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--white);
+  color: var(--dark);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.home-transport-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--white);
+  color: var(--dark);
+}
+.home-transport-search > svg {
+  flex: none;
+}
+.home-transport-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  border: 0;
+  background: transparent;
+  color: var(--dark);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.home-transport-section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--green);
+}
+.home-transport-section-title h2 {
+  margin: 0;
+  color: var(--dark);
+  font-size: 1.1rem;
+}
+.home-transport-route-name {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  color: var(--dark);
+  overflow-wrap: anywhere;
+}
+.home-transport-route-name strong {
+  font-size: 0.83rem;
+  color: var(--green);
+}
+.home-transport-route-name span {
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 650;
+}
+.home-transport-note,
+.home-transport-status {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.home-transport-status {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--dark);
+}
+.home-transport-network {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  color: var(--green);
+  font-weight: 650;
+}
+.home-transport-map {
+  --home-route-color: var(--accent-blue);
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 16px 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--white);
+  background-image: var(--surface-grain);
+  color: var(--dark);
+  text-align: left;
+}
+.home-transport-map[data-line='L1'] {
+  --home-route-color: #bd7508;
+}
+.home-transport-map[data-line='L2'] {
+  --home-route-color: #25904c;
+}
+.home-transport-map[data-line='L3'] {
+  --home-route-color: #bf4657;
+}
+.home-transport-map-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+.home-transport-map-heading > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.home-transport-map > svg {
+  display: block;
+  width: 100%;
+  height: clamp(120px, 28vw, 170px);
+  color: var(--home-route-color);
+}
+.home-transport-map polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.home-transport-map circle {
+  fill: currentColor;
+  stroke: var(--white);
+  stroke-width: 2px;
+}
+.home-transport-map .home-map-halo {
+  fill: var(--soft);
+  stroke: currentColor;
+  stroke-width: 1px;
+}
+.home-transport-map-caption {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.home-transport-map-name {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--dark);
+}
+.home-transport-report {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+  color: var(--green);
+  text-align: left;
+}
+.home-transport-report span {
+  flex: 1;
+}
+.home-transport-report strong {
+  font-size: 0.9rem;
+}
+.home-transport-report svg {
+  flex: none;
+}
+.home-transport-sources {
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--white);
+  color: var(--dark);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.home-transport-sources > summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+  font-weight: 650;
+}
+.home-transport-sources p {
+  margin: 0 0 10px;
+}
+.home-transport-sources a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  width: fit-content;
+  color: var(--green);
+  text-underline-offset: 3px;
+}
+.home-transport-sources summary:focus-visible,
+.home-transport-sources a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.home-transport-hub button:focus-visible,
+.home-transport-hub input:focus-visible,
+.home-transport-hub select:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.home-transport-hub button:not(:disabled):hover {
+  border-color: var(--green);
+}
+.high-contrast .home-transport-hub button {
+  border-color: var(--dark);
+  background-image: none;
+  box-shadow: none;
+}
+.high-contrast .home-transport-modes > button[aria-selected='true'] {
+  outline: 2px solid var(--green);
+  outline-offset: -3px;
+}
+:root[data-theme='dark'] .home-transport-map[data-line='L1'] {
+  --home-route-color: #f2bd51;
+}
+:root[data-theme='dark'] .home-transport-map[data-line='L2'] {
+  --home-route-color: #68d185;
+}
+:root[data-theme='dark'] .home-transport-map[data-line='L3'] {
+  --home-route-color: #ff8e99;
+}
+@media (max-width: 430px) {
+  .home-transport-modes {
+    gap: 10px;
+  }
+  .home-transport-modes > button {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 128px;
+    padding: 14px;
+  }
+  .home-transport-modes strong {
+    font-size: 1rem;
+  }
+}
+
+/* Keep each direction readable without doubling the height of the home feed. */
+.home-transport-station {
+  background-image: var(--surface-grain);
+}
+.home-transport-hub .home-departure .arrival-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 600px) {
+  .home-transport-hub .home-departure .arrival-list {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 8px;
+  }
+  .home-transport-hub .home-departure .arrival-card {
+    flex: 0 0 min(100%, 290px);
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+}
