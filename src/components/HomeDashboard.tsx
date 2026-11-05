@@ -28,7 +28,10 @@ import {
   isMetroOperating,
   metroHoursSource,
 } from './metroServiceHours';
+import DeferredSection from './DeferredSection';
 import './homeDashboard.css';
+
+const loadHomeTransportHub = () => import('./HomeTransportHub');
 
 export default function HomeDashboard({
   station,
@@ -40,6 +43,10 @@ export default function HomeDashboard({
   onSavedTrip,
   onStationDetails,
   onReport,
+  onNetwork,
+  onChooseStation,
+  onSelectStation,
+  onReportTarget,
   reportOpen = false,
   now = new Date(),
 }: {
@@ -54,6 +61,9 @@ export default function HomeDashboard({
   onSavedTrip?: (trip: SavedMobilityTrip) => void;
   onStationDetails: () => void;
   onReport: () => void;
+  onChooseStation?: () => void;
+  onSelectStation?: (id: string) => void;
+  onReportTarget?: (target: { stationId?: string; routeId?: string }) => void;
   reportOpen?: boolean;
   now?: Date;
 }) {
@@ -109,51 +119,25 @@ export default function HomeDashboard({
     );
   const open = isMetroOperating(now);
   const hours = getMetroServiceWindow(now);
-  return (
-    <div className="home-dashboard">
-      <button
-        type="button"
-        className="home-report-cta"
-        aria-label={hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}
-        onClick={onReport}
-      >
-        <span className="home-report-icon">
-          <Flag size={23} aria-hidden="true" />
-        </span>
-        <span>
-          <strong>Mejoremos nuestro transporte</strong>
-          <span>{hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}</span>
-        </span>
-        <ArrowRight size={20} aria-hidden="true" />
-      </button>
-      {onSavedTrip && savedTrips.length > 0 && (
-        <nav className="home-shortcuts" aria-label="Trayectos guardados">
-          {savedTrips.map((trip) => {
-            const label = trip.label
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .toLowerCase();
-            const Icon = /casa|hogar/.test(label)
-              ? House
-              : /escuela|universidad|tec|estudio/.test(label)
-                ? GraduationCap
-                : /trabajo|oficina/.test(label)
-                  ? BriefcaseBusiness
-                  : Bookmark;
-            return (
-              <button
-                key={trip.id}
-                type="button"
-                onClick={() => onSavedTrip(trip)}
-                aria-label={`Abrir trayecto ${trip.label}`}
-              >
-                <Icon size={19} aria-hidden="true" />
-                <span>{trip.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      )}
+  const reportAction = (
+    <button
+      type="button"
+      className="home-report-cta"
+      aria-label={hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}
+      onClick={onReport}
+    >
+      <span className="home-report-icon">
+        <Flag size={23} aria-hidden="true" />
+      </span>
+      <span>
+        <strong>Mejoremos nuestro transporte</strong>
+        <span>{hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}</span>
+      </span>
+      <ArrowRight size={20} aria-hidden="true" />
+    </button>
+  );
+  const metroContent = (
+    <>
       <section className="panel home-departure" aria-labelledby="home-departure-title">
         <div className="panel-heading">
           <div>
@@ -248,6 +232,66 @@ export default function HomeDashboard({
           </a>
         ))}
       </details>
+    </>
+  );
+  return (
+    <div className="home-dashboard">
+      {onSavedTrip && savedTrips.length > 0 && (
+        <nav className="home-shortcuts" aria-label="Trayectos guardados">
+          {savedTrips.map((trip) => {
+            const label = trip.label
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .toLowerCase();
+            const Icon = /casa|hogar/.test(label)
+              ? House
+              : /escuela|universidad|tec|estudio/.test(label)
+                ? GraduationCap
+                : /trabajo|oficina/.test(label)
+                  ? BriefcaseBusiness
+                  : Bookmark;
+            return (
+              <button
+                key={trip.id}
+                type="button"
+                onClick={() => onSavedTrip(trip)}
+                aria-label={`Abrir trayecto ${trip.label}`}
+              >
+                <Icon size={19} aria-hidden="true" />
+                <span>{trip.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+      <DeferredSection
+        load={loadHomeTransportHub}
+        loadingLabel="Preparando tu transporte…"
+        onRetry={() => location.reload()}
+        loadingFallback={<p role="status">Preparando tu transporte…</p>}
+        errorFallback={
+          <>
+            <p role="alert">
+              La vista de recorridos no está disponible. Puedes consultar tu estación y crear un
+              reporte.
+            </p>
+            {metroContent}
+            {reportAction}
+            <button type="button" className="text-button" onClick={() => location.reload()}>
+              Volver a cargar inicio
+            </button>
+          </>
+        }
+        componentProps={{
+          station,
+          onChooseStation: onChooseStation ?? onStationDetails,
+          onSelectStation: onSelectStation ?? (() => {}),
+          onNetwork: onNetwork ?? onStationDetails,
+          onReportTarget: onReportTarget ?? onReport,
+          metroContent,
+          reportAction,
+        }}
+      />
     </div>
   );
 }

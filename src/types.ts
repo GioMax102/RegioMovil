@@ -117,7 +117,15 @@ export interface RoutePack {
   verifiedAt: string;
   coordinates: [number, number][];
   segments?: [number, number][][];
-  stops: { id: string; name: string; lat: number; lng: number; infrastructureStatus?: string }[];
+  stops: {
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    infrastructureStatus?: string;
+    publishedInfrastructureNote?: string;
+  }[];
   stopOrderVerified: boolean;
+  experimentalRouting?: boolean;
   notes?: string | string[];
 }

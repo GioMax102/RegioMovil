@@ -256,21 +256,6 @@
   .page-heading p {
     font-size: max(0.77rem, 12px);
   }
-  .location-button {
-    min-width: 165px;
-    gap: 7px;
-    padding: 9px;
-  }
-  .location-button strong {
-    font-size: max(0.73rem, 12px);
-  }
-  .location-button small {
-    font-size: max(0.58rem, 12px);
-  }
-  .location-icon {
-    width: 29px;
-    height: 31px;
-  }
   .demo-banner {
     gap: 8px;
     padding: 8px 10px;
@@ -467,22 +452,6 @@
   }
   .page-heading p {
     font-size: max(0.76rem, 12px);
-  }
-  .location-button {
-    width: 100%;
-    min-height: 55px;
-    gap: 11px;
-    padding: 8px 12px;
-    border-radius: 9px;
-  }
-  .location-icon {
-    width: 33px;
-    height: 33px;
-  }
-  .location-button > span:nth-child(2) {
-    gap: 10px;
-    align-items: center;
-    flex: 1;
   }
   .demo-banner {
     padding: 11px 12px;
@@ -946,10 +915,6 @@
   .large-text .page-heading .eyebrow {
     letter-spacing: 1px;
   }
-  .large-text .location-button > span:nth-child(2) {
-    flex-wrap: wrap;
-    gap: 4px 8px;
-  }
   .large-text .forecast-foot {
     font-size: max(0.52rem, 12px);
   }
@@ -1170,9 +1135,6 @@
   .page-heading .eyebrow {
     font-size: 11px;
   }
-  .location-button {
-    margin-top: 0;
-  }
   .kiosk .topbar .brand {
     font-size: 17px;
   }
@@ -1338,16 +1300,6 @@
   }
   .demo-label {
     font-size: 10px;
-  }
-  .location-button > span:nth-child(2) {
-    display: block;
-  }
-  .location-button small {
-    font-size: 11px;
-    margin-bottom: 4px;
-  }
-  .location-button strong {
-    font-size: 13px;
   }
   .arrival-top h3 {
     font-size: 13px;
