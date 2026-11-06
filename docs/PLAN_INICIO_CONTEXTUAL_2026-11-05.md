@@ -1,6 +1,6 @@
 # Inicio contextual · plan de reestructuración
 
-**5 de noviembre de 2026 · estado: plan, sin implementación.** Base de código: `5187885`, rama documental `codex/plan-inicio-contextual`. La siguiente implementación partirá de esta base documental en `codex/inicio-contextual`; no hacer merge a `main` durante la planificación.
+**Plan del 5 de noviembre; implementación actualizada el 6 de noviembre de 2026.** Base `5187885`, plan guardado en `58cf9ac`; rama de implementación `codex/inicio-contextual`. I1–I6 implementados; I7 con verificación automatizada y visual, aceptación física pendiente. Consultar la [entrega y continuidad vigente](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md). Sin merge a `main`.
 
 Solicitud y referencia: [imagen del usuario](evidencia/2026-11-05/referencia-inicio-contextual.png). Este plan sustituye las decisiones de jerarquía y selector del [boceto anterior](PLAN_INICIO_2026-11-05.md), cuya entrega y evidencia siguen siendo históricas. Amplía **P8** del [plan P1–P10](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md), sin cerrar los pendientes físicos, de cobertura, administración o seguridad.
 
@@ -116,7 +116,7 @@ Presentar tarjetas horizontales del mismo ancho, con la siguiente parcialmente v
 
 ## 7. Instrucciones de implementación por archivo
 
-Los nombres nuevos siguientes son **propuestos**, no archivos existentes. Mantener componentes pequeños por responsabilidad; evitar un nuevo monolito que condicione toda la pantalla a una descarga opcional.
+La tabla conserva el alcance de implementación aprobado. Los módulos propuestos ya existen en la entrega del 6 de noviembre; mantener la separación entre Metro inmediato y componentes opcionales.
 
 | Bloque | Archivos y cambio exacto | Criterio de salida |
 | --- | --- | --- |
@@ -149,14 +149,14 @@ En implementación ejecutar build de producción, suite completa y comprobadores
 
 ## 9. Reanudación para el siguiente agente
 
-1. Leer este plan, el [registro anterior](PLAN_INICIO_2026-11-05.md), P1–P10, P10 y `git status`. Confirmar la base `5187885` y el commit documental actual; conservar trabajo ajeno.
-2. Crear `codex/inicio-contextual` desde la rama documental vigente. Empezar por I1, sin restaurar App completo desde la versión antigua ni implementar estrellas/encuestas incidentalmente.
-3. Antes de I2–I5 fijar `HomeSelection`: discriminante Metro/autobús, `stationId` o `routeId`, parada canónica/revisión cuando exista y origen de selección (base/manual/cercanía). Coordenadas, lista cercana y selección tentativa sólo en memoria; no persistir el GPS en este contrato.
-4. Registrar por bloque archivos, pruebas y límites; guardar capturas fuera de datos privados. Publicar PR apilado sobre la rama/base acordada y revisar CI, sin asumir autorización nueva de merge.
-5. Mantener abiertos P1/P2/P4 físicos, P3 de fuentes, P6/P7 de administración y seguridad/hosting de la [hoja de ruta](hoja-de-ruta.md). No completar trazos con suposiciones ni usar cambios de Inicio como prueba de auditoría OWASP.
+1. Leer la [entrega vigente](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md), este plan, P1–P10 y `git status`. Código funcional de cierre: `0414d33`; los commits documentales posteriores no implican otro APK.
+2. Continuar en `codex/inicio-contextual` o en una rama de corrección explícita. I1–I6 están implementados; I7 tiene pruebas automatizadas y revisión web, con aceptación física pendiente. No reiniciar la implementación ni restaurar App desde una versión antigua.
+3. Confirmar qué revisión sirve la web y el hash del APK instalado usando `output/android/build-info.json`. Preservar cuentas, MFA, bases y borradores. No subir `output`, secretos ni información privada del teléfono.
+4. Registrar hallazgos físicos o del usuario con pasos, contexto y resultado esperado; corregir por bloques, probar, commit/push y actualizar entrega. Revisar CI y PR apilados antes de solicitar el merge; esta entrega no autoriza fusionar a `main`.
+5. Mantener abiertos P1/P2/P4 físicos, P3 de fuentes, P6/P7 y seguridad/hosting. P10 requiere datos reales y metodología; no convertir reportes en estrellas ni afirmar auditoría OWASP completa.
 
-**Esta interacción entrega únicamente el plan y la referencia conservada.** No modifica la app servida, el APK, las bases ni cuentas. La siguiente interacción comenzará I1–I7.
+**Registro histórico de la planificación del 5 de noviembre:** ese lote entregó únicamente el plan y la referencia. Su implementación posterior está descrita en la entrega del 6 de noviembre, enlazada al inicio.
 
 Validación documental de este lote: `pnpm docs:check` verificó **71 archivos y 477 enlaces locales**; `git diff --check` sin errores. No se ejecutaron pruebas funcionales ni build porque no cambió código de aplicación.
 
-Entrega local: la rama documental fue creada, pero **commit y push pendientes**. Dos intentos de `git add` no se ejecutaron porque la revisión automática de permisos agotó su tiempo; no fue una evaluación de inseguridad del cambio. Antes de crear la rama de implementación, revisar y guardar estos archivos locales. La base Git continúa siendo `5187885`.
+La incidencia inicial de permisos quedó resuelta: el plan fue guardado en `58cf9ac`, antes de crear la rama de implementación. Los resultados de build, pruebas y APK posteriores pertenecen a la nueva entrega; no a la validación documental histórica anterior.

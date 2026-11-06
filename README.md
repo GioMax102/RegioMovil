@@ -20,6 +20,8 @@ Este repositorio contiene un piloto funcional para web/PWA, Android y pantallas 
 
 El [índice documental](docs/README.md) distingue referencias vigentes, guías especializadas y registros históricos. Las cifras de una entrega anterior no acreditan el estado actual.
 
+Última entrega de Inicio: [selector contextual, cercanía y mapa por transporte](docs/ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md), con pruebas y continuidad.
+
 ## Inicio rápido
 
 Requisitos: **Node.js 24 o posterior y pnpm 11.25.0**, fijado en `package.json`. Usar el lockfile del repositorio.

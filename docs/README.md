@@ -2,6 +2,8 @@
 
 Organización inicial: **29 de octubre de 2026**, base `cc69761`, integración de `feature/queja` en `main`. Actualización del mismo día: lote `codex/administracion-ciberseguridad`, con panel privado, controles de acceso y operación local. Las referencias canónicas incorporan ese lote; Git identifica su revisión exacta. Las propuestas futuras se identifican expresamente y los informes anteriores conservan su alcance fechado.
 
+Actualización **6 de noviembre**: [entrega de Inicio contextual](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md), [plan I1–I7](PLAN_INICIO_CONTEXTUAL_2026-11-05.md) y recorrido actualizado para evaluadores. Las verificaciones y pendientes de esa entrega sustituyen el estado anterior de Inicio.
+
 ## Lectura principal
 
 1. [Pitch](pitch.md): qué propone el producto y qué apoyo necesita.
