@@ -1,5 +1,3 @@
-@import './arrivalCard.css';
-
 .home-dashboard {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -16,52 +14,6 @@
 .home-page .page-heading h1 {
   font-size: clamp(1.15rem, 3vw, 1.6rem);
 }
-.home-page .home-plan-cta {
-  min-height: 58px;
-  padding: 12px 18px;
-  border-radius: 16px;
-  margin-bottom: 12px;
-}
-.home-page .home-plan-cta .soft-icon {
-  width: 34px;
-  height: 34px;
-}
-.home-shortcuts {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 4px 2px 8px;
-  overscroll-behavior-inline: contain;
-  scrollbar-width: thin;
-}
-.home-shortcuts button {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 48px;
-  max-width: min(80vw, 240px);
-  padding: 10px 16px;
-  flex-shrink: 0;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--white);
-  color: var(--dark);
-  font-size: 0.9rem;
-  font-weight: 650;
-  text-align: left;
-}
-.home-shortcuts button span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.home-shortcuts button > svg {
-  color: var(--accent-blue, var(--dark));
-  flex-shrink: 0;
-}
-.home-shortcuts button:hover {
-  border-color: var(--dark);
-}
 .home-departure {
   min-width: 0;
   padding: 20px;
@@ -69,8 +21,98 @@
   box-shadow: var(--surface-shadow);
 }
 .home-departure .arrival-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   padding: 0;
   gap: 12px;
+}
+.home-selector-fallback {
+  min-height: 92px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--white);
+  color: var(--dark);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  font-weight: 650;
+  text-align: left;
+}
+.home-line-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.home-line-options button {
+  min-height: 44px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--dark);
+}
+.home-line-options button[aria-pressed='true'] {
+  border-color: var(--green);
+  background: var(--soft);
+}
+.home-simulation {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin: 0 0 10px;
+}
+.home-arrival-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--dark);
+  text-align: left;
+}
+.home-arrival-direction {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.home-arrival-direction > span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.home-arrival-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--green);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.home-arrival-time strong {
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.home-arrival-time > span {
+  font-size: 0.75rem;
+}
+.home-arrival-crowding {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--dark);
+  font-size: 0.8rem;
+}
+.home-selector-fallback:focus-visible,
+.home-arrival-summary:focus-visible,
+.home-line-options button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 .home-dashboard .panel-heading {
   padding: 0;
@@ -186,14 +228,9 @@
   line-height: 1.5;
   text-underline-offset: 3px;
 }
-.home-shortcuts button:focus-visible,
 .home-dashboard summary:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
-}
-.high-contrast .home-shortcuts button {
-  border-color: var(--dark);
-  box-shadow: none;
 }
 @media (max-width: 430px) {
   .home-departure {

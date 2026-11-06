@@ -10,13 +10,12 @@ test('a rejected community module remains local and does not replace Home or blo
     (await screen.findByRole('alert')).textContent!,
     /No pudimos abrir las observaciones/,
   );
-  assert.ok(screen.getByRole('tab', { name: /^Metro/ }));
-  assert.ok(screen.getByRole('tab', { name: /^Autobús/ }));
-  await user.click(screen.getByRole('button', { name: 'Crear reporte', exact: true }));
+  assert.ok(screen.getByRole('button', { name: /^Cambiar transporte:/ }));
+  await user.click(screen.getByRole('button', { name: 'Crear reporte general', exact: true }));
   await user.click(screen.getByRole('button', { name: /Reportar aquí/ }));
   await user.click(screen.getByRole('button', { name: 'Ver estación', exact: true }));
-  await user.click(screen.getByRole('button', { name: /Explorar la red:/ }));
-  assert.deepEqual(actions, { station: 1, generalReport: 1, contextualReport: 1, network: 1 });
+  assert.ok(screen.getByRole('button', { name: 'Planear desde aquí' }));
+  assert.deepEqual(actions, { station: 1, generalReport: 1, contextualReport: 1, network: 0 });
   await user.click(screen.getByText('Datos y fuentes'));
   assert.equal(screen.getByText('Datos y fuentes').closest('details')!.open, true);
   assert.equal(fixture.rejectedImports(), 1);

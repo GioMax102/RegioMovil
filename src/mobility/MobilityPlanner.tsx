@@ -70,17 +70,20 @@ export default function MobilityPlanner({
   initialTrip,
   initialOrigin,
   initialStationId = 'padre-mier',
+  requireOriginSelection = false,
 }: {
   scenario: Scenario;
   initialTrip?: MobilityTripEndpoints | null;
   initialOrigin?: MobilityEndpoint;
   initialStationId?: string;
+  requireOriginSelection?: boolean;
 }) {
   const [network, setNetwork] = useState<MobilityNetwork | null>(null);
   const [loadError, setLoadError] = useState('');
   const [revision, setRevision] = useState(0);
   const [online, setOnline] = useState(navigator.onLine !== false);
   const [from, setFrom] = useState<MobilityEndpoint | null>(null);
+  const initialOriginApplied = useRef(false);
   const [to, setTo] = useState<MobilityEndpoint | null>(null);
   const [picker, setPicker] = useState<'from' | 'to' | null>(null);
   const [searchPreview, setSearchPreview] = useState<(MapPosition & { name: string }) | null>(null);
@@ -160,15 +163,23 @@ export default function MobilityPlanner({
               ? stopEndpoint(requestedStop)
               : null
             : origin
-          : {
-              id:
-                data.stops.find((stop) => stop.stationId === initialStationId)?.id ??
-                data.stops.find((stop) => stop.stationId === 'padre-mier')?.id ??
-                data.stops[0].id,
-            };
+          : requireOriginSelection
+            ? null
+            : {
+                id:
+                  data.stops.find((stop) => stop.stationId === initialStationId)?.id ??
+                  data.stops.find((stop) => stop.stationId === 'padre-mier')?.id ??
+                  data.stops[0].id,
+              };
         if (origin && 'id' in origin && !requestedStop && !initialTrip)
           setNotice('Esta parada guardada ya no está en la red disponible. Elige otro origen.');
         setFrom((current) => current ?? initialPoint);
+        if (!initialOriginApplied.current && requireOriginSelection && !origin && !initialTrip) {
+          setFrom(null);
+          setTo(null);
+          setPicker('from');
+        }
+        initialOriginApplied.current = true;
       })
       .catch((cause) => {
         if (active) setLoadError(cause.message);

@@ -6,4 +6,5 @@ declare module '*.mjs' {
     location: { lat: number; lng: number },
     coordinates: [number, number][],
   ): { distanceMeters: number; position: number };
+  export function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number;
 }

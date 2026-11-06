@@ -46,11 +46,11 @@
   color: var(--green);
   border-color: #609b7b;
 }
-:root[data-theme='dark'] :is(.primary-button, .home-plan-cta, .error-screen button) {
+:root[data-theme='dark'] :is(.primary-button, .error-screen button) {
   color: #fff;
   background: var(--app-primary);
 }
-:root[data-theme='dark'] :is(.primary-button:hover, .home-plan-cta:hover) {
+:root[data-theme='dark'] :is(.primary-button:hover) {
   background: #09634e;
 }
 :root[data-theme='dark']

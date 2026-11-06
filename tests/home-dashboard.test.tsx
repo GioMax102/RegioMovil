@@ -157,7 +157,7 @@ test('home never invents saved destinations or retains the old verbose shortcut 
   await screen.findByRole('button', { name: 'Ver estación', exact: true });
   assert.equal(container.querySelector('.home-shortcuts'), null);
   assert.equal(screen.queryByText('Tus rutas guardadas'), null);
-  assert.ok(screen.getByRole('tab', { name: /Autobús/ }));
+  assert.ok(await screen.findByRole('button', { name: /^Cambiar transporte:/ }));
   assert.match(
     within(container.querySelector('.home-departure') as HTMLElement).getByRole('status')
       .textContent!,
@@ -173,7 +173,7 @@ test('one-tap saved trip shortcuts use the actual label, open their snapshot and
   const { container } = mount(board, (value) => {
     selected = value;
   });
-  const shortcut = screen.getByRole('button', { name: 'Abrir trayecto Casa' });
+  const shortcut = await screen.findByRole('button', { name: 'Abrir trayecto Casa' });
   assert.equal(shortcut.textContent, 'Casa');
   assert.equal(shortcut.querySelector('small'), null);
   await user.click(shortcut);

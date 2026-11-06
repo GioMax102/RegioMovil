@@ -82,6 +82,22 @@ test('evaluation portal identifies simulation, incomplete coverage and restricte
   assert.match(android.closest('article').textContent, /puede corresponder a una entrega anterior/);
 });
 
+test('the evaluation tour distinguishes choosing a transport from planning and reporting', () => {
+  const tour = document.querySelector('.feature-grid');
+  const entries = [...tour.querySelectorAll('a')];
+  assert.equal(entries[0].getAttribute('href'), './?page=home');
+  assert.match(entries[0].textContent, /Metro.*selector circular.*confirma/s);
+  assert.match(tour.textContent, /autobús.*mapa.*parada/s);
+  assert.match(tour.textContent, /Planear desde aquí/);
+  assert.match(tour.textContent, /Reportar aquí/);
+  assert.match(tour.textContent, /nada se envía al tocar/);
+  assert.match(
+    document.querySelector('.scope').textContent,
+    /autobús.*llegadas y la afluencia no están\s+disponibles/s,
+  );
+  assert.doesNotMatch(tour.textContent, /¿A dónde vamos\?|pestañas Metro y Autobús/);
+});
+
 test('portal has an accessible document outline, navigation names and keyboard skip target', () => {
   assert.equal(document.documentElement.lang, 'es-MX');
   assert.ok(document.querySelector('meta[name="viewport"]'));

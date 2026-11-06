@@ -654,8 +654,8 @@ test('discarding requires confirmation; keeping or Escape preserves text and pro
     new dom.window.File(['original'], 'keep.jpg', { type: 'image/jpeg' }),
   );
   await screen.findByRole('img', { name: 'Vista previa de la foto adjunta' });
-  const before = await persistedDraft();
-  assert.ok(before?.photo);
+  await waitFor(async () => assert.ok((await persistedDraft())?.photo));
+  const before = (await persistedDraft())!;
   await user.click(screen.getByRole('button', { name: 'Descartar borrador' }));
   const confirmation = await screen.findByRole('alertdialog', { name: 'Descartar este borrador' });
   assert.ok(confirmation);

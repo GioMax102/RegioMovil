@@ -1,8 +1,18 @@
 # Especificación técnica de RegioMóvil
 
-**Estado:** piloto funcional, versión de paquete 1.1.0. **Revisión documental:** 29 de octubre de 2026, actualizada con el lote `codex/administracion-ciberseguridad`. **Destinatarios:** desarrollo, operaciones, seguridad, datos y responsables de producto.
+**Estado:** piloto funcional, versión de paquete 1.1.0. **Revisión documental:** 6 de noviembre de 2026, con los lotes de administración e Inicio contextual. **Destinatarios:** desarrollo, operaciones, seguridad, datos y responsables de producto.
 
 Este documento describe el código presente en el repositorio. Los comandos se ejecutan desde su raíz. El historial Git identifica la revisión exacta; los inventarios de datos conservan su propia fecha y revisión. Una característica propuesta no debe presentarse como instalada o validada por esta documentación.
+
+## Inicio contextual · 6 de noviembre de 2026
+
+Metro se renderiza fuera de los módulos opcionales; agrupa las salidas por línea/sentido y muestra la próxima de cada sentido existente. El selector circular carga bajo demanda, confirma elecciones manuales y conserva el contexto en `App` al navegar.
+
+`public/home-nearby.json` es un índice generado desde el mismo normalizador del grafo: 191 variantes y 10 768 puntos, 370 947 bytes. Se descarga al activar cercanía; no descarga el grafo completo ni recibe GPS. El ranking calcula distancia local en línea recta: 1.2 km, ampliación explícita a 3 km, ocho opciones. `locationPolicy.ts` centraliza límites de antigüedad/precisión. Sólo se guarda la preferencia; muestras y candidatos viven en memoria.
+
+El plugin Android permite consultar permisos y leer sin solicitar uno nuevo; se controla la revocación entre ambas acciones. Web requiere un clic para una muestra nueva. Peticiones y listeners se liberan al salir o cambiar contexto. El mapa usa el paquete de una ruta, IDs canónicos y fondo local. Cámaras en memoria limitadas a doce; retorno de foco/scroll sin mantener mapas ocultos. Los paquetes versionados verifican SHA-256 antes de lectura/caché; requieren navegador en contexto seguro.
+
+Planear usa estación/parada confirmada como origen y destino vacío. Una ruta sin parada solicita origen, sin usar silenciosamente Metro/GPS. Reportar pasa estación o variante; el contrato aún no persiste la parada del autobús. Borradores y publicación revisada conservan su comportamiento. Consultar [entrega, comandos y límites](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md).
 
 ## Alcance y límites del producto
 

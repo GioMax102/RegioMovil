@@ -115,6 +115,7 @@ let application: ReturnType<typeof createApp>;
 let server: Server;
 let base = '';
 let offline = false;
+const heldPublicDocuments = new Map<string, { promise: Promise<void>; release: () => void }>();
 let user: ReturnType<typeof userEvent.setup>;
 const requests: string[] = [];
 const plannedLines: string[] = [];
@@ -142,11 +143,13 @@ before(async () => {
       base,
     );
     requests.push(url.pathname + url.search);
+    if (heldPublicDocuments.has(url.pathname)) await heldPublicDocuments.get(url.pathname)!.promise;
     if (offline) throw new TypeError('Offline in this test');
     return realFetch(url, init);
   };
 });
 beforeEach(() => {
+  releasePublicDocuments();
   requests.length = 0;
   plannedLines.length = 0;
   cachedResponses.clear();
@@ -157,6 +160,7 @@ beforeEach(() => {
   user = userEvent.setup({ document: dom.window.document, delay: null });
 });
 afterEach(async () => {
+  releasePublicDocuments();
   // Flush React's scheduled work before the suite restores the DOM globals.
   await act(async () => cleanup());
 });
@@ -230,6 +234,137 @@ function assertNoTravelAction(dialog: HTMLElement) {
   assert.equal(within(dialog).queryByRole('button', { name: /llegada simulada/ }), null);
   assert.deepEqual(plannedLines, []);
 }
+
+function releasePublicDocuments() {
+  for (const held of heldPublicDocuments.values()) held.release();
+  heldPublicDocuments.clear();
+}
+function holdPublicDocument(path: string) {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  heldPublicDocuments.set(path, { promise, release });
+  return () => {
+    heldPublicDocuments.delete(path);
+    release();
+  };
+}
+function holdPublicCatalog() {
+  return holdPublicDocument('/transit-catalog.json');
+}
+
+test('Red restores the exact canonical Metro stop received with its initial route', async () => {
+  render(
+    <NetworkExplorer
+      onPlanLine={(id) => plannedLines.push(id)}
+      initialSelection={{ routeId: 'L2', stopId: 'metro:universidad' }}
+    />,
+  );
+  const selected = await screen.findByRole('region', { name: 'Estación seleccionada' });
+  assert.ok(within(selected).getByText('Universidad', { exact: true }));
+  assert.ok(within(selected).getByRole('button', { name: 'Centrar estación Universidad' }));
+  assert.equal(
+    (
+      screen.getByRole('combobox', {
+        name: 'Paradas de la ruta',
+        hidden: true,
+      }) as HTMLSelectElement
+    ).value,
+    'metro:universidad',
+  );
+  assert.deepEqual(
+    [...document.querySelectorAll('polyline[data-line]')].map((line) =>
+      line.getAttribute('data-line'),
+    ),
+    ['L2'],
+  );
+  assert.deepEqual(plannedLines, [], 'Restoring a stop must not start a journey.');
+});
+
+for (const interaction of ['search', 'filter'] as const) {
+  test(`a delayed initial route cannot replace the user's manual ${interaction} in Red`, async () => {
+    const release = holdPublicCatalog();
+    render(
+      <NetworkExplorer
+        onPlanLine={() => {}}
+        initialSelection={{ routeId: 'L1', stopId: 'metro:talleres' }}
+      />,
+    );
+    const input = screen.getByRole('combobox', {
+      name: 'Buscar recorrido en el mapa',
+    }) as HTMLInputElement;
+    await waitFor(() => assert.ok(requests.includes('/transit-catalog.json')));
+    if (interaction === 'search') await user.type(input, 'RegioRuta');
+    else
+      await user.click(
+        within(screen.getByRole('group', { name: 'Sistema en el mapa y catálogo' })).getByRole(
+          'button',
+          { name: 'RegioRuta', exact: true },
+        ),
+      );
+    await act(async () => release());
+    await waitFor(() => assert.ok(document.querySelector('.service-card')));
+    await screen.findByRole('group', { name: /^Mapa interactivo/ });
+    if (interaction === 'search') {
+      assert.equal(input.value, 'RegioRuta');
+      assert.ok(screen.getByRole('listbox', { name: 'Recorridos encontrados' }));
+    } else {
+      assert.ok(screen.getByRole('button', { name: 'RegioRuta', exact: true, pressed: true }));
+      assert.equal(input.value, '');
+      assert.ok(screen.getByText('7 rutas · 6 redes'));
+    }
+    assert.equal(screen.queryByRole('button', { name: 'Ver ficha de L1: Línea 1' }), null);
+    assert.equal(screen.queryByRole('region', { name: 'Estación seleccionada' }), null);
+  });
+}
+
+test('an initial service without geometry opens its source and never labels other routes as its trace', async () => {
+  const release = holdPublicCatalog();
+  render(
+    <NetworkExplorer
+      onPlanLine={(id) => plannedLines.push(id)}
+      initialSelection={{ routeId: 'ima-5-remanente-estanzuela-los-cristales' }}
+    />,
+  );
+  await screen.findByRole('group', { name: /^Mapa interactivo/ });
+  assert.ok(document.querySelectorAll('.location-map-canvas polyline[data-line]').length > 1);
+  await act(async () => release());
+  const dialog = await screen.findByRole('dialog', { name: /5 ·/ });
+  assert.ok(within(dialog).getByText('Trazo pendiente'));
+  assert.ok(within(dialog).getByRole('link', { name: 'Consultar fuente oficial', hidden: true }));
+  assert.equal(within(dialog).queryByRole('img', { name: /Mapa|Recorrido/ }), null);
+  assert.equal(
+    document.querySelectorAll('.location-map-canvas polyline[data-line]').length,
+    0,
+    'A selected service without geometry must not display another route under its identity.',
+  );
+  assertNoTravelAction(dialog);
+  assert.ok(!requests.some((path) => path.startsWith('/route-packs/')));
+});
+
+test('a manually closed service detail stays closed when its delayed map document arrives', async () => {
+  const release = holdPublicDocument('/mobility-network.json');
+  render(<NetworkExplorer onPlanLine={(id) => plannedLines.push(id)} />);
+  const input = screen.getByRole('combobox', { name: 'Buscar recorrido en el mapa' });
+  await screen.findByText('214 rutas · 6 redes');
+  assert.ok(screen.getByText('Cargando mapa…'));
+  await user.type(input, '5 Estanzuela Los Cristales');
+  await user.click(
+    await screen.findByRole('option', { name: /5.*Estanzuela.*Los Cristales.*Trazo pendiente/ }),
+  );
+  const dialog = await screen.findByRole('dialog', { name: /5 ·/ });
+  assertNoTravelAction(dialog);
+  await closeDetails();
+  assert.equal(screen.queryByRole('dialog'), null);
+  assert.equal(document.activeElement, input);
+  await act(async () => release());
+  await screen.findByText(/Este recorrido no tiene un trazo disponible en este mapa/);
+  assert.equal(screen.queryByRole('dialog'), null, 'A late graph must respect dismissal.');
+  assert.equal(document.activeElement, input);
+  assert.ok(screen.getByRole('button', { name: /Ver ficha de 5:/ }));
+  assert.equal(document.querySelectorAll('.location-map-canvas polyline[data-line]').length, 0);
+});
 
 test('Red can retry its public map document after a connection failure without leaving the section', async () => {
   offline = true;
@@ -572,7 +707,7 @@ test('map route suggestions support keyboard selection without a dangling ARIA r
 test('map search discovers a catalog service without geometry and opens its source instead of an empty map', async () => {
   render(<NetworkExplorer onPlanLine={(id) => plannedLines.push(id)} />);
   const searchInput = await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
-  const map = await screen.findByRole('group', { name: /^Mapa interactivo/ });
+  await screen.findByRole('group', { name: /^Mapa interactivo/ });
   await screen.findByText('214 rutas · 6 redes');
   await user.type(searchInput, '5 Estanzuela Los Cristales');
   await user.click(
@@ -583,10 +718,11 @@ test('map search discovers a catalog service without geometry and opens its sour
   assert.ok(within(dialog).getByRole('link', { name: 'Consultar fuente oficial' }));
   assert.equal(within(dialog).queryByRole('img', { name: /Mapa|Recorrido/ }), null);
   assertNoTravelAction(dialog);
-  assert.equal(document.querySelectorAll('.location-map-canvas').length, 1);
-  assert.equal(screen.getByRole('group', { name: /^Mapa interactivo/, hidden: true }), map);
+  assert.equal(document.querySelectorAll('.location-map-canvas').length, 0);
+  assert.equal(screen.queryByRole('group', { name: /^Mapa interactivo/, hidden: true }), null);
   await closeDetails();
   assert.equal(document.activeElement, searchInput);
+  assert.ok(screen.getByText(/Este recorrido no tiene un trazo disponible en este mapa/));
   assert.ok(screen.getByRole('button', { name: /Ver ficha de 5:/ }));
   assert.ok(!requests.some((path) => path.startsWith('/route-packs/')));
 });

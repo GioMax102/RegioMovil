@@ -1,0 +1,19 @@
+.home-selected-route-map {
+  min-width: 0;
+}
+.home-selected-route-map .location-map-canvas {
+  height: clamp(260px, 38svh, 340px);
+}
+.home-selected-route-map > .text-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+}
+.home-selected-route-map:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 20px;
+}

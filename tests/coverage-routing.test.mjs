@@ -105,13 +105,14 @@ test('all matching integrated maps are included and a newly imported corridor ge
 test('an explicit view-only override still excludes unsafe data while a separate experimental control stays routable', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'regiomovil-routing-evidence-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  for (const folder of ['scripts', 'server', 'data', 'public/route-packs']) await mkdir(join(directory, folder), { recursive: true });
+  for (const folder of ['scripts', 'server', 'shared', 'data', 'public/route-packs']) await mkdir(join(directory, folder), { recursive: true });
   const control = catalog.routes.find((route) => route.id === 'regioruta-a');
   const blocked = catalog.routes.find((route) => route.id === 'ima-182-troncal-cadereyta');
   const pack = await readJson(`public/route-packs/${blocked.geometryPack}.json`);
   await Promise.all([
     copyFile(new URL('scripts/prepare-mobility.mjs', root), join(directory, 'scripts/prepare-mobility.mjs')),
     copyFile(new URL('server/mobility.mjs', root), join(directory, 'server/mobility.mjs')),
+    copyFile(new URL('shared/published-route.mjs', root), join(directory, 'shared/published-route.mjs')),
     writeFile(join(directory, 'data/network.json'), JSON.stringify({ lines: [], stations: [], sources: [] })),
     writeFile(join(directory, 'data/transit-catalog.json'), JSON.stringify({ ...catalog, routes: [blocked, control] })),
     writeFile(join(directory, `public/route-packs/${blocked.geometryPack}.json`), JSON.stringify({ ...pack, experimentalRouting: false })),
