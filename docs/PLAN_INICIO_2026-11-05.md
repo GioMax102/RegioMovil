@@ -2,6 +2,8 @@
 
 Fecha: **5 de noviembre de 2026**, America/Monterrey. Rama `codex/inicio-boceto-transporte`, base `4173963` de `codex/evaluadores-optimizacion`. Continúa **P8** del [plan P1–P10](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md) y la [entrega web anterior](ENTREGA_EVALUADORES_2026-11-01.md). Este lote prepara revisión; no integra `main` ni instala un APK nuevo.
 
+Solicitud posterior: el [plan contextual, revisión 2](PLAN_INICIO_CONTEXTUAL_2026-11-05.md) sustituye la jerarquía/selector para la próxima implementación. Este registro conserva lo entregado en `5187885`; no implica que la revisión 2 ya esté desarrollada.
+
 ## Boceto y resultado
 
 El [boceto original del usuario](evidencia/2026-11-05/boceto-inicio-usuario.png) propone elegir transporte, encontrar un punto cercano o seleccionarlo, consultar un recorrido y participar mediante reportes. Se adapta a los datos y capacidades existentes:
