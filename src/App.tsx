@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -38,6 +38,8 @@ const ArrivalDetails = lazy(() => import('./components/ArrivalDetails'));
 import type { MobilityEndpoint, SavedMobilityTrip } from './mobility/types';
 import { ArrivalCard, Brand, Dialog, Forecast, LineBadge } from './components/Primitives';
 import HomeDashboard from './components/HomeDashboard';
+import type { HomeSelection, HomeUiState } from './components/homeTypes';
+import type { RegionalView } from './mobility/regionalViewport';
 import { useAppearance } from './appearance';
 import { ActionFeedback } from './components/ActionFeedback';
 import { DataPreferencesProvider } from './dataPreferences';
@@ -89,6 +91,15 @@ export default function App() {
     ),
   );
   const pageTitle = usePageFocus(page);
+  const [homeSelection, setHomeSelection] = useState<HomeSelection>(() => ({
+    kind: 'metro',
+    stationId: station,
+    source: 'base',
+  }));
+  const homeMapViews = useRef(new Map<string, RegionalView>());
+  const homeUiState = useRef<HomeUiState>({ metroMapOpen: false });
+  const [networkSelection, setNetworkSelection] = useState<{ routeId: string; stopId?: string }>();
+  const [requireOriginSelection, setRequireOriginSelection] = useState(false);
   const [initialMobilityTrip, setInitialMobilityTrip] = useState<
     | {
         from: MobilityEndpoint;
@@ -153,6 +164,41 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
   const [now, setNow] = useState(new Date());
   const currentStation = network.stations.find((s) => s.id === station)!;
+  const homeStation =
+    homeSelection.kind === 'metro'
+      ? (network.stations.find((item) => item.id === homeSelection.stationId) ?? currentStation)
+      : currentStation;
+  function selectHome(next: HomeSelection) {
+    setHomeSelection(next);
+    if (next.kind === 'metro') setStation(next.stationId);
+  }
+  function planHome(selected: HomeSelection) {
+    homeUiState.current.returnTo = 'plan';
+    homeUiState.current.scrollTop = window.scrollY;
+    setInitialMobilityTrip(undefined);
+    const id = selected.kind === 'metro' ? selected.stationId : selected.stopId;
+    setInitialMobilityOrigin(id ? { id } : undefined);
+    setRequireOriginSelection(!id);
+    setPage('plan');
+  }
+  function exploreHome(selected: HomeSelection) {
+    homeUiState.current.returnTo = 'map';
+    homeUiState.current.scrollTop = window.scrollY;
+    setNetworkSelection(
+      selected.kind === 'metro'
+        ? {
+            routeId: selected.lineId ?? homeStation.lineIds[0],
+            stopId: `metro:${selected.stationId}`,
+          }
+        : { routeId: selected.route.id, stopId: selected.stopId },
+    );
+    navigate({ page: 'stations', network: 'routes' });
+  }
+  useEffect(() => {
+    if (page === 'home' && !kiosk && homeSelection.kind === 'metro') {
+      setStation(homeSelection.stationId);
+    }
+  }, [page, kiosk, homeSelection]);
   function openReport(target: { stationId?: string; routeId?: string }) {
     setReportTarget(target);
     setModal('report');
@@ -234,6 +280,7 @@ export default function App() {
   function openMobilityPlanner() {
     setInitialMobilityTrip(undefined);
     setInitialMobilityOrigin(undefined);
+    setRequireOriginSelection(false);
     setPage('plan');
   }
   function toggleKiosk() {
@@ -521,34 +568,22 @@ export default function App() {
           )}
 
           {page === 'home' && !kiosk && (
-            <button className="mobile-plan-cta home-plan-cta" onClick={openMobilityPlanner}>
-              <span className="soft-icon">
-                <Route size={22} />
-              </span>
-              <span>
-                <strong>¿A dónde vamos?</strong>
-              </span>
-              <ArrowRight size={20} />
-            </button>
-          )}
-          {page === 'home' && !kiosk && (
             <HomeDashboard
               now={now}
-              station={currentStation}
-              board={board}
+              station={homeStation}
+              board={board?.stationId === homeStation.id ? board : null}
               loading={loading}
-              favorite={favorites.includes(station)}
-              onFavorite={() => toggleFavorite(station)}
+              favorite={favorites.includes(homeStation.id)}
+              onFavorite={() => toggleFavorite(homeStation.id)}
               onArrival={setArrival}
               onSavedTrip={setHomeTrip}
               onSaved={() => setPage('mobility')}
-              onNetwork={() => {
-                navigate({ page: 'stations', network: 'routes' });
-              }}
+              onNetwork={exploreHome}
               onStationDetails={() => {
                 navigate({ page: 'stations', network: 'stations' });
                 setLineFilter('all');
-                setStationQuery(currentStation.name);
+                setStation(homeStation.id);
+                setStationQuery(homeStation.name);
               }}
               onReport={() => openReport({})}
               onChooseStation={() => {
@@ -556,6 +591,11 @@ export default function App() {
                 setModal('station');
               }}
               onSelectStation={setStation}
+              selection={homeSelection}
+              onSelect={selectHome}
+              onPlan={planHome}
+              mapViews={homeMapViews.current}
+              uiState={homeUiState.current}
               onReportTarget={openReport}
               reportOpen={modal === 'report'}
             />
@@ -707,6 +747,7 @@ export default function App() {
                 initialTrip={initialMobilityTrip}
                 initialOrigin={initialMobilityOrigin}
                 initialStationId={station}
+                requireOriginSelection={requireOriginSelection}
               />
             </Suspense>
           )}
@@ -771,6 +812,7 @@ export default function App() {
                   location.replace(target.href);
                 }}
                 componentProps={{
+                  initialSelection: networkSelection,
                   onReportRoute: (routeId: string) => openReport({ routeId }),
                   onPlanLine: (lineId: string) => {
                     const line = network.lines.find((item) => item.id === lineId);
@@ -780,6 +822,7 @@ export default function App() {
                       to: { id: line.stationIds[line.stationIds.length - 1] },
                       preference: 'fastest',
                     });
+                    setRequireOriginSelection(false);
                     setPage('plan');
                   },
                 }}
@@ -920,6 +963,7 @@ export default function App() {
                                   setStationQuery('');
                                 } else {
                                   setInitialMobilityTrip(undefined);
+                                  setRequireOriginSelection(false);
                                   setInitialMobilityOrigin({
                                     id: entry.stopId,
                                     name: entry.name,
@@ -1072,7 +1116,9 @@ export default function App() {
                   key={s.id}
                   className="station-list-item"
                   onClick={() => {
-                    setStation(s.id);
+                    if (page === 'home' && !kiosk)
+                      selectHome({ kind: 'metro', stationId: s.id, source: 'manual' });
+                    else setStation(s.id);
                     setModal(null);
                   }}
                 >

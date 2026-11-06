@@ -1,10 +1,11 @@
-/** Behavioral tests for the new home selection; no browser layout or phone camera claims. */
+/** Behavioral tests for context details. Map geometry and GPS are covered by their dedicated suites. */
 import test, { after, afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import React, { type ComponentProps } from 'react';
 import { JSDOM } from 'jsdom';
-import type { RoutePack, TransitCatalogData, TransitRoute } from '../src/types';
+import type { RoutePack } from '../src/types';
+import type { HomeSelection } from '../src/components/homeTypes';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });
 const previous = new Map<string, PropertyDescriptor | undefined>();
@@ -33,51 +34,31 @@ for (const name of [
 }
 const styles = registerHooks({
   load(url, context, next) {
+    if (url.endsWith('/HomeSelectedRouteMap.tsx'))
+      return {
+        format: 'module',
+        shortCircuit: true,
+        source: `import React from 'react'; export default function Map({selection,onExpand}) {return React.createElement('div',{'data-testid':'selected-map','data-target':selection.kind==='bus'?selection.route.id:selection.stationId,'data-stop':selection.stopId},React.createElement('button',{onClick:onExpand},'Ampliar recorrido'));}`,
+      };
     return url.endsWith('.css')
       ? { format: 'module', source: '', shortCircuit: true }
       : next(url, context);
   },
 });
 const { default: HomeTransportHub } = await import('../src/components/HomeTransportHub');
+const { homeCanonicalStops } = await import('../src/components/homeNearby');
 const { nearestHomePoint, homeRouteSegments, projectHomePreview } =
   await import('../src/components/homeTransport');
 const { network } = await import('../src/api');
 const { render, screen, cleanup, waitFor, act } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
 type Props = ComponentProps<typeof HomeTransportHub>;
-const station = network.stations[0];
-const makeRoute = (id: string, overrides: Partial<TransitRoute> = {}): TransitRoute => ({
-  id,
-  code: id.toUpperCase(),
-  name: `Ruta ${id}`,
-  networkId: 'transmetro',
-  mode: 'bus',
-  status: 'published',
-  statusAsOf: null,
-  municipalities: ['Monterrey'],
-  from: null,
-  to: null,
-  via: [],
-  sourceIds: [],
-  officialUrl: null,
-  planningEligible: true,
-  geometryPack: 'home-test',
-  notes: [],
-  ...overrides,
+const metro: HomeSelection = { kind: 'metro', stationId: network.stations[0].id, source: 'base' };
+const bus = (id = 'bus-a', geometryPack: string | null = 'home-test'): HomeSelection => ({
+  kind: 'bus',
+  route: { id, code: id.toUpperCase(), name: `Ruta ${id}`, networkId: 'transmetro', geometryPack },
+  source: 'manual',
 });
-const catalog: TransitCatalogData = {
-  version: 1,
-  verifiedAt: '2026-11-05',
-  networks: [],
-  sources: [],
-  routes: [
-    makeRoute('bus-a', { officialUrl: 'javascript:alert(1)' }),
-    makeRoute('bus-b', { geometryPack: null, officialUrl: 'https://example.test/catalog/bus-b' }),
-    makeRoute('bus-c', { geometryPack: 'home-other' }),
-    makeRoute('construction', { status: 'construction' }),
-    makeRoute('metro', { mode: 'metro' }),
-  ],
-};
 const pack: RoutePack = {
   id: 'home-test',
   sourceUrl: 'https://example.test/route',
@@ -100,56 +81,65 @@ const pack: RoutePack = {
   ],
   stops: [
     { id: 'stop-a', name: 'Parada A', lat: 25.7, lng: -100.4 },
-    { id: 'stop-b', name: 'Parada B', lat: 25.71, lng: -100.29 },
+    { id: 'stop-b', name: 'Parada B', lat: 25.71, lng: -100.39 },
+    { id: 'stop-c', name: 'Parada C', lat: 25.7, lng: -100.3 },
+    { id: 'stop-d', name: 'Parada D', lat: 25.71, lng: -100.29 },
   ],
   stopOrderVerified: false,
 };
-let requests: string[];
-let gpsCalls: number;
-let gpsSuccess: PositionCallback | undefined;
-let gpsError: PositionErrorCallback | undefined;
-let failCatalog: boolean;
-let waitForPack: ((value: Response) => void) | undefined;
-let holdPack: boolean;
-let responsePack: RoutePack & {
-  experimentalRouting?: boolean;
-  stops: (RoutePack['stops'][number] & { publishedInfrastructureNote?: string })[];
-};
 const json = (data: unknown) =>
-  new Response(JSON.stringify(data), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+let requests: string[],
+  responsePack: RoutePack,
+  failPack: boolean,
+  holdPack: boolean,
+  aborts: number;
+let releasePack: ((response: Response) => void) | undefined;
+let catalogRevision: string | undefined;
 beforeEach(() => {
   requests = [];
-  gpsCalls = 0;
-  gpsSuccess = undefined;
-  gpsError = undefined;
-  failCatalog = false;
-  holdPack = false;
   responsePack = pack;
-  waitForPack = undefined;
-  Object.defineProperty(navigator, 'geolocation', {
-    configurable: true,
-    value: {
-      getCurrentPosition(success: PositionCallback, error: PositionErrorCallback) {
-        gpsCalls++;
-        gpsSuccess = success;
-        gpsError = error;
-      },
-    },
-  });
-  globalThis.fetch = async (input) => {
+  failPack = false;
+  holdPack = false;
+  aborts = 0;
+  releasePack = undefined;
+  catalogRevision = undefined;
+  localStorage.clear();
+  globalThis.fetch = async (input, init) => {
     const path = String(input);
     requests.push(path);
-    if (path.startsWith('/transit-catalog.json')) {
-      if (failCatalog) throw new Error('offline');
-      return json(catalog);
-    }
+    if (path.startsWith('/api/reports?'))
+      return json({ reports: [], summary: { total: 0, open: 0, resolved: 0, byCategory: {} } });
+    if (path.startsWith('/transit-catalog.json'))
+      return json({
+        version: 1,
+        sources: [],
+        routes: [
+          {
+            id: 'bus-a',
+            mode: 'bus',
+            status: 'published',
+            geometryPack: 'home-test',
+            geometryRevision: catalogRevision,
+          },
+          {
+            id: 'bus-c',
+            mode: 'bus',
+            status: 'published',
+            geometryPack: 'home-other',
+            geometryRevision: catalogRevision,
+          },
+        ],
+      });
     if (path.startsWith('/route-packs/')) {
+      if (failPack) throw new Error('offline');
       if (holdPack)
-        return new Promise<Response>((resolve) => {
-          waitForPack = resolve;
+        return new Promise<Response>((resolve, reject) => {
+          releasePack = resolve;
+          init?.signal?.addEventListener('abort', () => {
+            aborts++;
+            reject(new DOMException('Cancelled', 'AbortError'));
+          });
         });
       return json(
         path.includes('home-other') ? { ...responsePack, id: 'home-other' } : responsePack,
@@ -158,7 +148,9 @@ beforeEach(() => {
     throw new Error(`Unexpected request: ${path}`);
   };
 });
-afterEach(cleanup);
+afterEach(async () => {
+  await act(async () => cleanup());
+});
 after(() => {
   styles.deregister();
   dom.window.close();
@@ -168,358 +160,219 @@ after(() => {
       : Reflect.deleteProperty(globalThis, name);
 });
 function mount(overrides: Partial<Props> = {}) {
+  const selections: HomeSelection[] = [],
+    planned: HomeSelection[] = [],
+    expanded: HomeSelection[] = [],
+    reported: unknown[] = [];
+  let saved = 0,
+    general = 0;
   const props: Props = {
-    station,
-    onChooseStation() {},
-    onSelectStation() {},
-    onNetwork() {},
-    onReportTarget() {},
-    metroContent: <p>Contenido de Metro simulado</p>,
-    reportAction: <button type="button">Crear reporte general</button>,
-    community: (target) => (
-      <div data-testid="community" data-target={target.stationId || target.routeId}>
-        Reportes aprobados
-      </div>
-    ),
+    selection: metro,
+    onSelect: (value) => selections.push(value),
+    onPlan: (value) => planned.push(value),
+    onSaved: () => saved++,
+    onNetwork: (value) => expanded.push(value),
+    onReportTarget: (target) => reported.push(target),
+    onReportGeneral: () => general++,
     ...overrides,
   };
-  return { ...render(<HomeTransportHub {...props} />), props };
-}
-async function chooseBus() {
-  const user = userEvent.setup({ document: dom.window.document });
-  await user.click(screen.getByRole('tab', { name: /Autobús/ }));
-  await screen.findByRole('combobox', { name: 'Ruta', exact: true });
-  return user;
-}
-async function position(lat: number, lng: number, accuracy = 30) {
-  await act(async () =>
-    gpsSuccess?.({
-      coords: { latitude: lat, longitude: lng, accuracy },
-      timestamp: Date.now(),
-    } as GeolocationPosition),
-  );
-}
-
-test('home opens Metro without catalog, graph, tiles or a GPS prompt; tabs preserve keyboard access', async () => {
-  const { container } = mount();
-  const assertPanelRelations = () => {
-    for (const tab of screen.getAllByRole('tab')) {
-      const panel = document.getElementById(tab.getAttribute('aria-controls')!);
-      assert.ok(panel, 'Every tab controls an existing panel.');
-      assert.equal(panel.getAttribute('role'), 'tabpanel');
-      assert.equal(panel.getAttribute('aria-labelledby'), tab.id);
-      const inactive = tab.getAttribute('aria-selected') === 'false';
-      assert.equal(panel.hidden, inactive);
-      if (inactive) assert.equal(panel.childElementCount, 0, 'Inactive content stays unmounted.');
-    }
-    assert.equal(screen.getAllByRole('tabpanel').length, 1);
+  return {
+    ...render(<HomeTransportHub {...props} />),
+    props,
+    selections,
+    planned,
+    expanded,
+    reported,
+    saved: () => saved,
+    general: () => general,
   };
-  assertPanelRelations();
-  assert.deepEqual(requests, []);
-  assert.equal(gpsCalls, 0);
-  assert.match(container.textContent!, /Contenido de Metro simulado/);
-  assert.equal(container.querySelectorAll('.home-transport-map polyline').length, 1);
-  assert.equal(container.querySelectorAll('img,image').length, 0);
+}
+
+test('Metro details leave its map closed, fetch no graph/catalog/packs and keep compact actions separate', async () => {
+  const view = mount();
   const user = userEvent.setup({ document: dom.window.document });
-  screen.getByRole('tab', { name: /^Metro/ }).focus();
-  await user.keyboard('{ArrowRight}');
-  await screen.findByRole('combobox', { name: 'Ruta', exact: true });
-  assert.equal(document.activeElement, screen.getByRole('tab', { name: /Autobús/ }));
-  assert.deepEqual(requests, ['/transit-catalog.json']);
-  assert.equal(screen.queryByText('Contenido de Metro simulado'), null);
-  assert.ok(screen.getByRole('button', { name: 'Crear reporte general' }));
-  assertPanelRelations();
-  for (const shortcut of [
-    '{Control>}{Home}{/Control}',
-    '{Alt>}{ArrowLeft}{/Alt}',
-    '{Meta>}{Home}{/Meta}',
-  ]) {
-    await user.keyboard(shortcut);
-    const busTab = screen.getByRole('tab', { name: /Autobús/ });
-    assert.equal(busTab.getAttribute('aria-selected'), 'true');
-    assert.equal(document.activeElement, busTab);
-    assertPanelRelations();
-  }
-  await user.keyboard('{ArrowLeft}');
-  assertPanelRelations();
-  assert.equal(document.activeElement, screen.getByRole('tab', { name: /^Metro/ }));
-  assert.ok(screen.getByText('Contenido de Metro simulado'));
-  assert.deepEqual(requests, ['/transit-catalog.json']);
+  await screen.findByText(/Todavía no hay reportes públicos/);
+  assert.equal(screen.queryByTestId('selected-map'), null);
+  assert.ok(requests.every((path) => path.startsWith('/api/reports?station=')));
+  await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
+  await user.click(screen.getByRole('button', { name: 'Guardados', exact: true }));
+  await user.click(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
+  await user.click(screen.getByRole('button', { name: 'Crear reporte general' }));
+  assert.deepEqual(view.planned, [metro]);
+  assert.equal(view.saved(), 1);
+  assert.deepEqual(view.reported, [{ stationId: metro.kind === 'metro' ? metro.stationId : '' }]);
+  assert.equal(view.general(), 1);
+  await user.click(screen.getByText('Ver mapa de la línea'));
+  await screen.findByTestId('selected-map');
+  await user.click(screen.getByRole('button', { name: 'Ampliar recorrido' }));
+  assert.deepEqual(view.expanded, [metro]);
+  assert.deepEqual(view.selections, []);
 });
 
-test('a catalog route without geometry stays selectable and reportable without invented stops, ETA or ratings', async () => {
-  let target: Parameters<Props['onReportTarget']>[0] | undefined;
-  mount({
-    onReportTarget: (value) => {
-      target = value;
-    },
-  });
-  const user = await chooseBus();
-  const select = screen.getByRole('combobox', { name: 'Ruta', exact: true });
-  assert.equal(screen.queryByRole('option', { name: /construction|Ruta metro/ }), null);
-  await user.selectOptions(select, 'bus-b');
-  assert.match(screen.getByRole('status').textContent!, /trazo y paradas siguen pendientes/);
-  assert.equal(screen.queryByRole('combobox', { name: 'Parada del recorrido' }), null);
-  assert.equal(screen.queryByLabelText('Encontrar parada cercana de esta ruta'), null);
-  await user.click(screen.getByRole('button', { name: /Reportar aquí/ }));
-  assert.deepEqual(target, { routeId: 'bus-b' });
-  assert.equal(screen.getByTestId('community').getAttribute('data-target'), 'bus-b');
-  assert.deepEqual(requests, ['/transit-catalog.json']);
-  assert.equal(screen.queryByText(/estrellas|llega en|minutos/i), null);
-});
-
-test('selected bus loads one route pack, preserves geometry gaps and scopes its map and community context', async () => {
-  let networkOpened = 0;
-  const { container } = mount({
-    onNetwork: () => {
-      networkOpened++;
-    },
-  });
-  const user = await chooseBus();
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-a');
-  await screen.findByRole('combobox', { name: 'Parada del recorrido' });
-  assert.deepEqual(requests, ['/transit-catalog.json', '/route-packs/home-test.json']);
-  assert.equal(container.querySelectorAll('.home-transport-map polyline').length, 2);
-  assert.match(container.textContent!, /Sin llegadas ni afluencia en tiempo real/);
-  assert.equal(screen.getByTestId('community').getAttribute('data-target'), 'bus-a');
-  await user.selectOptions(
-    screen.getByRole('combobox', { name: 'Parada del recorrido' }),
-    'stop-b',
+test('bus context loads one settled pack, canonical stop selection updates context and sources remain explicit', async () => {
+  const selection = bus();
+  const view = mount({ selection });
+  const user = userEvent.setup({ document: dom.window.document });
+  assert.ok(screen.getByText('Llegadas y afluencia no disponibles'));
+  const select = await screen.findByRole('combobox', { name: 'Parada del recorrido' });
+  assert.deepEqual(
+    [...(select as HTMLSelectElement).options].map((option) => option.value),
+    ['', 'bus-a:stop-a', 'bus-a:stop-b', 'bus-a:stop-c', 'bus-a:stop-d'],
   );
-  assert.equal(container.querySelectorAll('.home-transport-map > svg circle').length, 2);
-  await user.click(screen.getByRole('button', { name: 'Explorar la red: Ruta bus-a' }));
-  assert.equal(networkOpened, 1);
-  assert.equal(
-    requests.some((path) => /mobility-network|tile/.test(path)),
-    false,
-  );
-});
-
-test('bus provenance retains dated HTTPS sources, inferred order and pending-route references without joining gaps', async () => {
-  const { container } = mount();
-  const user = await chooseBus();
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-a');
-  await screen.findByRole('combobox', { name: 'Parada del recorrido' });
-  const details = container.querySelector('.home-transport-sources') as HTMLDetailsElement;
-  assert.equal(details.open, false);
+  await user.selectOptions(select, 'bus-a:stop-b');
+  assert.equal(view.selections.length, 1);
+  assert.equal(view.selections[0].kind, 'bus');
+  assert.equal(view.selections[0].kind === 'bus' && view.selections[0].stopId, 'bus-a:stop-b');
+  assert.equal(requests.filter((path) => path.startsWith('/route-packs/')).length, 1);
+  assert.ok(!requests.some((path) => path.includes('mobility-network')));
+  assert.equal(requests.filter((path) => path.startsWith('/transit-catalog.json')).length, 1);
   await user.click(screen.getByText('Fuente y alcance'));
-  assert.equal(details.open, true);
-  assert.match(details.textContent!, /Orden de paradas por confirmar/);
-  assert.match(details.textContent!, /no confirma la operación actual/);
-  assert.equal(details.querySelector('time')?.getAttribute('dateTime'), '2026-11-05');
+  assert.match(screen.getByText(/Orden de paradas por confirmar/).textContent!, /sentido/);
   assert.equal(
     screen.getByRole('link', { name: 'Fuente del trazo' }).getAttribute('href'),
     pack.sourceUrl,
   );
-  assert.equal(screen.queryByRole('link', { name: 'Fuente de la ruta' }), null);
-  assert.equal(container.querySelectorAll('.home-transport-map polyline').length, 2);
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-b');
-  await user.click(screen.getByText('Fuente y alcance'));
+  await user.click(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
+  assert.deepEqual(view.reported, [{ routeId: 'bus-a' }]);
+});
+
+test('manual routes without traces retain planning, reporting, sources and their own community scope', async () => {
+  const selection = bus('without-trace', null);
+  const view = mount({ selection });
+  const user = userEvent.setup({ document: dom.window.document });
+  await screen.findByText(/Todavía no hay reportes públicos para esta ruta/);
+  assert.ok(screen.getByText(/Trazo pendiente/));
+  assert.equal(screen.queryByRole('combobox', { name: 'Parada del recorrido' }), null);
+  assert.equal(screen.queryByTestId('selected-map'), null);
+  await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
+  await user.click(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
+  assert.deepEqual(view.planned, [selection]);
+  assert.deepEqual(view.reported, [{ routeId: 'without-trace' }]);
+  assert.ok(requests.every((path) => path.startsWith('/api/reports?route=without-trace')));
+});
+
+test('rapid context changes are debounced and unfinished packs are aborted without leaking old stops', async () => {
+  const first = bus();
+  const view = mount({ selection: first });
+  view.rerender(<HomeTransportHub {...view.props} selection={bus('bus-b', null)} />);
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 280));
+  });
   assert.equal(
-    screen.getByRole('link', { name: 'Fuente de la ruta' }).getAttribute('href'),
-    'https://example.test/catalog/bus-b',
+    requests.some((path) => path.startsWith('/route-packs/')),
+    false,
   );
-  assert.equal(screen.queryByRole('link', { name: 'Fuente del trazo' }), null);
-  assert.match(
-    container.querySelector('.home-transport-sources')!.textContent!,
-    /Corte del catálogo/,
+  holdPack = true;
+  view.rerender(<HomeTransportHub {...view.props} selection={first} />);
+  await waitFor(() => assert.equal(typeof releasePack, 'function'));
+  view.rerender(<HomeTransportHub {...view.props} selection={bus('bus-b', null)} />);
+  await waitFor(() => assert.equal(aborts, 1));
+  await act(async () => releasePack?.(json(pack)));
+  assert.equal(screen.queryByRole('combobox', { name: 'Parada del recorrido' }), null);
+  assert.equal(screen.queryByTestId('selected-map'), null);
+  assert.ok(requests.some((path) => path === '/api/reports?route=bus-b'));
+});
+
+test('pack failures are retryable and never disable reporting or reuse Metro predictions', async () => {
+  failPack = true;
+  mount({ selection: bus() });
+  const user = userEvent.setup({ document: dom.window.document });
+  await screen.findByRole('alert');
+  assert.ok(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
+  assert.ok(screen.getByText('Llegadas y afluencia no disponibles'));
+  assert.equal(screen.queryByRole('button', { name: /llegada simulada/ }), null);
+  failPack = false;
+  await user.click(screen.getByRole('button', { name: 'Reintentar trazo' }));
+  await screen.findByRole('combobox', { name: 'Parada del recorrido' });
+});
+
+test('a retained report draft resumes without silently assigning the newly selected route', async () => {
+  const view = mount({ selection: bus(), hasReportDraft: true });
+  const user = userEvent.setup({ document: dom.window.document });
+  await user.click(screen.getByRole('button', { name: 'Continuar reporte' }));
+  assert.equal(view.general(), 1);
+  assert.deepEqual(view.reported, []);
+});
+
+test('planning uses a stop only after its canonical identity is confirmed against the current pack', async () => {
+  const selection: HomeSelection = {
+    ...(bus() as Extract<HomeSelection, { kind: 'bus' }>),
+    stopId: 'bus-a:stop-b',
+  };
+  const view = mount({ selection });
+  const user = userEvent.setup({ document: dom.window.document });
+  await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
+  assert.equal(view.planned[0].kind === 'bus' && view.planned[0].stopId, undefined);
+  await screen.findByRole('combobox', { name: 'Parada del recorrido' });
+  await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
+  assert.equal(view.planned[1].kind === 'bus' && view.planned[1].stopId, 'bus-a:stop-b');
+});
+
+test('an outdated nearby route never fetches a mismatched pack and asks before changing its revision', async () => {
+  catalogRevision = '123456abcdef';
+  const selection: HomeSelection = {
+    ...(bus() as Extract<HomeSelection, { kind: 'bus' }>),
+    stopId: 'bus-a:stop-b',
+  };
+  const view = mount({ selection });
+  const user = userEvent.setup({ document: dom.window.document });
+  await screen.findByRole('alert');
+  assert.ok(screen.getByText(/Este recorrido cambió/));
+  assert.equal(
+    requests.some((path) => path.startsWith('/route-packs/')),
+    false,
   );
-  assert.match(screen.getByRole('status').textContent!, /trazo y paradas siguen pendientes/);
+  assert.deepEqual(view.selections, []);
+  await user.click(screen.getByRole('button', { name: 'Usar versión actual' }));
+  assert.equal(
+    view.selections[0].kind === 'bus' && view.selections[0].route.geometryRevision,
+    catalogRevision,
+  );
+  assert.equal(view.selections[0].kind === 'bus' && view.selections[0].stopId, undefined);
 });
 
-test('late Metro GPS never replaces a station chosen manually or after changing mode', async () => {
-  const selected: string[] = [];
-  let manual = 0;
-  mount({
-    onChooseStation: () => {
-      manual++;
-    },
-    onSelectStation: (id) => selected.push(id),
-  });
-  const user = userEvent.setup({ document: dom.window.document });
-  assert.equal(gpsCalls, 0);
-  await user.click(screen.getByRole('button', { name: 'Encontrar estación de Metro cercana' }));
-  await waitFor(() => assert.equal(gpsCalls, 1));
-  await user.click(screen.getByRole('button', { name: /Tu estación/ }));
-  await position(station.lat, station.lng);
-  assert.equal(manual, 1);
-  assert.deepEqual(selected, []);
-  await user.click(screen.getByRole('button', { name: 'Encontrar estación de Metro cercana' }));
-  await waitFor(() => assert.equal(gpsCalls, 2));
-  await user.click(screen.getByRole('tab', { name: /Autobús/ }));
-  await position(station.lat, station.lng);
-  assert.deepEqual(selected, []);
-});
-
-test('explicit GPS selects the nearest Metro and rejects remote, imprecise and denied fixes', async () => {
-  const selected: string[] = [];
-  mount({ onSelectStation: (id) => selected.push(id) });
-  const user = userEvent.setup({ document: dom.window.document });
-  const locate = screen.getByRole('button', { name: 'Encontrar estación de Metro cercana' });
-  await user.click(locate);
-  await waitFor(() => assert.equal(gpsCalls, 1));
-  await position(station.lat, station.lng);
-  assert.deepEqual(selected, [station.id]);
-  await user.click(locate);
-  await waitFor(() => assert.equal(gpsCalls, 2));
-  await position(0, 0);
-  assert.match(screen.getByRole('status').textContent!, /No encontramos una estación/);
-  await user.click(locate);
-  await waitFor(() => assert.equal(gpsCalls, 3));
-  await position(station.lat, station.lng, 2000);
-  assert.match(screen.getByRole('status').textContent!, /imprecisa/);
-  await user.click(locate);
-  await waitFor(() => assert.equal(gpsCalls, 4));
-  await act(async () => gpsError?.({ code: 1 } as GeolocationPositionError));
-  assert.match(screen.getByRole('status').textContent!, /No se concedió/);
-  assert.deepEqual(selected, [station.id]);
-});
-
-test('bus GPS finds a stop only within the selected route and manual selection invalidates late fixes', async () => {
-  mount();
-  const user = await chooseBus();
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-a');
-  const stops = (await screen.findByRole('combobox', {
-    name: 'Parada del recorrido',
-  })) as HTMLSelectElement;
-  const locate = screen.getByRole('button', { name: 'Encontrar parada cercana de esta ruta' });
-  await user.click(locate);
-  await waitFor(() => assert.equal(gpsCalls, 1));
-  await position(pack.stops[0].lat, pack.stops[0].lng);
-  assert.equal(stops.value, 'stop-a');
-  assert.match(screen.getByRole('status').textContent!, /de esta ruta en línea recta/);
-  await user.click(locate);
-  await waitFor(() => assert.equal(gpsCalls, 2));
-  await user.selectOptions(stops, 'stop-b');
-  await position(pack.stops[0].lat, pack.stops[0].lng);
-  assert.equal(stops.value, 'stop-b');
-});
-
-test('a GPS-selected station keeps its feedback after the parent updates, but unmount ignores late fixes', async () => {
-  let selected = '';
-  const view = mount({
-    onSelectStation: (id) => {
-      selected = id;
-    },
-  });
-  const user = userEvent.setup({ document: dom.window.document });
-  const nextStation = network.stations[1];
-  await user.click(screen.getByRole('button', { name: 'Encontrar estación de Metro cercana' }));
-  await waitFor(() => assert.equal(gpsCalls, 1));
-  await position(nextStation.lat, nextStation.lng);
-  assert.equal(selected, nextStation.id);
-  view.rerender(<HomeTransportHub {...view.props} station={nextStation} />);
-  assert.match(screen.getByRole('status').textContent!, /estación más cercana en línea recta/);
-  await user.click(screen.getByRole('button', { name: 'Encontrar estación de Metro cercana' }));
-  await waitFor(() => assert.equal(gpsCalls, 2));
-  view.unmount();
-  await position(station.lat, station.lng);
-  assert.equal(selected, nextStation.id);
-});
-
-test('bus selection and GPS exclude proposed, distant, invalid and duplicate markers while visualization-only traces stay visible', async () => {
-  responsePack = {
+test('canonical stops reject proposals and traces with too few usable points while separate map segments stay separate', () => {
+  const invalid: RoutePack = {
     ...pack,
     stops: [
       pack.stops[0],
-      {
-        ...pack.stops[1],
-        id: 'proposal',
-        name: 'Solo propuesta',
-        publishedInfrastructureNote: 'PROPUESTA',
-      },
-      { id: 'far', name: 'Marcador lejos del trazo', lat: 25.705, lng: -100.35 },
-      { id: 'invalid', name: 'Coordenada inválida', lat: 91, lng: -100.4 },
-      { ...pack.stops[1], id: pack.stops[0].id, name: 'Identificador duplicado' },
-      {
-        id: 'exists',
-        name: 'Punto existente publicado',
-        lat: 25.705,
-        lng: -100.395,
-        publishedInfrastructureNote: 'EXISTE; PROPUESTA de mejora',
-      },
+      pack.stops[1],
+      { ...pack.stops[2], publishedInfrastructureNote: 'PROPUESTA' },
+      pack.stops[3],
+      { id: 'far', name: 'Lejos', lat: 25.705, lng: -100.35 },
+      { id: 'invalid', name: 'Inválido', lat: 91, lng: -100.4 },
     ],
   };
-  const { container } = mount();
-  const user = await chooseBus();
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-a');
-  const stops = (await screen.findByRole('combobox', {
-    name: 'Parada del recorrido',
-  })) as HTMLSelectElement;
   assert.deepEqual(
-    [...stops.options].map((option) => option.value),
-    ['', 'stop-a', 'exists'],
-  );
-  assert.equal(container.querySelectorAll('.home-transport-map polyline').length, 2);
-  await user.click(screen.getByRole('button', { name: 'Encontrar parada cercana de esta ruta' }));
-  await waitFor(() => assert.equal(gpsCalls, 1));
-  await position(pack.stops[1].lat, pack.stops[1].lng);
-  assert.equal(stops.value, 'exists');
-  assert.match(container.textContent!, /Confirma parada y sentido/);
-  responsePack = { ...pack, experimentalRouting: false };
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-c');
-  await screen.findByText(/Trazo para consulta visual/);
-  assert.equal(screen.queryByRole('combobox', { name: 'Parada del recorrido' }), null);
-  assert.equal(
-    screen.queryByRole('button', { name: 'Encontrar parada cercana de esta ruta' }),
-    null,
-  );
-  assert.equal(container.querySelectorAll('.home-transport-map polyline').length, 2);
-  assert.equal(screen.getByTestId('community').getAttribute('data-target'), 'bus-c');
-});
-
-test('an interchange can choose its preview line without changing the selected station', async () => {
-  const interchange = network.stations.find((item) => item.lineIds.length > 1)!;
-  let selected = '';
-  const { container } = mount({
-    station: interchange,
-    onSelectStation: (id) => {
-      selected = id;
-    },
-  });
-  const user = userEvent.setup({ document: dom.window.document });
-  await user.selectOptions(
-    screen.getByRole('combobox', { name: 'Línea para el mapa' }),
-    interchange.lineIds[1],
+    homeCanonicalStops({ id: 'bus-a' }, invalid).map((stop) => stop.id),
+    ['bus-a:stop-a', 'bus-a:stop-b'],
   );
   assert.equal(
-    container.querySelector('.home-transport-map')?.getAttribute('data-line'),
-    interchange.lineIds[1],
+    homeCanonicalStops({ id: 'bus-a' }, { ...pack, experimentalRouting: false }).length,
+    0,
   );
-  assert.equal(screen.getByTestId('community').getAttribute('data-target'), interchange.id);
-  assert.equal(selected, '');
-  assert.deepEqual(requests, []);
-});
-
-test('a late route pack does not leak stops into another route and failed catalogs are retryable', async () => {
-  failCatalog = true;
-  mount();
-  const user = userEvent.setup({ document: dom.window.document });
-  await user.click(screen.getByRole('tab', { name: /Autobús/ }));
-  await screen.findByRole('alert');
-  failCatalog = false;
-  await user.click(screen.getByRole('button', { name: 'Reintentar rutas' }));
-  await screen.findByRole('combobox', { name: 'Ruta', exact: true });
-  holdPack = true;
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-a');
-  await waitFor(() => assert.equal(typeof waitForPack, 'function'));
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Ruta', exact: true }), 'bus-b');
-  await act(async () => waitForPack?.(json(pack)));
-  assert.equal(screen.queryByRole('combobox', { name: 'Parada del recorrido' }), null);
-  assert.equal(screen.getByTestId('community').getAttribute('data-target'), 'bus-b');
-});
-
-test('nearest scan and schematic projection reject bad fixes, enforce distance and never join published gaps', () => {
-  assert.equal(nearestHomePoint(network.stations, { lat: NaN, lng: 0 }), null);
-  assert.equal(nearestHomePoint(network.stations, { lat: 0, lng: 0 }), null);
-  assert.equal(nearestHomePoint([station], { ...station, lat: station.lat + 1 }), null);
-  assert.equal(nearestHomePoint([station], station)?.point.id, station.id);
   assert.equal(homeRouteSegments(pack).length, 2);
   const preview = projectHomePreview(homeRouteSegments(pack), pack.stops[0]);
   assert.equal(preview?.paths.length, 2);
+  assert.ok(preview?.paths.every((path) => !/NaN|Infinity/.test(path)));
+  assert.equal(nearestHomePoint(network.stations, { lat: NaN, lng: 0 }), null);
+});
+
+test('returning to Home restores an explicitly opened Metro map without requesting the regional graph', async () => {
+  const uiState = { metroMapOpen: false };
+  const view = mount({ uiState });
+  const user = userEvent.setup({ document: dom.window.document });
+  await user.click(screen.getByText('Ver mapa de la línea'));
+  await screen.findByTestId('selected-map');
+  assert.equal(uiState.metroMapOpen, true);
+  assert.ok(document.querySelector('[data-home-action="map"]'));
+  assert.ok(document.querySelector('[data-home-action="plan"]'));
+  view.unmount();
+  mount({ uiState });
+  await screen.findByTestId('selected-map');
+  assert.equal(document.querySelector<HTMLDetailsElement>('.home-metro-map')?.open, true);
   assert.equal(
-    preview?.paths.some((path) => /NaN|Infinity/.test(path)),
+    requests.some((path) => path.includes('mobility-network')),
     false,
   );
-  assert.equal(projectHomePreview([]), null);
 });

@@ -51,6 +51,9 @@ export default function LocationMap({
   onExpand,
   onPick,
   onStopSelect,
+  initialStopId,
+  initialView,
+  onViewChange,
 }: {
   network: MobilityNetwork;
   online: boolean;
@@ -76,6 +79,9 @@ export default function LocationMap({
   onExpand?: () => void;
   onPick?: (point: MapPosition) => void;
   onStopSelect?: (stop: MobilityStop) => void;
+  initialStopId?: string;
+  initialView?: RegionalView;
+  onViewChange?: (view: RegionalView) => void;
 }) {
   const lowData = useDataSaver();
   const container = useRef<HTMLDivElement>(null);
@@ -97,6 +103,16 @@ export default function LocationMap({
   };
   const lastJourneyFit = useRef<string | null>(null);
   const lastContextFit = useRef<string | null>(null);
+  const restoredView = useRef(
+    initialView &&
+      isRegionalCoordinate([initialView.lng, initialView.lat]) &&
+      Number.isFinite(initialView.zoom)
+      ? initialView
+      : null,
+  );
+  const skipInitialFocus = useRef(!!restoredView.current);
+  const viewListener = useRef(onViewChange);
+  viewListener.current = onViewChange;
   function fit(positions: MapPosition[]) {
     const fullSize = sizeRef.current;
     const padding = paddingRef.current;
@@ -128,11 +144,21 @@ export default function LocationMap({
       {
         ...(focus && isRegionalCoordinate([focus.lng, focus.lat]) ? focus : CITY_CENTER),
         zoom: 13,
+        ...(restoredView.current ?? {}),
       },
       { width: 720, height: 420 },
     ),
   );
   const viewRef = useRef(view);
+  useEffect(() => {
+    viewListener.current?.(view);
+  }, [view]);
+  useEffect(
+    () => () => {
+      viewListener.current?.(viewRef.current);
+    },
+    [],
+  );
   const gestureFrame = useRef<number | null>(null);
   const pendingGesture = useRef<RegionalView | null>(null);
   function flushGesture() {
@@ -208,6 +234,20 @@ export default function LocationMap({
   useEffect(() => {
     setInspectedId('');
   }, [contextSignature, journey?.id, field]);
+  useEffect(() => {
+    if (!initialStopId || field) return;
+    const stop = network.stops.find(
+      (item) =>
+        item.id === initialStopId && item.official && isRegionalCoordinate([item.lng, item.lat]),
+    );
+    setInspectedId(
+      stop &&
+        (!contextRoutes ||
+          stop.routeIds.some((id) => displayedRoutes.some((route) => route.id === id)))
+        ? stop.id
+        : '',
+    );
+  }, [initialStopId, network, contextSignature, journey?.id, field]);
   function move(next: RegionalView) {
     flushGesture();
     const safe = constrainRegionalView(next, sizeRef.current);
@@ -252,6 +292,10 @@ export default function LocationMap({
     );
   }
   useEffect(() => {
+    if (skipInitialFocus.current) {
+      skipInitialFocus.current = false;
+      return;
+    }
     if (focus && isRegionalCoordinate([focus.lng, focus.lat]))
       move(navigationMode ? centerPosition(focus, viewRef.current.zoom) : { ...focus, zoom: 14 });
   }, [focus?.lat, focus?.lng]);
@@ -270,6 +314,10 @@ export default function LocationMap({
   }, [journey?.id, field, size.width, size.height, measured, preserveViewportOnResize]);
   useEffect(() => {
     if (!contextRoutes || journey || field || !measured) return;
+    if (restoredView.current && lastContextFit.current === null) {
+      lastContextFit.current = contextSignature ?? '';
+      return;
+    }
     // A map becoming the screen keeps its camera. Only choosing a different set of
     // routes (or explicitly centering) should reset an explored network view.
     if (preserveViewportOnResize && lastContextFit.current === contextSignature) return;

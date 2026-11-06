@@ -11,7 +11,7 @@ test('a rejected Home hub module keeps the station, generic report and simulatio
     /vista de recorridos no está disponible/,
   );
   await user.click(screen.getByRole('button', { name: 'Ver estación', exact: true }));
-  await user.click(screen.getByRole('button', { name: 'Crear reporte', exact: true }));
+  await user.click(screen.getByRole('button', { name: 'Crear o continuar reporte', exact: true }));
   assert.equal(actions.station, 1);
   assert.equal(actions.generalReport, 1);
   assert.equal(actions.contextualReport, 0);

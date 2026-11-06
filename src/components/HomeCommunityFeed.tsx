@@ -64,9 +64,11 @@ function CommunityCard({ report }: { report: PublicReport }) {
 export default function HomeCommunityFeed({
   stationId,
   routeId,
+  onContribute,
 }: {
   stationId?: string;
   routeId?: string;
+  onContribute?: () => void;
 }) {
   const key = `${stationId || ''}:${routeId || ''}`;
   const validTarget = !!stationId !== !!routeId;
@@ -125,13 +127,20 @@ export default function HomeCommunityFeed({
             </p>
           )}
           {!visible.length && (
-            <p>
-              {summary?.total === 0
-                ? `Todavía no hay reportes públicos para esta ${routeId ? 'ruta' : 'estación'}.`
-                : summary
-                  ? 'No hay observaciones recientes disponibles para mostrar.'
-                  : 'No hay observaciones recientes disponibles. El recuento total no está disponible.'}
-            </p>
+            <div className="home-community-empty">
+              <p>
+                {summary?.total === 0
+                  ? `Todavía no hay reportes públicos para esta ${routeId ? 'ruta' : 'estación'}.`
+                  : summary
+                    ? 'No hay observaciones recientes disponibles para mostrar.'
+                    : 'No hay observaciones recientes disponibles. El recuento total no está disponible.'}
+              </p>
+              {onContribute && (
+                <button type="button" onClick={onContribute}>
+                  Comparte tu experiencia
+                </button>
+              )}
+            </div>
           )}
           {!!visible.length && (
             <>

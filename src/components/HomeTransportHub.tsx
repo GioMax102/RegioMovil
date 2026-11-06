@@ -1,45 +1,235 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
-  BusFront,
+  Bookmark,
   ChevronDown,
   Flag,
+  Info,
   LocateFixed,
-  MapPin,
-  Search,
-  TrainFront,
+  Map,
+  Route,
 } from 'lucide-react';
 import { loadRoutePack, loadTransitCatalog, network } from '../api';
-import type { RoutePack, Station, TransitCatalogData } from '../types';
-import { networkLabel } from '../mobility/networks';
-import {
-  homeMetroCoordinates,
-  homePublishedStops,
-  homeRouteSegments,
-  homeSourceHref,
-  nearestHomePoint,
-} from './homeTransport';
+import type { RoutePack } from '../types';
+import type { RegionalView } from '../mobility/regionalViewport';
+import type { SavedMobilityTrip } from '../mobility/types';
+import { homeMetroCoordinates, homeRouteSegments, homeSourceHref } from './homeTransport';
+import { homeCanonicalStops } from './homeNearby';
+import type { HomeRoute, HomeSelection, HomeUiState } from './homeTypes';
+import { useHomeNearby } from './useHomeNearby';
+import HomeTransportSelector, {
+  homeSelectionKey,
+  homeSelectionName,
+} from './HomeTransportSelector';
 import HomeTransportMap from './HomeTransportMap';
-import { indexRouteSearch, searchIndexedRoutes } from './routeSearch';
 import DeferredSection from './DeferredSection';
+import { Dialog } from './Primitives';
+import HomeSavedTrips from './HomeSavedTrips';
+import { useHomeReportDraft } from './useHomeReportDraft';
+import { useHomeUiReturn } from './useHomeUiReturn';
 import './homeTransportHub.css';
 
+const loadPicker = () => import('./HomeTransportPicker');
 const loadCommunity = () => import('./HomeCommunityFeed');
-
+const loadSelectedMap = () => import('./HomeSelectedRouteMap');
 type Target = { stationId?: string; routeId?: string };
-function renderCommunity(target: Target) {
+
+/** This optional selector never owns or blocks the immediate Metro board. */
+export function HomeTransportTools({
+  selection,
+  onSelect,
+  reportOpen = false,
+}: {
+  selection: HomeSelection;
+  onSelect: (selection: HomeSelection) => void;
+  reportOpen?: boolean;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerAttempt, setPickerAttempt] = useState(0);
+  const nearby = useHomeNearby({ selection, onSelect, suspendAutomatic: pickerOpen || reportOpen });
+  function openPicker() {
+    nearby.cancelPending();
+    setPickerOpen(true);
+  }
+  function closePicker() {
+    nearby.cancelPending();
+    setPickerOpen(false);
+  }
+  return (
+    <div className="home-transport-tools">
+      <HomeTransportSelector
+        selection={selection}
+        candidates={nearby.candidates}
+        onSelect={onSelect}
+        onOpenPicker={openPicker}
+        onInteraction={nearby.cancelPending}
+      />
+      <div className="home-context-nearby">
+        <button type="button" onClick={() => void nearby.findNearby()} disabled={nearby.busy}>
+          <LocateFixed size={16} aria-hidden="true" />
+          {nearby.enabled ? 'Actualizar cercanos' : 'Cerca de mí'}
+        </button>
+        {nearby.canExpand && (
+          <button type="button" onClick={() => void nearby.expandRadius()}>
+            Ampliar a 3 km
+          </button>
+        )}
+        {nearby.enabled && (
+          <button type="button" className="home-context-disable" onClick={nearby.disable}>
+            Desactivar cercanía
+          </button>
+        )}
+      </div>
+      {!nearby.enabled && (
+        <p className="home-context-privacy">
+          La ubicación sólo ordena opciones en tu dispositivo. Tú decides cuándo usarla.
+        </p>
+      )}
+      {nearby.busy && (
+        <p className="home-transport-status" role="status">
+          Buscando opciones cercanas…
+        </p>
+      )}
+      {nearby.message && !pickerOpen && (
+        <p className="home-transport-status" role="status">
+          {nearby.message}
+        </p>
+      )}
+      {pickerOpen && (
+        <DeferredSection
+          key={pickerAttempt}
+          load={loadPicker}
+          componentProps={{
+            selection,
+            candidates: nearby.candidates,
+            nearbyBusy: nearby.busy,
+            nearbyMessage: nearby.message,
+            onNearby: () => void nearby.findNearby(),
+            onClose: closePicker,
+            onConfirm: (next: HomeSelection) => {
+              nearby.cancelPending();
+              onSelect(next);
+              setPickerOpen(false);
+            },
+          }}
+          loadingLabel="Abriendo selección de transporte…"
+          onRetry={() => setPickerAttempt((value) => value + 1)}
+          loadingFallback={
+            <Dialog title="Elige tu transporte" onClose={closePicker}>
+              <p role="status">Abriendo selección de transporte…</p>
+            </Dialog>
+          }
+          errorFallback={
+            <Dialog title="Elige tu transporte" onClose={closePicker}>
+              <div role="alert">
+                <p>No pudimos abrir la selección. Tu transporte actual sigue disponible.</p>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setPickerAttempt((value) => value + 1)}
+                >
+                  Reintentar selector
+                </button>
+              </div>
+              <button type="button" className="secondary-button" onClick={closePicker}>
+                Cerrar selector
+              </button>
+            </Dialog>
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function CommunitySection({ target, onContribute }: { target: Target; onContribute: () => void }) {
+  const [attempt, setAttempt] = useState(0);
   return (
     <DeferredSection
+      key={attempt}
       load={loadCommunity}
-      componentProps={target}
+      componentProps={{ ...target, onContribute }}
       loadingLabel="Consultando la comunidad…"
       loadingFallback={<p role="status">Consultando la comunidad…</p>}
-      onRetry={() => location.reload()}
+      onRetry={() => setAttempt((value) => value + 1)}
       errorFallback={
-        <div role="alert">
-          <p>No pudimos abrir las observaciones. Puedes seguir usando el inicio.</p>
-          <button type="button" className="text-button" onClick={() => location.reload()}>
-            Volver a cargar observaciones
+        <div className="home-community-error" role="alert">
+          <p>No pudimos abrir las observaciones. Puedes seguir consultando tu transporte.</p>
+          <button type="button" onClick={() => setAttempt((value) => value + 1)}>
+            Reintentar observaciones
+          </button>
+        </div>
+      }
+    />
+  );
+}
+function SelectedMap({
+  selection,
+  pack,
+  onNetwork,
+  mapViews,
+}: {
+  selection: HomeSelection;
+  pack?: RoutePack;
+  onNetwork: (selection: HomeSelection) => void;
+  mapViews?: Map<string, RegionalView>;
+}) {
+  const [attempt, setAttempt] = useState(0);
+  const station =
+    selection.kind === 'metro'
+      ? network.stations.find((item) => item.id === selection.stationId)
+      : null;
+  const line = station
+    ? network.lines.find(
+        (item) =>
+          item.id === ((selection.kind === 'metro' && selection.lineId) || station.lineIds[0]),
+      )
+    : null;
+  const segments = useMemo(
+    () =>
+      pack
+        ? homeRouteSegments(pack)
+        : line
+          ? [homeMetroCoordinates(network.stations, line.stationIds)]
+          : [],
+    [pack, line],
+  );
+  const fallback = (
+    <>
+      <p className="home-transport-note">
+        El mapa detallado no está disponible. Este esquema conserva los tramos publicados.
+      </p>
+      <HomeTransportMap
+        segments={segments}
+        marker={station || undefined}
+        name={homeSelectionName(selection)}
+        line={line?.id}
+        onNetwork={() => onNetwork(selection)}
+      />
+    </>
+  );
+  return (
+    <DeferredSection
+      key={attempt}
+      load={loadSelectedMap}
+      componentProps={{
+        selection,
+        pack,
+        onExpand: () => onNetwork(selection),
+        viewCache: mapViews,
+      }}
+      loadingLabel="Abriendo el mapa…"
+      loadingFallback={<p role="status">Abriendo el mapa…</p>}
+      onRetry={() => setAttempt((value) => value + 1)}
+      errorFallback={
+        <div className="home-map-error" role="alert">
+          {fallback}
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            Reintentar mapa
           </button>
         </div>
       }
@@ -47,509 +237,293 @@ function renderCommunity(target: Target) {
   );
 }
 
-type PackState = { id: string; pack?: RoutePack; error?: string };
-
-export default function HomeTransportHub({
-  station,
-  onChooseStation,
-  onSelectStation,
-  onNetwork,
-  onReportTarget,
-  metroContent,
-  reportAction,
-  community = renderCommunity,
-}: {
-  station: Station;
-  onChooseStation: () => void;
-  onSelectStation: (id: string) => void;
-  onNetwork: () => void;
-  onReportTarget: (target: Target) => void;
-  metroContent: ReactNode;
-  reportAction: ReactNode;
-  community?: (target: Target) => ReactNode;
+function MetroMapSection(props: {
+  selection: HomeSelection;
+  onNetwork: (selection: HomeSelection) => void;
+  mapViews?: Map<string, RegionalView>;
+  uiState?: HomeUiState;
 }) {
-  const id = useId();
-  const [mode, setMode] = useState<'metro' | 'bus'>('metro');
-  const inactiveMode = mode === 'metro' ? 'bus' : 'metro';
-  const [lineId, setLineId] = useState(station.lineIds[0]);
-  const line = network.lines.find(
-    (item) => item.id === (station.lineIds.includes(lineId) ? lineId : station.lineIds[0]),
+  const [open, setOpen] = useState(props.uiState?.metroMapOpen || false);
+  return (
+    <details
+      className="home-metro-map"
+      open={open}
+      onToggle={(event) => {
+        setOpen(event.currentTarget.open);
+        if (props.uiState) props.uiState.metroMapOpen = event.currentTarget.open;
+      }}
+    >
+      <summary data-home-action="map">
+        <Map size={18} aria-hidden="true" />
+        Ver mapa de la línea
+        <ChevronDown size={17} aria-hidden="true" />
+      </summary>
+      {open && <SelectedMap {...props} />}
+    </details>
   );
-  const [catalog, setCatalog] = useState<TransitCatalogData | null>(null);
-  const [catalogError, setCatalogError] = useState('');
-  const [catalogAttempt, setCatalogAttempt] = useState(0);
-  const [query, setQuery] = useState('');
-  const [routeId, setRouteId] = useState('');
-  const [packState, setPackState] = useState<PackState | null>(null);
-  const [packAttempt, setPackAttempt] = useState(0);
-  const [stopId, setStopId] = useState('');
-  const [locating, setLocating] = useState(false);
-  const [locationMessage, setLocationMessage] = useState('');
-  const generation = useRef(0);
-  const mounted = useRef(true);
-  const locatedStation = useRef<string | null>(null);
-  const latest = useRef({ onSelectStation });
-  latest.current = { onSelectStation };
+}
+
+/** Context details are optional; the parent renders Metro predictions before this component. */
+export default function HomeTransportHub({
+  selection,
+  onSelect,
+  onNetwork,
+  onPlan,
+  onSaved,
+  onSavedTrip,
+  onReportTarget,
+  onReportGeneral,
+  hasReportDraft: draftOverride,
+  reportOpen = false,
+  mapViews,
+  uiState,
+}: {
+  selection: HomeSelection;
+  onSelect: (selection: HomeSelection) => void;
+  onNetwork: (selection: HomeSelection) => void;
+  onPlan: (selection: HomeSelection) => void;
+  onSaved: () => void;
+  onSavedTrip?: (trip: SavedMobilityTrip) => void;
+  onReportTarget: (target: Target) => void;
+  onReportGeneral: () => void;
+  reportOpen?: boolean;
+  hasReportDraft?: boolean;
+  mapViews?: Map<string, RegionalView>;
+  uiState?: HomeUiState;
+}) {
+  const storedDraft = useHomeReportDraft(reportOpen, draftOverride === undefined);
+  const hasReportDraft = draftOverride ?? storedDraft;
+  const container = useHomeUiReturn(uiState);
+  const [packState, setPackState] = useState<{
+    key: string;
+    pack?: RoutePack;
+    error?: string;
+    updatedRoute?: HomeRoute;
+  } | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const route = selection.kind === 'bus' ? selection.route : null;
+  const key = homeSelectionKey(selection);
+  const routeKey = route
+    ? `${route.id}:${route.geometryPack || ''}:${route.geometryRevision || ''}`
+    : '';
   useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      generation.current++;
-    };
-  }, []);
-  useEffect(() => {
-    generation.current++;
-    setLocating(false);
-    if (locatedStation.current !== station.id) setLocationMessage('');
-    locatedStation.current = null;
-  }, [station.id]);
-  useEffect(() => {
-    if (mode !== 'bus' || catalog) return;
+    if (!route?.geometryPack) return;
     let active = true;
-    setCatalogError('');
-    loadTransitCatalog().then(
-      ({ data }) => {
-        if (active) setCatalog(data);
-      },
-      () => {
-        if (active)
-          setCatalogError('No pudimos abrir las rutas. Revisa tu conexión y vuelve a intentar.');
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [mode, catalog, catalogAttempt]);
-  const busRoutes = useMemo(
-    () =>
-      (catalog?.routes ?? []).filter(
-        (route) => route.mode === 'bus' && ['published', 'operational'].includes(route.status),
-      ),
-    [catalog],
-  );
-  const route = busRoutes.find((item) => item.id === routeId);
-  const searchIndex = useMemo(() => indexRouteSearch(busRoutes), [busRoutes]);
-  const visibleRoutes = useMemo(
-    () => (query.trim() ? searchIndexedRoutes(busRoutes, searchIndex, query) : busRoutes),
-    [busRoutes, searchIndex, query],
-  );
-  useEffect(() => {
-    if (mode !== 'bus' || !route?.geometryPack) return;
-    let active = true;
-    setPackState({ id: route.id });
-    loadRoutePack(route).then(
-      ({ data }) => {
-        if (active) setPackState({ id: route.id, pack: data });
-      },
-      () => {
-        if (active)
-          setPackState({
-            id: route.id,
-            error: 'No pudimos abrir este trazo. Puedes reportar o explorar las demás rutas.',
-          });
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [mode, route, packAttempt]);
-  const pack = packState?.id === routeId ? packState.pack : undefined;
-  const packError = packState?.id === routeId ? packState.error : undefined;
-  const publishedStops = useMemo(() => (pack ? homePublishedStops(pack) : []), [pack]);
-  const stop = publishedStops.find((item) => item.id === stopId);
-  const busSegments = useMemo(() => (pack ? homeRouteSegments(pack) : []), [pack]);
-  const routeSource = homeSourceHref(route?.officialUrl);
-  const packSource = homeSourceHref(pack?.sourceUrl);
-  const sourceDate = /^(\d{4}-\d{2}-\d{2})/.exec(
-    pack?.verifiedAt || catalog?.verifiedAt || '',
-  )?.[1];
-  function manualChange() {
-    generation.current++;
-    locatedStation.current = null;
-    setLocating(false);
-    setLocationMessage('');
-  }
-  function chooseMode(next: 'metro' | 'bus') {
-    manualChange();
-    setMode(next);
-  }
-  async function locate() {
-    const current = ++generation.current;
-    setLocating(true);
-    setLocationMessage('');
-    try {
-      const { currentLocation } = await import('../mobility/location');
-      if (!mounted.current || current !== generation.current) return;
-      const position = await currentLocation();
-      if (!mounted.current || current !== generation.current) return;
-      if (
-        !('lat' in position) ||
-        !Number.isFinite(position.accuracy) ||
-        (position.accuracy ?? Infinity) > 1500 ||
-        (position.accuracy ?? -1) < 0
-      )
-        throw new Error('La ubicación es imprecisa. Elige tu parada manualmente.');
-      if (mode === 'metro') {
-        const nearby = nearestHomePoint(network.stations, position);
-        if (!nearby)
-          throw new Error('No encontramos una estación de Metro cercana. Elígela manualmente.');
-        locatedStation.current = nearby.point.id;
-        latest.current.onSelectStation(nearby.point.id);
-        setLocationMessage(`${nearby.point.name} · estación más cercana en línea recta.`);
-      } else {
-        const nearby = nearestHomePoint(publishedStops, position);
-        if (!nearby)
-          throw new Error(
-            'No encontramos una parada cercana de este recorrido. Elige otra ruta o parada.',
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setPackState({ key: routeKey });
+      loadTransitCatalog(controller.signal)
+        .then(async ({ data }) => {
+          const current = data.routes.find(
+            (candidate) =>
+              candidate.id === route.id &&
+              candidate.mode === 'bus' &&
+              ['published', 'operational'].includes(candidate.status),
           );
-        setStopId(nearby.point.id);
-        setLocationMessage(
-          `${nearby.point.name} · parada más cercana de esta ruta en línea recta.`,
+          if (
+            !current ||
+            current.geometryPack !== route.geometryPack ||
+            current.geometryRevision !== route.geometryRevision
+          ) {
+            if (active)
+              setPackState({
+                key: routeKey,
+                error:
+                  'Este recorrido cambió desde tu selección. Confirma su revisión actual o vuelve a elegir una ruta.',
+                updatedRoute: current,
+              });
+            return;
+          }
+          if (!active) return;
+          return loadRoutePack(current, controller.signal);
+        })
+        .then(
+          (result) => {
+            if (!result) return;
+            const { data } = result;
+            if (active) setPackState({ key: routeKey, pack: data });
+          },
+          () => {
+            if (active)
+              setPackState({
+                key: routeKey,
+                error:
+                  'No pudimos abrir este recorrido. Puedes planear, reportar o consultar la red.',
+              });
+          },
         );
-      }
-    } catch (error) {
-      if (mounted.current && current === generation.current)
-        setLocationMessage(
-          error instanceof Error ? error.message : 'No obtuvimos tu ubicación. Elige una parada.',
-        );
-    } finally {
-      if (mounted.current && current === generation.current) setLocating(false);
-    }
+    }, 240);
+    return () => {
+      active = false;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [routeKey, attempt]);
+  const pack = packState?.key === routeKey ? packState.pack : undefined;
+  const error = packState?.key === routeKey ? packState.error : undefined;
+  const updatedRoute = packState?.key === routeKey ? packState.updatedRoute : undefined;
+  const stops = useMemo(
+    () => (pack && route ? homeCanonicalStops(route, pack) : []),
+    [pack, routeKey],
+  );
+  const stop = selection.kind === 'bus' ? stops.find((item) => item.id === selection.stopId) : null;
+  const target: Target =
+    selection.kind === 'metro'
+      ? { stationId: selection.stationId }
+      : { routeId: selection.route.id };
+  const source = homeSourceHref(pack?.sourceUrl);
+  const date = /^(\d{4}-\d{2}-\d{2})/.exec(pack?.verifiedAt || '')?.[1];
+  const report = () => (hasReportDraft ? onReportGeneral() : onReportTarget(target));
+  const planningSelection: HomeSelection = selection.kind === 'bus' ? { ...selection } : selection;
+  if (planningSelection.kind === 'bus') {
+    if (stop) planningSelection.stopId = stop.id;
+    else delete planningSelection.stopId;
   }
-  const target =
-    mode === 'metro' ? { stationId: station.id } : route ? { routeId: route.id } : null;
-  const metroCoordinates = useMemo(
-    () => homeMetroCoordinates(network.stations, line?.stationIds ?? []),
-    [line],
+  const actions = (
+    <div className="home-context-actions" aria-label="Acciones para este transporte">
+      <button type="button" data-home-action="plan" onClick={() => onPlan(planningSelection)}>
+        <Route size={19} aria-hidden="true" />
+        <span>Planear desde aquí</span>
+      </button>
+      <button type="button" onClick={onSaved}>
+        <Bookmark size={19} aria-hidden="true" />
+        <span>Guardados</span>
+      </button>
+      <button type="button" onClick={report}>
+        <Flag size={19} aria-hidden="true" />
+        <span>{hasReportDraft ? 'Continuar reporte' : 'Reportar aquí'}</span>
+      </button>
+    </div>
   );
   return (
-    <div className="home-transport-hub">
-      <div className="home-transport-modes" role="tablist" aria-label="Elige cómo te mueves">
-        {(['metro', 'bus'] as const).map((item) => {
-          const Icon = item === 'metro' ? TrainFront : BusFront;
-          return (
-            <button
-              type="button"
-              role="tab"
-              id={`${id}-${item}-tab`}
-              aria-controls={`${id}-${item}-panel`}
-              aria-selected={mode === item}
-              tabIndex={mode === item ? 0 : -1}
-              key={item}
-              onClick={() => chooseMode(item)}
-              onKeyDown={(event) => {
-                if (event.altKey || event.ctrlKey || event.metaKey) return;
-                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-                event.preventDefault();
-                const next =
-                  event.key === 'Home'
-                    ? 'metro'
-                    : event.key === 'End'
-                      ? 'bus'
-                      : mode === 'metro'
-                        ? 'bus'
-                        : 'metro';
-                chooseMode(next);
-                document.getElementById(`${id}-${next}-tab`)?.focus();
-              }}
-            >
-              <Icon size={48} strokeWidth={1.45} aria-hidden="true" />
-              <span>
-                <strong>{item === 'metro' ? 'Metro' : 'Autobús'}</strong>
-                <small>
-                  {item === 'metro' ? 'Tu estación y sus líneas' : 'Tu ruta y sus paradas'}
-                </small>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <section
-        className="home-transport-panel"
-        id={`${id}-${mode}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${id}-${mode}-tab`}
-      >
-        {mode === 'metro' ? (
-          <>
-            <div className="home-transport-select-row">
-              <button
-                type="button"
-                className="home-transport-station"
-                onClick={() => {
-                  manualChange();
-                  onChooseStation();
-                }}
-              >
-                <MapPin size={20} aria-hidden="true" />
-                <span>
-                  <small>Tu estación</small>
-                  <strong>{station.name}</strong>
-                </span>
-                <ChevronDown size={19} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="home-transport-locate"
-                disabled={locating}
-                onClick={() => void locate()}
-                aria-label="Encontrar estación de Metro cercana"
-              >
-                <LocateFixed size={22} aria-hidden="true" />
+    <div className="home-transport-hub" key={key} ref={container}>
+      {selection.kind === 'bus' && (
+        <section className="home-bus-context" aria-label="Información de la ruta seleccionada">
+          <p className="home-bus-availability">
+            <Info size={17} aria-hidden="true" />
+            Llegadas y afluencia no disponibles
+          </p>
+          {route && !route.geometryPack ? (
+            <div className="home-map-pending">
+              <Map size={22} aria-hidden="true" />
+              <p>Trazo pendiente. Esta ruta conserva su ficha y puede recibir observaciones.</p>
+              <button type="button" onClick={() => onNetwork(selection)}>
+                Ver ficha en la red
+                <ArrowRight size={17} />
               </button>
             </div>
-            {station.lineIds.length > 1 && (
-              <label className="home-transport-field">
-                Línea para el mapa
-                <select
-                  value={line?.id}
-                  onChange={(event) => {
-                    manualChange();
-                    setLineId(event.target.value);
-                  }}
-                >
-                  {station.lineIds.map((id) => (
-                    <option key={id} value={id}>
-                      {network.lines.find((item) => item.id === id)?.name ?? id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {line && (
-              <HomeTransportMap
-                segments={[metroCoordinates]}
-                marker={station}
-                line={line.id}
-                name={line.name}
-                onNetwork={onNetwork}
-              />
-            )}
-            {metroContent}
-          </>
-        ) : (
-          <>
-            <div className="home-transport-section-title">
-              <BusFront size={20} aria-hidden="true" />
-              <h2>Encuentra tu ruta</h2>
-            </div>
-            {!catalog && !catalogError && <p role="status">Cargando rutas publicadas…</p>}
-            {catalogError && (
-              <div role="alert">
-                <p>{catalogError}</p>
+          ) : error ? (
+            <div className="home-map-error" role="alert">
+              <p>{error}</p>
+              {updatedRoute ? (
                 <button
                   type="button"
-                  className="text-button"
-                  onClick={() => setCatalogAttempt((value) => value + 1)}
+                  onClick={() => onSelect({ kind: 'bus', route: updatedRoute, source: 'manual' })}
                 >
-                  Reintentar rutas
+                  Usar versión actual
                 </button>
-              </div>
-            )}
-            {catalog && (
-              <>
-                <label className="home-transport-search">
-                  <Search size={19} aria-hidden="true" />
-                  <input
-                    type="search"
-                    value={query}
-                    onChange={(event) => {
-                      manualChange();
-                      setQuery(event.target.value);
-                    }}
-                    placeholder="Número, ruta o municipio"
-                    aria-label="Buscar ruta de autobús"
-                  />
-                </label>
+              ) : (
+                <button type="button" onClick={() => setAttempt((value) => value + 1)}>
+                  Reintentar trazo
+                </button>
+              )}
+            </div>
+          ) : !pack ? (
+            <p role="status">Abriendo el recorrido seleccionado…</p>
+          ) : (
+            <>
+              {stops.length > 0 && (
                 <label className="home-transport-field">
-                  Ruta
+                  Parada del recorrido
                   <select
-                    value={routeId}
-                    onChange={(event) => {
-                      manualChange();
-                      setRouteId(event.target.value);
-                      setStopId('');
-                    }}
+                    value={stop?.id || ''}
+                    onChange={(event) =>
+                      onSelect({
+                        ...selection,
+                        stopId: event.target.value || undefined,
+                        source: 'manual',
+                      })
+                    }
                   >
-                    <option value="">Elige una ruta</option>
-                    {route && !visibleRoutes.includes(route) && (
-                      <option value={route.id}>
-                        {route.code} · {route.name}
-                      </option>
-                    )}
-                    {visibleRoutes.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.code} · {item.name}
+                    <option value="">Elige una parada para planear desde ella</option>
+                    {stops.map((item) => (
+                      <option value={item.id} key={item.id}>
+                        {item.name}
                       </option>
                     ))}
                   </select>
                 </label>
-                {!visibleRoutes.length && (
-                  <p role="status">No encontramos esa ruta. Prueba otro número o municipio.</p>
-                )}
-                {route && (
-                  <p className="home-transport-route-name">
-                    <strong>
-                      {networkLabel(route.networkId)} · {route.code}
-                    </strong>
-                    <span>{route.name}</span>
-                  </p>
-                )}
-                {route && !route.geometryPack && (
-                  <>
-                    <p className="home-transport-note" role="status">
-                      Esta ruta tiene ficha publicada; su trazo y paradas siguen pendientes de una
-                      fuente verificable.
-                    </p>
-                    <button type="button" className="home-transport-network" onClick={onNetwork}>
-                      Consultar catálogo de rutas <ArrowRight size={17} aria-hidden="true" />
-                    </button>
-                  </>
-                )}
-                {route?.geometryPack && !pack && !packError && (
-                  <p role="status">Abriendo el recorrido…</p>
-                )}
-                {packError && (
-                  <div role="alert">
-                    <p>{packError}</p>
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() => setPackAttempt((value) => value + 1)}
-                    >
-                      Reintentar trazo
-                    </button>
-                  </div>
-                )}
-                {pack && (
-                  <>
-                    {publishedStops.length > 0 && (
-                      <div className="home-transport-select-row">
-                        <label className="home-transport-field">
-                          Parada del recorrido
-                          <select
-                            value={stopId}
-                            onChange={(event) => {
-                              manualChange();
-                              setStopId(event.target.value);
-                            }}
-                          >
-                            <option value="">Elige una parada</option>
-                            {publishedStops.map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <button
-                          type="button"
-                          className="home-transport-locate"
-                          disabled={locating}
-                          onClick={() => void locate()}
-                          aria-label="Encontrar parada cercana de esta ruta"
-                        >
-                          <LocateFixed size={22} aria-hidden="true" />
-                        </button>
-                      </div>
-                    )}
-                    <HomeTransportMap
-                      segments={busSegments}
-                      marker={stop}
-                      name={route?.name ?? 'Ruta seleccionada'}
-                      onNetwork={onNetwork}
-                    />
-                    <p className="home-transport-note">
-                      Recorrido publicado. Confirma parada y sentido al abordar. Sin llegadas ni
-                      afluencia en tiempo real.
-                    </p>
-                    {publishedStops.length === 0 && (
-                      <p className="home-transport-note">
-                        Trazo para consulta visual; no hay puntos de parada elegibles para esta
-                        selección.
-                      </p>
-                    )}
-                  </>
-                )}
-                {route && (
-                  <details className="home-transport-sources" key={route.id}>
-                    <summary>Fuente y alcance</summary>
-                    <div>
-                      {sourceDate && (
-                        <p>
-                          {pack ? 'Referencia del trazo' : 'Corte del catálogo'}:{' '}
-                          <time dateTime={sourceDate}>{sourceDate}</time>.
-                        </p>
-                      )}
-                      {pack?.stopOrderVerified === false && (
-                        <p>
-                          Orden de paradas por confirmar. No establece el sentido de circulación.
-                        </p>
-                      )}
-                      <p>
-                        El recorrido publicado no confirma la operación actual ni las condiciones de
-                        las paradas o unidades.
-                      </p>
-                      {routeSource && (
-                        <a href={routeSource} target="_blank" rel="noreferrer">
-                          Fuente de la ruta
-                        </a>
-                      )}
-                      {packSource && packSource !== routeSource && (
-                        <a href={packSource} target="_blank" rel="noreferrer">
-                          Fuente del trazo
-                        </a>
-                      )}
-                      {!routeSource && !packSource && (
-                        <p>Consulta las referencias disponibles en el catálogo de la red.</p>
-                      )}
-                    </div>
-                  </details>
-                )}
-              </>
-            )}
-            {!route && (
-              <button type="button" className="home-transport-network" onClick={onNetwork}>
-                Explorar la red <ArrowRight size={17} aria-hidden="true" />
-              </button>
-            )}
-          </>
-        )}
-        {locating && (
-          <p className="home-transport-status" role="status">
-            Buscando una parada cercana…
-          </p>
-        )}
-        {locationMessage && (
-          <p className="home-transport-status" role="status">
-            {locationMessage}
-          </p>
-        )}
-      </section>
-      <section
-        hidden
-        id={`${id}-${inactiveMode}-panel`}
-        role="tabpanel"
-        aria-labelledby={`${id}-${inactiveMode}-tab`}
-      />
-      {reportAction}
-      {target && (
-        <>
-          <button
-            type="button"
-            className="home-transport-report"
-            onClick={() => onReportTarget(target)}
-          >
-            <Flag size={20} aria-hidden="true" />
-            <span>
-              <strong>Reportar aquí</strong>
-              <small>{mode === 'metro' ? station.name : route?.name}</small>
-            </span>
-            <ArrowRight size={18} aria-hidden="true" />
-          </button>
-          {community(target)}
-        </>
+              )}
+              {selection.stopId && !stop && (
+                <p className="home-transport-note" role="status">
+                  La parada guardada no coincide con esta revisión del recorrido. Elige una parada o
+                  consulta la red.
+                </p>
+              )}
+              <SelectedMap
+                selection={selection}
+                pack={pack}
+                onNetwork={onNetwork}
+                mapViews={mapViews}
+              />
+              <p className="home-transport-note">
+                Confirma parada y sentido al abordar.
+                {stops.length === 0
+                  ? ' Este trazo es para consulta visual; no hay paradas elegibles para planear.'
+                  : ''}
+              </p>
+            </>
+          )}
+        </section>
       )}
+      {actions}
+      {selection.kind === 'metro' && (
+        <MetroMapSection
+          key={`map:${key}`}
+          selection={selection}
+          onNetwork={onNetwork}
+          mapViews={mapViews}
+          uiState={uiState}
+        />
+      )}
+      <div className="home-context-participation">
+        <button type="button" onClick={onReportGeneral}>
+          Crear reporte general
+          <ArrowRight size={16} aria-hidden="true" />
+        </button>
+      </div>
+      <CommunitySection key={`community:${key}`} target={target} onContribute={report} />
+      {selection.kind === 'bus' && (
+        <details className="home-transport-sources">
+          <summary>Fuente y alcance</summary>
+          <div>
+            {date && (
+              <p>
+                Referencia del trazo: <time dateTime={date}>{date}</time>.
+              </p>
+            )}
+            {pack?.stopOrderVerified === false && (
+              <p>
+                Orden de paradas por confirmar. El trazo no establece el sentido de circulación.
+              </p>
+            )}
+            <p>
+              El recorrido publicado no confirma la operación actual ni las condiciones de las
+              paradas o unidades.
+            </p>
+            {source && (
+              <a href={source} target="_blank" rel="noreferrer">
+                Fuente del trazo
+              </a>
+            )}
+            <button type="button" onClick={() => onNetwork(selection)}>
+              Consultar ficha y fuentes de la ruta
+              <ArrowRight size={15} aria-hidden="true" />
+            </button>
+          </div>
+        </details>
+      )}
+      {onSavedTrip && <HomeSavedTrips onOpen={onSavedTrip} />}
     </div>
   );
 }

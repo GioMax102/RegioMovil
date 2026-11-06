@@ -1,26 +1,11 @@
-import { useEffect, useState } from 'react';
-import {
-  ArrowRight,
-  Bookmark,
-  BriefcaseBusiness,
-  ChevronDown,
-  Clock3,
-  Flag,
-  GraduationCap,
-  House,
-  Info,
-  MapPin,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, Bookmark, ChevronDown, Clock3, Flag, Info, MapPin, Users } from 'lucide-react';
 import { network } from '../api';
 import type { Arrival, Board, Station } from '../types';
-import {
-  readSavedMobilityTrips,
-  savedMobilityEvent,
-  savedMobilityKey,
-} from '../mobility/savedTrips';
 import type { SavedMobilityTrip } from '../mobility/types';
-import { ArrivalCard, Forecast, LineBadge } from './Primitives';
+import { Forecast, LineBadge } from './Primitives';
+import type { HomeSelection, HomeUiState } from './homeTypes';
+import type { RegionalView } from '../mobility/regionalViewport';
+import { homeMetroArrivals } from './homeMetroArrivals';
 import {
   filterMetroForecast,
   getMetroServiceWindow,
@@ -32,6 +17,10 @@ import DeferredSection from './DeferredSection';
 import './homeDashboard.css';
 
 const loadHomeTransportHub = () => import('./HomeTransportHub');
+const loadHomeTransportTools = () =>
+  import('./HomeTransportHub').then((module) => ({
+    default: module.HomeTransportTools,
+  }));
 
 export default function HomeDashboard({
   station,
@@ -47,6 +36,12 @@ export default function HomeDashboard({
   onChooseStation,
   onSelectStation,
   onReportTarget,
+  selection,
+  onSelect,
+  onPlan,
+  onSaved,
+  mapViews,
+  uiState,
   reportOpen = false,
   now = new Date(),
 }: {
@@ -56,7 +51,7 @@ export default function HomeDashboard({
   favorite: boolean;
   onFavorite: () => void;
   onArrival: (arrival: Arrival) => void;
-  onNetwork?: () => void;
+  onNetwork?: (selection: HomeSelection) => void;
   onSaved?: () => void;
   onSavedTrip?: (trip: SavedMobilityTrip) => void;
   onStationDetails: () => void;
@@ -64,51 +59,14 @@ export default function HomeDashboard({
   onChooseStation?: () => void;
   onSelectStation?: (id: string) => void;
   onReportTarget?: (target: { stationId?: string; routeId?: string }) => void;
+  selection?: HomeSelection;
+  onSelect?: (selection: HomeSelection) => void;
+  onPlan?: (selection: HomeSelection) => void;
+  mapViews?: Map<string, RegionalView>;
+  uiState?: HomeUiState;
   reportOpen?: boolean;
   now?: Date;
 }) {
-  const [savedTrips, setSavedTrips] = useState(readSavedMobilityTrips);
-  const [hasReportDraft, setHasReportDraft] = useState(false);
-  useEffect(() => {
-    let active = true;
-    let expiry: ReturnType<typeof setTimeout> | undefined;
-    const refresh = () => {
-      if (document.hidden) return;
-      void import('../reportDraft')
-        .then(({ readReportDraft }) => readReportDraft())
-        .then((draft) => {
-          if (!active) return;
-          clearTimeout(expiry);
-          setHasReportDraft(!!draft);
-          if (draft)
-            expiry = setTimeout(() => setHasReportDraft(false), draft.expiresAt - Date.now());
-        })
-        .catch(() => {
-          if (active) setHasReportDraft(false);
-        });
-    };
-    refresh();
-    window.addEventListener('focus', refresh);
-    document.addEventListener('visibilitychange', refresh);
-    return () => {
-      active = false;
-      clearTimeout(expiry);
-      window.removeEventListener('focus', refresh);
-      document.removeEventListener('visibilitychange', refresh);
-    };
-  }, [reportOpen]);
-  useEffect(() => {
-    const refresh = () => setSavedTrips(readSavedMobilityTrips());
-    const storage = (event: StorageEvent) => {
-      if (event.key === savedMobilityKey || event.key === null) refresh();
-    };
-    window.addEventListener(savedMobilityEvent, refresh);
-    window.addEventListener('storage', storage);
-    return () => {
-      window.removeEventListener(savedMobilityEvent, refresh);
-      window.removeEventListener('storage', storage);
-    };
-  }, []);
   const quietestHour = (
     board ? filterMetroForecast(board.forecast, new Date(board.generatedAt)) : []
   )
@@ -119,11 +77,21 @@ export default function HomeDashboard({
     );
   const open = isMetroOperating(now);
   const hours = getMetroServiceWindow(now);
+  const current: HomeSelection = selection ?? {
+    kind: 'metro',
+    stationId: station.id,
+    source: 'base',
+  };
+  const lineId =
+    current.kind === 'metro' && station.lineIds.includes(current.lineId ?? '')
+      ? current.lineId!
+      : station.lineIds[0];
+  const nextArrivals = homeMetroArrivals(board?.arrivals ?? [], lineId);
   const reportAction = (
     <button
       type="button"
       className="home-report-cta"
-      aria-label={hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}
+      aria-label="Crear o continuar reporte"
       onClick={onReport}
     >
       <span className="home-report-icon">
@@ -131,7 +99,7 @@ export default function HomeDashboard({
       </span>
       <span>
         <strong>Mejoremos nuestro transporte</strong>
-        <span>{hasReportDraft ? 'Continuar reporte' : 'Crear reporte'}</span>
+        <span>Crear o continuar reporte</span>
       </span>
       <ArrowRight size={20} aria-hidden="true" />
     </button>
@@ -160,6 +128,27 @@ export default function HomeDashboard({
             <LineBadge key={id} id={id} />
           ))}
         </p>
+        {station.lineIds.length > 1 && (
+          <div
+            className="home-line-options"
+            role="group"
+            aria-label="Línea para consultar llegadas"
+          >
+            {station.lineIds.map((id) => (
+              <button
+                type="button"
+                key={id}
+                aria-pressed={id === lineId}
+                onClick={() =>
+                  onSelect?.({ kind: 'metro', stationId: station.id, lineId: id, source: 'manual' })
+                }
+              >
+                <LineBadge id={id} />
+              </button>
+            ))}
+          </div>
+        )}
+        {open && <p className="home-simulation">Llegadas y afluencia simuladas</p>}
         <div className="arrival-list" aria-busy={loading}>
           {!open ? (
             <p className="home-service-closed" role="status">
@@ -168,15 +157,35 @@ export default function HomeDashboard({
               <span>Abre {getNextMetroOpening(now)}</span>
             </p>
           ) : board ? (
-            board.arrivals
-              .slice(0, 2)
-              .map((arrival) => (
-                <ArrivalCard
+            nextArrivals.length ? (
+              nextArrivals.map((arrival) => (
+                <button
+                  type="button"
+                  className="home-arrival-summary"
                   key={arrival.id}
-                  arrival={arrival}
-                  onDetails={() => onArrival(arrival)}
-                />
+                  onClick={() => onArrival(arrival)}
+                  aria-label={`${arrival.lineName} hacia ${arrival.direction}, llegada simulada en ${arrival.etaRange[0]} a ${arrival.etaRange[1]} minutos. Afluencia simulada ${arrival.occupancyLabel}. Ver detalles.`}
+                >
+                  <span className="home-arrival-direction">
+                    <span>Hacia</span>
+                    <strong>{arrival.direction}</strong>
+                  </span>
+                  <span className="home-arrival-time">
+                    <Clock3 size={17} aria-hidden="true" />
+                    <strong>
+                      {arrival.etaRange[0]}–{arrival.etaRange[1]}
+                    </strong>
+                    <span>min</span>
+                  </span>
+                  <span className="home-arrival-crowding">
+                    <Users size={17} aria-hidden="true" />
+                    Afluencia <strong>{arrival.occupancyLabel}</strong>
+                  </span>
+                </button>
               ))
+            ) : (
+              <p role="status">No hay llegadas disponibles para esta línea.</p>
+            )
           ) : (
             <p role="status">Preparando tu camino…</p>
           )}
@@ -236,46 +245,51 @@ export default function HomeDashboard({
   );
   return (
     <div className="home-dashboard">
-      {onSavedTrip && savedTrips.length > 0 && (
-        <nav className="home-shortcuts" aria-label="Trayectos guardados">
-          {savedTrips.map((trip) => {
-            const label = trip.label
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .toLowerCase();
-            const Icon = /casa|hogar/.test(label)
-              ? House
-              : /escuela|universidad|tec|estudio/.test(label)
-                ? GraduationCap
-                : /trabajo|oficina/.test(label)
-                  ? BriefcaseBusiness
-                  : Bookmark;
-            return (
-              <button
-                key={trip.id}
-                type="button"
-                onClick={() => onSavedTrip(trip)}
-                aria-label={`Abrir trayecto ${trip.label}`}
-              >
-                <Icon size={19} aria-hidden="true" />
-                <span>{trip.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      )}
+      <DeferredSection
+        load={loadHomeTransportTools}
+        loadingLabel="Preparando el selector…"
+        onRetry={() => location.reload()}
+        loadingFallback={
+          <button
+            type="button"
+            className="home-selector-fallback"
+            onClick={onChooseStation ?? onStationDetails}
+          >
+            <MapPin size={21} aria-hidden="true" />
+            {current.kind === 'metro' ? station.name : current.route.name}
+          </button>
+        }
+        errorFallback={
+          <button
+            type="button"
+            className="home-selector-fallback"
+            onClick={onChooseStation ?? onStationDetails}
+          >
+            Cambiar estación · {station.name}
+          </button>
+        }
+        componentProps={{
+          selection: current,
+          onSelect:
+            onSelect ??
+            ((next: HomeSelection) => {
+              if (next.kind === 'metro') onSelectStation?.(next.stationId);
+            }),
+          reportOpen,
+        }}
+      />
+      {current.kind === 'metro' && metroContent}
       <DeferredSection
         load={loadHomeTransportHub}
-        loadingLabel="Preparando tu transporte…"
+        loadingLabel="Preparando tus opciones…"
         onRetry={() => location.reload()}
-        loadingFallback={<p role="status">Preparando tu transporte…</p>}
+        loadingFallback={reportAction}
         errorFallback={
           <>
             <p role="alert">
               La vista de recorridos no está disponible. Puedes consultar tu estación y crear un
               reporte.
             </p>
-            {metroContent}
             {reportAction}
             <button type="button" className="text-button" onClick={() => location.reload()}>
               Volver a cargar inicio
@@ -283,13 +297,17 @@ export default function HomeDashboard({
           </>
         }
         componentProps={{
-          station,
-          onChooseStation: onChooseStation ?? onStationDetails,
-          onSelectStation: onSelectStation ?? (() => {}),
+          selection: current,
+          onSelect: onSelect ?? (() => {}),
           onNetwork: onNetwork ?? onStationDetails,
+          onPlan: onPlan ?? (() => {}),
+          onSaved: onSaved ?? (() => {}),
           onReportTarget: onReportTarget ?? onReport,
-          metroContent,
-          reportAction,
+          onReportGeneral: onReport,
+          reportOpen,
+          onSavedTrip,
+          mapViews,
+          uiState,
         }}
       />
     </div>

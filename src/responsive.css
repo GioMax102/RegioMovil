@@ -999,51 +999,8 @@
   transition: none !important;
   animation: none !important;
 }
-.mobile-brand,
-.mobile-plan-cta {
+.mobile-brand {
   display: none;
-}
-.home-plan-cta {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
-  min-height: 112px;
-  padding: 24px;
-  margin-bottom: 24px;
-  border: 1px solid #06734f;
-  background: var(--green);
-  text-align: left;
-}
-.home-plan-cta:hover {
-  background: #066447;
-}
-.home-plan-cta > span:nth-child(2) {
-  flex: 1;
-  min-width: 0;
-}
-.home-plan-cta .soft-icon {
-  width: 46px;
-  height: 46px;
-}
-.home-plan-cta strong {
-  display: block;
-  font-family: 'Montserrat Variable', sans-serif;
-  font-size: 1.3rem;
-  font-weight: 650;
-}
-.home-plan-cta small {
-  display: block;
-  color: #d5f8e9;
-  font-size: 13px;
-  line-height: 1.5;
-  margin-top: 5px;
-}
-.home-plan-cta > svg {
-  color: white;
-}
-.high-contrast .home-plan-cta small {
-  color: #d5f8e9;
 }
 .demo-banner > button,
 .switch {
@@ -1080,18 +1037,6 @@
   }
   .topbar-actions {
     gap: 8px;
-  }
-  .mobile-plan-cta {
-    gap: 13px;
-    padding: 18px;
-    margin-bottom: 20px;
-    min-height: 86px;
-  }
-  .mobile-plan-cta strong {
-    font-size: 16px;
-  }
-  .mobile-plan-cta small {
-    font-size: 12px;
   }
   .demo-banner {
     align-items: center;

@@ -13,26 +13,6 @@
   letter-spacing: 1px;
   white-space: nowrap;
 }
-.home-plan-cta {
-  background-image:
-    radial-gradient(ellipse at 110% 115%, #ffffff14 0 34%, transparent 34.3%),
-    repeating-radial-gradient(
-      ellipse at 110% 115%,
-      transparent 0 28px,
-      #ffffff18 29px 30px,
-      transparent 31px 55px
-    );
-  border-color: var(--app-primary);
-  border-radius: 20px;
-  box-shadow: 0 7px 20px #103e3612;
-}
-.home-plan-cta:hover {
-  background-color: #066447;
-}
-.home-plan-cta .soft-icon {
-  border: 1px solid #ffffff38;
-  border-radius: 50%;
-}
 .connection-pill {
   white-space: nowrap;
 }
@@ -66,30 +46,15 @@
 :root[data-theme='dark'] .setting-row .switch.on::before {
   background: var(--app-primary);
 }
-.high-contrast .home-plan-cta {
-  background-image: none;
-  border: 2px solid currentColor;
-}
 :root.high-contrast {
   --surface-grain: none;
   --surface-shadow: none;
-}
-@media (max-width: 760px) {
-  .home-plan-cta {
-    padding: 20px;
-    min-height: 100px;
-    margin-bottom: 18px;
-  }
 }
 @media (forced-colors: active) {
   :root,
   :root[data-theme] {
     --surface-grain: none;
     --surface-shadow: none;
-  }
-  .home-plan-cta {
-    background-image: none;
-    border: 2px solid ButtonText;
   }
   .setting-row .switch::before {
     border-color: ButtonText;

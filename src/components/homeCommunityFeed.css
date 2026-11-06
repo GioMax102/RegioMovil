@@ -78,6 +78,10 @@
   font-size: 0.96rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .home-community-card time {
   font-size: 0.76rem;
@@ -93,6 +97,18 @@
   color: var(--green);
   cursor: pointer;
   font-size: 0.82rem;
+  font-weight: 600;
+}
+.home-community-empty p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.home-community-empty button {
+  min-height: 44px;
+  padding: 8px 0;
+  font-size: 0.83rem;
+  color: var(--green);
   font-weight: 600;
 }
 .home-community-card summary {

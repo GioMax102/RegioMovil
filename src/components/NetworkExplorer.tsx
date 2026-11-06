@@ -30,9 +30,11 @@ const systems = [
 export default function NetworkExplorer({
   onPlanLine,
   onReportRoute,
+  initialSelection,
 }: {
   onPlanLine: (lineId: string) => void;
   onReportRoute?: (routeId: string) => void;
+  initialSelection?: { routeId: string; stopId?: string };
 }) {
   const [network, setNetwork] = useState<MobilityNetwork | null>(null);
   const [catalog, setCatalog] = useState<TransitCatalogData | null>(null);
@@ -51,6 +53,29 @@ export default function NetworkExplorer({
   const [searching, setSearching] = useState(false);
   const [activeResult, setActiveResult] = useState(-1);
   const [detailId, setDetailId] = useState('');
+  const appliedSelection = useRef('');
+  const pendingInitialDetail = useRef('');
+  const [selectionNotice, setSelectionNotice] = useState('');
+  useEffect(() => {
+    if (!initialSelection || !catalog) return;
+    const key = JSON.stringify(initialSelection);
+    if (appliedSelection.current === key) return;
+    appliedSelection.current = key;
+    const service = catalog.routes.find((item) => item.id === initialSelection.routeId);
+    if (!service) {
+      setSelectionNotice('La ruta elegida ya no está en este catálogo. Busca otra variante.');
+      return;
+    }
+    pendingInitialDetail.current = service.id;
+    setNetworkId(service.networkId);
+    setRouteId(service.id);
+    setQuery(`${service.code} · ${service.name}`);
+  }, [initialSelection, catalog]);
+  function cancelInitialSelection() {
+    pendingInitialDetail.current = '';
+    if (initialSelection) appliedSelection.current = JSON.stringify(initialSelection);
+    setSelectionNotice('');
+  }
   const previousDetailId = useRef('');
   useEffect(() => {
     if (previousDetailId.current && !detailId) routeSearch.current?.focus({ preventScroll: true });
@@ -203,9 +228,14 @@ export default function NetworkExplorer({
   const selectedRoute = routes.find((route) => route.id === routeId);
   const selectedService = catalogRoutes.find((route) => route.id === routeId);
   const displayedRoutes = useMemo(
-    () => (selectedRoute ? [selectedRoute] : routes),
-    [selectedRoute, routes],
+    () => (routeId ? (selectedRoute ? [selectedRoute] : []) : routes),
+    [routeId, selectedRoute, routes],
   );
+  useEffect(() => {
+    if (!network || pendingInitialDetail.current !== routeId) return;
+    pendingInitialDetail.current = '';
+    if (selectedService && !selectedRoute) setDetailId(selectedService.id);
+  }, [network, routeId, selectedService, selectedRoute]);
   const matches = useMemo(
     () => searchIndexedRoutes(catalogRoutes, searchIndex, query),
     [query, catalogRoutes, searchIndex],
@@ -220,6 +250,7 @@ export default function NetworkExplorer({
     }
   }, [searchOpen, activeResult, resultId]);
   function chooseSystem(id: string) {
+    cancelInitialSelection();
     setNetworkId(id);
     setRouteId('');
     setQuery('');
@@ -227,6 +258,7 @@ export default function NetworkExplorer({
     setActiveResult(-1);
   }
   function chooseRoute(id: string) {
+    cancelInitialSelection();
     const route = catalog?.routes.find((item) => item.id === id);
     if (!route) return;
     setRouteId(id);
@@ -242,6 +274,7 @@ export default function NetworkExplorer({
       setDetailId(id);
   }
   function clearSearch() {
+    cancelInitialSelection();
     setQuery('');
     setRouteId('');
     setSearching(false);
@@ -270,7 +303,7 @@ export default function NetworkExplorer({
     </button>
   );
   const map =
-    network && routes.length ? (
+    network && displayedRoutes.length ? (
       <LocationMap
         network={network}
         online={online}
@@ -278,6 +311,14 @@ export default function NetworkExplorer({
         contextRoutes={displayedRoutes}
         compact
         inspectStops
+        initialStopId={
+          initialSelection?.routeId === routeId &&
+          network.stops.some(
+            (stop) => stop.id === initialSelection.stopId && stop.routeIds.includes(routeId),
+          )
+            ? initialSelection?.stopId
+            : undefined
+        }
         viewportPadding={{ top: overlayHeight + 20, right: 76, bottom: 20, left: 16 }}
         selectionOverlay={selectedRouteCard}
         mapInfo={
@@ -310,16 +351,22 @@ export default function NetworkExplorer({
         }
       }}
     >
+      {selectionNotice && <p role="status">{selectionNotice}</p>}
       <section className="network-overview" aria-label="Mapa de la red de transporte">
         <div className="network-map-stage">
           <div className="network-map-layer">
             {network ? (
-              routes.length ? (
+              displayedRoutes.length ? (
                 map
               ) : (
-                <p className="network-map-empty" role="status">
-                  Esta red aún no tiene trazos documentados.
-                </p>
+                <div className="network-map-empty" role="status">
+                  <p>
+                    {routeId
+                      ? 'Este recorrido no tiene un trazo disponible en este mapa. Consulta su ficha y fuentes.'
+                      : 'Esta red aún no tiene trazos documentados.'}
+                  </p>
+                  {selectedRouteCard}
+                </div>
               )
             ) : (
               <p className="network-map-empty" role="status">
@@ -381,6 +428,7 @@ export default function NetworkExplorer({
                     value={query}
                     onFocus={() => setSearching(!selectedService)}
                     onChange={(event) => {
+                      cancelInitialSelection();
                       setQuery(event.target.value);
                       setSearching(true);
                       setActiveResult(-1);

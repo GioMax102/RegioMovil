@@ -222,10 +222,24 @@ async function closeDialog() {
   );
 }
 async function openHomeReport() {
-  await user.click(screen.getByRole('button', { name: /^(Crear|Continuar) reporte$/ }));
+  await user.click(
+    await screen.findByRole('button', { name: 'Crear reporte general', exact: true }),
+  );
   await screen.findByRole('textbox', { name: 'Título' });
   const station = screen.getByRole('combobox', { name: 'Estación de Metro' }) as HTMLSelectElement;
   if (!station.value) await user.selectOptions(station, 'padre-mier');
+}
+async function chooseHomeBus() {
+  await user.click(screen.getByRole('button', { name: /^Cambiar transporte:/ }));
+  await user.type(
+    await screen.findByRole('searchbox', { name: 'Buscar estación o ruta' }),
+    'No Reelección',
+  );
+  await user.click(
+    await screen.findByRole('radio', { name: /^TM · San Bernabé – No Reelección Transmetro$/ }),
+  );
+  await user.click(screen.getByRole('button', { name: 'Confirmar selección' }));
+  await screen.findByRole('combobox', { name: 'Parada del recorrido' }, { timeout: 10000 });
 }
 async function waitForMobilityMap() {
   // Loading the public graph includes its download, JSON decoding and render.
@@ -361,10 +375,7 @@ test('initial board comes from the real API and unit details explain simulation 
   assert.equal(screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ }).length, 2);
   const first = screen.getAllByRole('button', { name: /llegada simulada.*Ver detalles/ })[0];
   assert.match(first.getAttribute('aria-label') || '', /Afluencia simulada (Baja|Media|Alta)/);
-  assert.match(
-    first.getAttribute('aria-label') || '',
-    /Aire acondicionado simulado: (funcionando|no disponible|sin información)/,
-  );
+  assert.equal(first.querySelector('.home-arrival-crowding') !== null, true);
   assert.ok(
     requests.some((request) => request.path === '/api/board?station=padre-mier&scenario=normal'),
   );
@@ -550,7 +561,8 @@ test('appearance controls persist a dark theme and allow disabling navigation mo
 
 test('Home keeps the planning action direct, and Red opens the map with searchable transport routes', async () => {
   await mount();
-  assert.ok(screen.getByRole('button', { name: /¿A dónde vamos\?/ }));
+  assert.equal(screen.queryByRole('button', { name: /¿A dónde vamos\?/ }), null);
+  assert.ok(await screen.findByRole('button', { name: 'Planear desde aquí' }));
   assert.equal(screen.queryByRole('navigation', { name: 'Trayectos guardados' }), null);
   assert.equal(screen.queryByRole('combobox', { name: 'Buscar recorrido en el mapa' }), null);
   await user.click(mainNavigation().getByRole('link', { name: 'Red de transporte', exact: true }));
@@ -565,13 +577,10 @@ test('Home keeps the planning action direct, and Red opens the map with searchab
 
 test('Home explores one chosen bus route without loading the regional graph and reports its actual context', async () => {
   await mount();
-  await screen.findByRole('tab', { name: /Metro/ });
+  await screen.findByRole('button', { name: /^Cambiar transporte:/ });
   assert.ok(!requests.some(({ path }) => path.startsWith('/mobility-network.json')));
   assert.ok(!requests.some(({ path }) => path.startsWith('/transit-catalog.json')));
-  await user.click(screen.getByRole('tab', { name: /Autobús/ }));
-  const routes = await screen.findByRole('combobox', { name: 'Ruta', exact: true });
-  await user.selectOptions(routes, 'transmetro-san-bernabe-no-reeleccion');
-  await screen.findByRole('button', { name: 'Explorar la red: San Bernabé – No Reelección' });
+  await chooseHomeBus();
   assert.ok(
     requests.some(({ path }) =>
       path.startsWith('/route-packs/transmetro-san-bernabe-no-reeleccion.json'),
@@ -591,10 +600,67 @@ test('Home explores one chosen bus route without loading the regional graph and 
   assert.ok(!requests.some(({ path, method }) => path === '/api/reports' && method === 'POST'));
 });
 
+test('expanding the Home Metro map keeps the selected station in Red', async () => {
+  await mount();
+  await user.click(await screen.findByText('Ver mapa de la línea', { exact: true }));
+  await user.click(await screen.findByRole('button', { name: 'Ampliar en la red', exact: true }));
+  await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
+  const station = await screen.findByRole(
+    'region',
+    { name: 'Estación seleccionada' },
+    { timeout: 10000 },
+  );
+  assert.ok(within(station).getByText('Padre Mier', { exact: true }));
+  assert.equal(
+    (screen.getByRole('combobox', { name: 'Buscar recorrido en el mapa' }) as HTMLInputElement)
+      .value,
+    'L2 · Línea 2',
+  );
+  await navigate('Mi camino');
+  await waitFor(() =>
+    assert.equal(document.activeElement?.textContent?.trim(), 'Ver mapa de la línea'),
+  );
+});
+
+test('Home planning requires a confirmed origin and returning preserves its transport and focus', async () => {
+  await mount();
+  await chooseHomeBus();
+  await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
+  await screen.findByRole('region', { name: '¿Desde dónde sales?' }, { timeout: 10000 });
+  await user.click(screen.getByRole('button', { name: 'Cerrar búsqueda', exact: true }));
+  assert.ok(screen.getByRole('button', { name: 'Origen: Elige un punto', exact: true }));
+  assert.ok(screen.getByRole('button', { name: 'Destino: Elige un punto', exact: true }));
+  await navigate('Mi camino');
+  const plan = await screen.findByRole('button', { name: 'Planear desde aquí' });
+  await waitFor(() => assert.equal(document.activeElement, plan));
+  assert.ok(
+    screen.getByRole('button', {
+      name: 'Cambiar transporte: TM · San Bernabé – No Reelección',
+      exact: true,
+    }),
+  );
+  const stops = (await screen.findByRole('combobox', {
+    name: 'Parada del recorrido',
+  })) as HTMLSelectElement;
+  const stop = stops.options[1];
+  const graph = JSON.parse(
+    await readFile(new URL('../public/mobility-network.json', import.meta.url), 'utf8'),
+  );
+  assert.ok(
+    graph.stops.some((item: { id: string }) => item.id === stop.value),
+    'Origin must use an existing graph ID.',
+  );
+  await user.selectOptions(stops, stop.value);
+  await user.click(plan);
+  await waitForMobilityMap();
+  assert.ok(screen.getByRole('button', { name: `Origen: ${stop.textContent}`, exact: true }));
+  assert.ok(screen.getByRole('button', { name: 'Destino: Elige un punto', exact: true }));
+});
+
 test('Home highlights reports after planning, asks for the place and resumes a saved draft without submitting it', async () => {
   await mount();
-  const plan = screen.getByRole('button', { name: /¿A dónde vamos\?/ });
-  const report = screen.getByRole('button', { name: 'Crear reporte', exact: true });
+  const plan = await screen.findByRole('button', { name: 'Planear desde aquí' });
+  const report = screen.getByRole('button', { name: 'Crear reporte general', exact: true });
   assert.ok(plan.compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING);
   const guidanceRequests = requests.filter(
     (request) => request.path.includes('/api/reports') && request.method === 'POST',
@@ -641,7 +707,7 @@ test('a report is submitted through the UI and stays private and pending in SQLi
   await user.type(within(dialog).getByRole('textbox', { name: 'Título' }), 'Ventilación apagada');
   await user.type(within(dialog).getByRole('textbox', { name: /Cuéntanos un poco/ }), description);
   await user.click(within(dialog).getByRole('button', { name: 'Enviar reporte al piloto' }));
-  await screen.findByRole('status');
+  await screen.findByText('Reporte recibido. Queda privado y pendiente de revisión.');
   await waitFor(() => assert.ok(!screen.queryByRole('dialog')));
   const response = await realFetch(`${base}/api/reports?station=padre-mier`);
   const payload = await response.json();

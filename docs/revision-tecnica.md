@@ -6,6 +6,18 @@ Base documental: **29 de octubre de 2026**, código `cc69761`. Permite reproduci
 
 Para probar el producto ejecutable, iniciar el servidor y abrir `/acceso.html`. La [entrega de evaluación web del 1 de noviembre](ENTREGA_EVALUADORES_2026-11-01.md) documenta enlaces directos, navegación, pruebas y límites de la candidata. El recorrido ciudadano no solicita cuenta; la administración sigue siendo privada y exige MFA.
 
+Recorrido de interfaz actualizado el **6 de noviembre de 2026** para Inicio contextual:
+
+1. Abrir Inicio. Metro muestra la estación conservada, las próximas llegadas por sentido y su afluencia simulada sin esperar ubicación, catálogo o mapa. En intercambios, cambiar la línea mediante el control compacto. Fuera del horario general se muestra la próxima apertura.
+2. Tocar el vehículo del **selector circular**. Buscar una estación o una ruta de autobús, filtrar por sistema, elegir y confirmar. Cancelar conserva el transporte anterior. Las flechas o el deslizamiento del selector recorren las opciones disponibles; el círculo no inicia un viaje.
+3. Elegir manualmente un autobús y una variante concreta. Consultar su mapa y seleccionar una parada cuando haya puntos elegibles. Una ficha sin trazo sigue disponible; no se inventan paradas, llegadas ni afluencia de autobús. Ampliar abre esa selección en Red y permite volver al contexto de Inicio.
+4. Probar «Cerca de mí» sólo si se desea ordenar opciones por ubicación. La distancia es en línea recta y puede ser aproximada; no confirma acceso a pie ni vehículos cercanos. La selección manual sigue disponible sin conceder el permiso.
+5. Usar **«Planear desde aquí»** para abrir Planear con la estación o parada canónica confirmada como origen y el destino vacío. Si sólo se eligió una ruta, sin parada válida, se solicita el origen. Buscar el destino, comparar alternativas y abrir el detalle o la guía como acciones separadas.
+6. Usar **«Reportar aquí»** para abrir el formulario contextual, o «Crear reporte general» para no asignar un transporte. Un borrador existente ofrece «Continuar reporte» y conserva su contexto; tocar el acceso no envía nada. Las observaciones públicas de la estación o variante se muestran tras consentimiento y revisión, con sus límites visibles.
+7. Abrir Guardados para retomar viajes reales del dispositivo. Consultar los mapas de Metro mediante «Ver mapa de la línea», inicialmente cerrado; ajustes, fuentes y pronóstico permanecen accesibles.
+
+Esta guía describe el comportamiento que debe revisarse; no acredita pruebas físicas, resultados de CI ni una nueva publicación de web o Android. No hay calificaciones ni estrellas agregadas en este lote.
+
 | Área                | Entradas                                                                                                      | Evidencia esperada                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Producto            | [README](../README.md), [propuesta social](propuesta-social.md), [pitch](pitch.md).                           | Capacidades demostrables, simulaciones visibles y promesas pendientes identificadas.  |

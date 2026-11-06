@@ -161,14 +161,6 @@ summary:focus-visible {
   color: var(--dark);
   border-color: var(--line);
 }
-.home-plan-cta {
-  background-color: var(--app-primary);
-  color: var(--on-primary);
-}
-.home-plan-cta .soft-icon {
-  background: #ffffff18;
-  color: inherit;
-}
 .journey-detail .journey-detail-summary {
   background: var(--white);
   color: var(--dark);
