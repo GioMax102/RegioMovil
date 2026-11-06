@@ -38,6 +38,8 @@ public class RegioLocationPlugin extends Plugin {
     private volatile boolean foreground = true;
     private final Set<String> awaitingWatchIds = new HashSet<>();
     private final Set<String> cancelledWatchIds = new HashSet<>();
+    private final Set<String> awaitingPositionIds = new HashSet<>();
+    private final Set<String> cancelledPositionIds = new HashSet<>();
 
     @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
     public void watchPosition(PluginCall call) {
@@ -89,7 +91,7 @@ public class RegioLocationPlugin extends Plugin {
                     result.put("lat", location.getLatitude());
                     result.put("lng", location.getLongitude());
                     result.put("accuracy", location.getAccuracy());
-                    result.put("timestamp", System.currentTimeMillis() - age);
+                    result.put("timestamp", location.getTime());
                     if (location.hasSpeed()) result.put("speed", location.getSpeed());
                     if (location.hasBearing()) result.put("heading", location.getBearing());
                     watchCall.resolve(result);
@@ -152,7 +154,16 @@ public class RegioLocationPlugin extends Plugin {
 
     @PluginMethod
     public void getCurrentPosition(PluginCall call) {
+        String id = call.getString("requestId");
+        synchronized (awaitingPositionIds) { if (id != null) awaitingPositionIds.add(id); }
+        if (!foreground) { releasePositionId(call); call.reject("Se interrumpió la lectura de ubicación. Vuelve a intentarlo al regresar.", "LOCATION_CANCELLED"); return; }
         if (getPermissionState("coarse") != PermissionState.GRANTED && getPermissionState("fine") != PermissionState.GRANTED) {
+            // Strict automatic reads must never reopen a revoked permission prompt.
+            if (!call.getBoolean("requestPermission", true)) {
+                releasePositionId(call);
+                call.reject("No se concedió acceso a la ubicación. Puedes elegir una parada.", "LOCATION_DENIED");
+                return;
+            }
             requestPermissionForAliases(new String[] { "coarse", "fine" }, call, "locationPermission");
         } else start(call);
     }
@@ -160,22 +171,58 @@ public class RegioLocationPlugin extends Plugin {
     @PermissionCallback
     private void locationPermission(PluginCall call) {
         if (getPermissionState("coarse") == PermissionState.GRANTED || getPermissionState("fine") == PermissionState.GRANTED) start(call);
-        else call.reject("No se concedió acceso a la ubicación. Puedes elegir una parada.", "LOCATION_DENIED");
+        else { releasePositionId(call); call.reject("No se concedió acceso a la ubicación. Puedes elegir una parada.", "LOCATION_DENIED"); }
+    }
+
+    @PluginMethod
+    public void cancelCurrentPosition(PluginCall call) {
+        String id = call.getString("id");
+        synchronized (awaitingPositionIds) {
+            if (id != null && awaitingPositionIds.contains(id)) cancelledPositionIds.add(id);
+        }
+        main.post(() -> {
+            if (pending != null && id != null && id.equals(pending.getString("requestId"))) {
+                fail("Se canceló la lectura de ubicación.", "LOCATION_CANCELLED");
+            }
+            call.resolve();
+        });
+    }
+
+    private void releasePositionId(PluginCall call) {
+        if (call == null) return;
+        synchronized (awaitingPositionIds) {
+            String id = call.getString("requestId");
+            awaitingPositionIds.remove(id);
+            cancelledPositionIds.remove(id);
+        }
     }
 
     @SuppressLint("MissingPermission")
     @SuppressWarnings("deprecation")
     private void start(PluginCall call) {
         main.post(() -> {
+            synchronized (awaitingPositionIds) {
+                if (cancelledPositionIds.contains(call.getString("requestId"))) {
+                    releasePositionId(call);
+                    call.reject("Se canceló la lectura de ubicación.", "LOCATION_CANCELLED");
+                    return;
+                }
+            }
             // A permission response can arrive after the app has been hidden.
             // Do not register new listeners while the pause cleanup is queued.
-            if (!foreground) { call.reject("Se interrumpió la lectura de ubicación. Vuelve a intentarlo al regresar.", "LOCATION_CANCELLED"); return; }
-            if (pending != null) { call.reject("Ya estamos buscando tu ubicación.", "LOCATION_BUSY"); return; }
+            if (!foreground) { releasePositionId(call); call.reject("Se interrumpió la lectura de ubicación. Vuelve a intentarlo al regresar.", "LOCATION_CANCELLED"); return; }
+            // Permission may have been revoked while this work waited for the UI thread.
+            if (getPermissionState("coarse") != PermissionState.GRANTED && getPermissionState("fine") != PermissionState.GRANTED) {
+                releasePositionId(call);
+                call.reject("No se concedió acceso a la ubicación. Puedes elegir una parada.", "LOCATION_DENIED");
+                return;
+            }
+            if (pending != null) { releasePositionId(call); call.reject("Ya estamos buscando tu ubicación.", "LOCATION_BUSY"); return; }
             manager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
-            if (manager == null) { call.reject("Este dispositivo no ofrece ubicación.", "LOCATION_UNAVAILABLE"); return; }
+            if (manager == null) { releasePositionId(call); call.reject("Este dispositivo no ofrece ubicación.", "LOCATION_UNAVAILABLE"); return; }
             pending = call;
             listener = new LocationListener() {
-                @Override public void onLocationChanged(Location location) { complete(location); }
+                @Override public void onLocationChanged(Location location) { if (pending == call) complete(location); }
                 @Override public void onProviderEnabled(String provider) { }
                 @Override public void onProviderDisabled(String provider) { }
                 @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
@@ -215,6 +262,7 @@ public class RegioLocationPlugin extends Plugin {
         result.put("lat", location.getLatitude());
         result.put("lng", location.getLongitude());
         result.put("accuracy", location.getAccuracy());
+        result.put("timestamp", location.getTime());
         call.resolve(result);
     }
 
@@ -229,6 +277,7 @@ public class RegioLocationPlugin extends Plugin {
         if (manager != null && listener != null) {
             try { manager.removeUpdates(listener); } catch (RuntimeException ignored) { }
         }
+        releasePositionId(pending);
         pending = null; listener = null; timeout = null;
     }
 
@@ -237,6 +286,9 @@ public class RegioLocationPlugin extends Plugin {
         synchronized (awaitingWatchIds) { cancelledWatchIds.addAll(awaitingWatchIds); }
     }
     @Override protected void handleOnResume() { foreground = true; }
+    // A permission dialog can pause the activity without taking it out of view.
+    // Only a real stop cancels reads still waiting for that explicit permission.
+    @Override protected void handleOnStop() { synchronized (awaitingPositionIds) { cancelledPositionIds.addAll(awaitingPositionIds); } }
     @Override protected void handleOnPause() { leaveForeground(); main.post(() -> { fail("Se interrumpió la lectura de ubicación. Vuelve a intentarlo al regresar.", "LOCATION_CANCELLED"); endWatch("Guía en pausa. Vuelve a iniciarla al regresar a la aplicación.", "LOCATION_PAUSED"); }); }
-    @Override protected void handleOnDestroy() { leaveForeground(); main.post(() -> { fail("Se cerró el lector de ubicación.", "LOCATION_CANCELLED"); endWatch("Se cerró el seguimiento de ubicación.", "LOCATION_CANCELLED"); }); }
+    @Override protected void handleOnDestroy() { leaveForeground(); handleOnStop(); main.post(() -> { fail("Se cerró el lector de ubicación.", "LOCATION_CANCELLED"); endWatch("Se cerró el seguimiento de ubicación.", "LOCATION_CANCELLED"); }); }
 }
