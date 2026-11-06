@@ -80,21 +80,39 @@ const routeCache = 'regiomovil-public-routes-v1';
 export async function readPublicDocument<T>(
   path: string,
   immutable = false,
+  signal?: AbortSignal,
+  decode?: (body: string) => Promise<T>,
 ): Promise<{ data: T; offline: boolean }> {
+  const parse = (response: Response): Promise<T> =>
+    decode ? response.text().then(decode) : response.json();
+  const active = () => {
+    if (signal?.aborted) throw new DOMException('Lectura cancelada.', 'AbortError');
+  };
+  active();
   if (immutable && typeof caches !== 'undefined') {
     try {
       const cached = await (await caches.open(routeCache)).match(path, { ignoreVary: true });
-      if (cached) return { data: (await cached.json()) as T, offline: !navigator.onLine };
+      if (cached) {
+        const data = await parse(cached);
+        active();
+        return { data, offline: !navigator.onLine };
+      }
     } catch {
       /* A restricted cache falls through to the local bundle or network. */
     }
   }
+  active();
   try {
-    const { response, data } = await withRequestTimeout(async (signal) => {
-      const response = await fetch(path, { cache: 'no-store', signal });
-      if (!response.ok) throw new Error('PUBLIC_DOCUMENT_UNAVAILABLE');
-      return { response, data: (await response.clone().json()) as T };
-    }, 10000);
+    const { response, data } = await withRequestTimeout(
+      async (signal) => {
+        const response = await fetch(path, { cache: 'no-store', signal });
+        if (!response.ok) throw new Error('PUBLIC_DOCUMENT_UNAVAILABLE');
+        return { response, data: await parse(response.clone()) };
+      },
+      10000,
+      signal,
+    );
+    active();
     if (typeof caches !== 'undefined') {
       try {
         const cache = await caches.open(routeCache);
@@ -112,23 +130,34 @@ export async function readPublicDocument<T>(
         /* Restricted storage does not prevent consultation. */
       }
     }
+    active();
     return { data, offline: false };
   } catch {
+    active();
     if (typeof caches !== 'undefined') {
       try {
         const cached = await (await caches.open(routeCache)).match(path, { ignoreVary: true });
-        if (cached) return { data: (await cached.json()) as T, offline: true };
+        if (cached) {
+          const data = await parse(cached);
+          active();
+          return { data, offline: true };
+        }
       } catch {
         /* Surface the actionable message below. */
       }
     }
+    active();
     throw new Error(
       'No pudimos abrir estos datos. Conéctate una vez para guardarlos en este dispositivo y vuelve a intentar.',
     );
   }
 }
-export async function loadTransitCatalog() {
-  const result = await readPublicDocument<TransitCatalogData>('/transit-catalog.json');
+export async function loadTransitCatalog(signal?: AbortSignal) {
+  const result = await readPublicDocument<TransitCatalogData>(
+    '/transit-catalog.json',
+    false,
+    signal,
+  );
   if (
     result.data.version !== 1 ||
     !Array.isArray(result.data.routes) ||
@@ -137,14 +166,25 @@ export async function loadTransitCatalog() {
     throw new Error('El catálogo no tiene un formato válido. Vuelve a descargarlo.');
   return result;
 }
-export async function loadRoutePack(route: TransitRoute) {
+export async function loadRoutePack(
+  route: Pick<TransitRoute, 'geometryPack' | 'geometryRevision'>,
+  signal?: AbortSignal,
+) {
   if (!route.geometryPack || !/^[a-zA-Z0-9][a-zA-Z0-9-]{0,100}$/.test(route.geometryPack))
     throw new Error('Esta ruta todavía no tiene un trazo publicado disponible.');
   const result = await readPublicDocument<RoutePack>(
     `/route-packs/${route.geometryPack}.json${route.geometryRevision ? `?v=${route.geometryRevision}` : ''}`,
     !!route.geometryRevision,
+    signal,
+    route.geometryRevision
+      ? (body) =>
+          import('./routeIntegrity').then((module) =>
+            module.decodeRoutePack(body, route.geometryRevision!),
+          )
+      : undefined,
   );
-  const isCoordinate = (point: number[]) =>
+  const isCoordinate = (point: unknown) =>
+    Array.isArray(point) &&
     point.length === 2 &&
     point.every(Number.isFinite) &&
     point[0] >= -102 &&
@@ -155,10 +195,11 @@ export async function loadRoutePack(route: TransitRoute) {
     result.data.id !== route.geometryPack ||
     !Array.isArray(result.data.coordinates) ||
     !result.data.coordinates.every(isCoordinate) ||
-    (result.data.segments &&
-      !result.data.segments.every(
-        (segment) => Array.isArray(segment) && segment.every(isCoordinate),
-      ))
+    (result.data.segments !== undefined &&
+      (!Array.isArray(result.data.segments) ||
+        !result.data.segments.every(
+          (segment) => Array.isArray(segment) && segment.every(isCoordinate),
+        )))
   )
     throw new Error(
       'El recorrido recibido no pasó la validación de coordenadas. Consulta la fuente oficial.',

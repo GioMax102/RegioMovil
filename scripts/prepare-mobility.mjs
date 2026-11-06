@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { projectOnPolyline } from '../server/mobility.mjs';
+import { gzipSync } from 'node:zlib';
+import { normalizePublishedRoute } from '../shared/published-route.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = async path => JSON.parse(await readFile(new URL(path, root), 'utf8'));
@@ -34,55 +35,14 @@ for (const route of catalog.routes.filter(route => route.mode === 'bus')) {
     continue;
   }
   const pack = await read(`public/route-packs/${route.geometryPack}.json`);
-  // A viewable official map does not establish a usable boarding sequence.
-  if (pack.experimentalRouting === false) {
-    exclusions.push({ id: route.id, code: route.code, reason: 'visualization-only' });
+  const normalized = normalizePublishedRoute(route, pack);
+  excludedStops.push(...normalized.excludedStops);
+  if (normalized.reason) {
+    exclusions.push({ id: route.id, code: route.code, reason: normalized.reason });
     continue;
   }
-  // Published segments remain separate. Never concatenate disconnected paths.
-  const segments = (pack.segments?.length ? pack.segments : [pack.coordinates]).map((coordinates, index) =>
-    ({ id: `${route.id}:${index}`, coordinates, records: [] }));
-  const usedIds = new Set();
-  for (const marker of pack.stops) {
-    const note = String(marker.publishedInfrastructureNote || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-    if (note.includes('PROPUESTA') && !note.includes('EXISTE')) {
-      excludedStops.push({ routeId: route.id, markerId: marker.id, reason: 'proposed-only' });
-      continue;
-    }
-    const matches = segments.map((segment, index) => ({ index, ...projectOnPolyline(marker, segment.coordinates) }))
-      .sort((a, b) => a.distanceMeters - b.distanceMeters);
-    const nearest = matches[0];
-    if (!nearest || nearest.distanceMeters > 160) {
-      excludedStops.push({ routeId: route.id, markerId: marker.id, reason: 'too-far-from-published-trace' });
-      continue;
-    }
-    let id = `${route.id}:${encodeURIComponent(marker.id)}`;
-    if (usedIds.has(id)) id += `:${digest(`${marker.lng},${marker.lat},${marker.name}`)}`;
-    // Exact duplicates do not create a second vertex or a zero-length loop.
-    if (usedIds.has(id)) continue;
-    usedIds.add(id);
-    const stop = { id, name: marker.name, lat: marker.lat, lng: marker.lng,
-      mode: 'bus', routeIds: [route.id], sourceIds: route.sourceIds, official: true,
-      infrastructureStatus: marker.infrastructureStatus || 'unknown',
-      ...(marker.municipality ? { municipality: marker.municipality } : {}),
-      ...(marker.publishedInfrastructureNote ? { publishedInfrastructureNote: marker.publishedInfrastructureNote } : {}),
-      snapDistanceMeters: Math.round(nearest.distanceMeters) };
-    stops.push(stop);
-    segments[nearest.index].records.push({ id, position: nearest.position });
-  }
-  const usableSegments = segments.map(segment => {
-    segment.records.sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
-    return { id: segment.id, coordinates: segment.coordinates, stopIds: segment.records.map(record => record.id),
-      positions: segment.records.map(record => Math.round(record.position * 1e6) / 1e6) };
-  }).filter(segment => segment.stopIds.length >= 2);
-  const retainedIds = new Set(usableSegments.flatMap(segment => segment.stopIds));
-  for (let index = stops.length - 1; index >= 0; index--) {
-    if (stops[index].routeIds[0] === route.id && !retainedIds.has(stops[index].id)) stops.splice(index, 1);
-  }
-  if (!usableSegments.length) {
-    exclusions.push({ id: route.id, code: route.code, reason: 'insufficient-published-stops' });
-    continue;
-  }
+  stops.push(...normalized.stops);
+  const usableSegments = normalized.segments;
   routes.push({ id: route.id, code: route.code, name: route.name, mode: 'bus', networkId: route.networkId,
     color: route.networkId === 'regioruta' ? '#46794d' : route.networkId === 'transmetro' ? '#008b72' : route.networkId === 'ecovia' ? '#a54545' : '#4975a4', sourceIds: route.sourceIds,
     stopOrderVerified: false, directionVerified: false, geometryKind: 'official-published',
@@ -110,6 +70,25 @@ const data = {
 };
 data.revision = digest(JSON.stringify(data));
 const json = JSON.stringify(data);
+// An opt-in public index has IDs and coordinates, never complete route geometries.
+const nearbyRoutes = routes.filter(route => route.mode === 'bus');
+const ordinal = new Map(nearbyRoutes.map((route, index) => [route.id, index]));
+const nearby = {
+  version: 1, revision: data.revision, verifiedAt: data.verifiedAt,
+  origin: [24, -102], scale: 100000,
+  routes: nearbyRoutes.map(route => Object.fromEntries(
+    ['id','code','name','networkId','geometryPack','geometryRevision'].map(key => [key, route[key]]))),
+  points: stops.filter(stop => stop.mode === 'bus').flatMap(stop => stop.routeIds.map(routeId => {
+    if (!stop.id.startsWith(`${routeId}:`) || !ordinal.has(routeId)) throw new Error('Invalid canonical nearby stop.');
+    return [Math.round((stop.lat - 24) * 100000), Math.round((stop.lng + 102) * 100000), ordinal.get(routeId), stop.id.slice(routeId.length + 1)];
+  })),
+};
+const nearbyJson = JSON.stringify(nearby);
+const nearbyBytes = Buffer.byteLength(nearbyJson), nearbyGzip = gzipSync(nearbyJson, {level:6}).length;
+if (nearbyBytes > 450 * 1024 || nearbyGzip > 110 * 1024) throw new Error(`Nearby index exceeds its budget: ${nearbyBytes} raw / ${nearbyGzip} gzip bytes.`);
+
 await mkdir(new URL('public/', root), { recursive: true });
 await Promise.all(['data/mobility-network.json', 'public/mobility-network.json'].map(path => writeFile(new URL(path, root), json)));
+await writeFile(new URL('public/home-nearby.json', root), nearbyJson);
+console.log(`Cercanía bajo demanda: ${nearby.points.length} puntos; ${nearbyBytes} bytes JSON / ${nearbyGzip} gzip6.`);
 console.log(`Movilidad experimental: ${routes.length} líneas/recorridos, ${stops.length} puntos publicados, ${excludedStops.length} marcadores excluidos; ${(Buffer.byteLength(json) / 1024).toFixed(1)} KiB.`);
