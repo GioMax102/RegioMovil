@@ -188,11 +188,12 @@ function mount(overrides: Partial<Props> = {}) {
   };
 }
 
-test('Metro details leave its map closed, fetch no graph/catalog/packs and keep compact actions separate', async () => {
+test('Metro shows its map on entry without the graph/catalog/packs and keeps compact actions separate', async () => {
   const view = mount();
   const user = userEvent.setup({ document: dom.window.document });
   await screen.findByText(/Todavía no hay reportes públicos/);
-  assert.equal(screen.queryByTestId('selected-map'), null);
+  await screen.findByTestId('selected-map');
+  assert.equal(document.querySelector<HTMLDetailsElement>('.home-metro-map')?.open, true);
   assert.ok(requests.every((path) => path.startsWith('/api/reports?station=')));
   await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
   await user.click(screen.getByRole('button', { name: 'Guardados', exact: true }));
@@ -202,8 +203,6 @@ test('Metro details leave its map closed, fetch no graph/catalog/packs and keep 
   assert.equal(view.saved(), 1);
   assert.deepEqual(view.reported, [{ stationId: metro.kind === 'metro' ? metro.stationId : '' }]);
   assert.equal(view.general(), 1);
-  await user.click(screen.getByText('Ver mapa de la línea'));
-  await screen.findByTestId('selected-map');
   await user.click(screen.getByRole('button', { name: 'Ampliar recorrido' }));
   assert.deepEqual(view.expanded, [metro]);
   assert.deepEqual(view.selections, []);
@@ -358,19 +357,21 @@ test('canonical stops reject proposals and traces with too few usable points whi
   assert.equal(nearestHomePoint(network.stations, { lat: NaN, lng: 0 }), null);
 });
 
-test('returning to Home restores an explicitly opened Metro map without requesting the regional graph', async () => {
-  const uiState = { metroMapOpen: false };
+test('a user can close the initially visible Metro map and returning preserves that decision', async () => {
+  const uiState = { metroMapOpen: true };
   const view = mount({ uiState });
   const user = userEvent.setup({ document: dom.window.document });
-  await user.click(screen.getByText('Ver mapa de la línea'));
   await screen.findByTestId('selected-map');
   assert.equal(uiState.metroMapOpen, true);
+  await user.click(screen.getByText('Ver mapa de la línea'));
+  await waitFor(() => assert.equal(uiState.metroMapOpen, false));
+  assert.equal(screen.queryByTestId('selected-map'), null);
   assert.ok(document.querySelector('[data-home-action="map"]'));
   assert.ok(document.querySelector('[data-home-action="plan"]'));
   view.unmount();
   mount({ uiState });
-  await screen.findByTestId('selected-map');
-  assert.equal(document.querySelector<HTMLDetailsElement>('.home-metro-map')?.open, true);
+  assert.equal(document.querySelector<HTMLDetailsElement>('.home-metro-map')?.open, false);
+  assert.equal(screen.queryByTestId('selected-map'), null);
   assert.equal(
     requests.some((path) => path.includes('mobility-network')),
     false,

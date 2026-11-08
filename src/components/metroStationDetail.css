@@ -37,9 +37,6 @@
   flex-wrap: wrap;
   gap: 5px;
 }
-.metro-station-title .line-badge {
-  font-size: 0.7rem;
-}
 
 .metro-station-outlook {
   padding: 14px 12px 8px;

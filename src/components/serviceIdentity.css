@@ -19,9 +19,6 @@
   align-items: center;
   gap: 7px;
   padding: 7px 9px;
-  color: var(--dark);
-  background: var(--white);
-  border: 1px solid var(--line);
   border-radius: 9px;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;

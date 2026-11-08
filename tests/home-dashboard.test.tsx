@@ -31,6 +31,12 @@ for (const name of [
 }
 const styles = registerHooks({
   load(url, context, nextLoad) {
+    if (url.endsWith('/HomeSelectedRouteMap.tsx'))
+      return {
+        format: 'module',
+        source: `import React from 'react'; export default function Map(){return React.createElement('div',{'data-testid':'selected-map'});}`,
+        shortCircuit: true,
+      };
     return url.endsWith('.css')
       ? { format: 'module', source: '', shortCircuit: true }
       : nextLoad(url, context);
@@ -39,7 +45,9 @@ const styles = registerHooks({
 const { default: HomeDashboard } = await import('../src/components/HomeDashboard');
 const { render, screen, cleanup, act, within } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
-afterEach(cleanup);
+afterEach(async () => {
+  await act(async () => cleanup());
+});
 beforeEach(() => dom.window.localStorage.clear());
 after(() => {
   styles.deregister();
@@ -135,17 +143,21 @@ function savedTrip(label: string): SavedMobilityTrip {
   } as SavedMobilityTrip;
 }
 
-test('secondary outlook and provenance start collapsed, with simulation still available on demand', async () => {
+test('hourly crowding and advice are visible on entry while methodology remains optional', async () => {
   const user = userEvent.setup({ document: dom.window.document });
   const { container } = mount();
   await screen.findByRole('button', { name: 'Ver estación', exact: true });
   const outlook = container.querySelector('.home-outlook') as HTMLDetailsElement;
   const info = container.querySelector('.home-data-info') as HTMLDetailsElement;
-  assert.equal(outlook.open, false);
+  assert.equal(outlook.open, true);
   assert.equal(info.open, false);
+  assert.equal(container.querySelector<HTMLDetailsElement>('.home-advice')?.open, true);
+  assert.ok(screen.getByRole('img', { name: /Afluencia simulada por hora/ }));
+  assert.match(container.querySelector('.home-quiet-hour')!.textContent!, /12:00/);
+  await user.click(screen.getByText('Afluencia por hora'));
+  assert.equal(outlook.open, false);
   await user.click(screen.getByText('Afluencia por hora'));
   assert.equal(outlook.open, true);
-  assert.match(container.querySelector('.home-quiet-hour')!.textContent!, /12:00/);
   await user.click(screen.getByText('Datos y fuentes'));
   assert.equal(info.open, true);
   assert.match(info.textContent!, /son una simulación/);
@@ -206,7 +218,6 @@ test('home hides imminent Metro units while closed and keeps future operating ho
     ],
     forecast: ['03:00', '04:00', '05:00', '06:00'].map((hour) => ({ hour, occupancy: 30 })),
   };
-  const user = userEvent.setup({ document: dom.window.document });
   const { container } = mount(closedBoard, undefined, new Date(closedBoard.generatedAt));
   await screen.findByRole('button', { name: 'Ver estación', exact: true });
   assert.equal(container.querySelectorAll('.arrival-card').length, 0);
@@ -216,7 +227,7 @@ test('home hides imminent Metro units while closed and keeps future operating ho
     /Fuera de horario.*05:00/,
   );
   assert.equal(screen.queryByRole('heading', { name: 'Próximas llegadas' }), null);
-  await user.click(screen.getByText('Afluencia por hora'));
+  assert.equal(container.querySelector<HTMLDetailsElement>('.home-outlook')?.open, true);
   assert.deepEqual(
     [...container.querySelectorAll('.bar-hour')].map((node) => node.textContent),
     ['05:00', '06:00'],

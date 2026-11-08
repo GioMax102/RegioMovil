@@ -82,7 +82,7 @@ export function HomeTransportTools({
       </div>
       {!nearby.enabled && (
         <p className="home-context-privacy">
-          La ubicación sólo ordena opciones en tu dispositivo. Tú decides cuándo usarla.
+          Tú decides cuándo usar tu ubicación. Se procesa en este dispositivo.
         </p>
       )}
       {nearby.busy && (
@@ -243,7 +243,7 @@ function MetroMapSection(props: {
   mapViews?: Map<string, RegionalView>;
   uiState?: HomeUiState;
 }) {
-  const [open, setOpen] = useState(props.uiState?.metroMapOpen || false);
+  const [open, setOpen] = useState(props.uiState?.metroMapOpen ?? true);
   return (
     <details
       className="home-metro-map"
@@ -385,18 +385,19 @@ export default function HomeTransportHub({
         <Route size={19} aria-hidden="true" />
         <span>Planear desde aquí</span>
       </button>
+      <button type="button" className="home-context-report" onClick={report}>
+        <Flag size={19} aria-hidden="true" />
+        <span>{hasReportDraft ? 'Continuar reporte' : 'Reportar aquí'}</span>
+      </button>
       <button type="button" onClick={onSaved}>
         <Bookmark size={19} aria-hidden="true" />
         <span>Guardados</span>
-      </button>
-      <button type="button" onClick={report}>
-        <Flag size={19} aria-hidden="true" />
-        <span>{hasReportDraft ? 'Continuar reporte' : 'Reportar aquí'}</span>
       </button>
     </div>
   );
   return (
     <div className="home-transport-hub" key={key} ref={container}>
+      {actions}
       {selection.kind === 'bus' && (
         <section className="home-bus-context" aria-label="Información de la ruta seleccionada">
           <p className="home-bus-availability">
@@ -476,7 +477,6 @@ export default function HomeTransportHub({
           )}
         </section>
       )}
-      {actions}
       {selection.kind === 'metro' && (
         <MetroMapSection
           key={`map:${key}`}

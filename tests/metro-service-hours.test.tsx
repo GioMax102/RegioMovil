@@ -1,14 +1,24 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Forecast } from '../src/components/Primitives';
 import {
   filterMetroForecast,
   getMetroServiceWindow,
   getNextMetroOpening,
   isMetroOperating,
 } from '../src/components/metroServiceHours';
+
+const sourceHooks = registerHooks({
+  load(url, context, nextLoad) {
+    return url.endsWith('.css')
+      ? { format: 'module', source: '', shortCircuit: true }
+      : nextLoad(url, context);
+  },
+});
+const { Forecast } = await import('../src/components/Primitives');
+after(() => sourceHooks.deregister());
 
 const local = (value: string) => new Date(`${value}-06:00`);
 

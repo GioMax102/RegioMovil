@@ -1,10 +1,20 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { ArrivalCard } from '../src/components/Primitives';
 import type { Arrival } from '../src/types';
+
+const sourceHooks = registerHooks({
+  load(url, context, nextLoad) {
+    return url.endsWith('.css')
+      ? { format: 'module', source: '', shortCircuit: true }
+      : nextLoad(url, context);
+  },
+});
+const { ArrivalCard } = await import('../src/components/Primitives');
+after(() => sourceHooks.deregister());
 
 const arrival: Arrival = {
   id: 'unit-test',

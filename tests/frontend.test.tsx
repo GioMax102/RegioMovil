@@ -498,8 +498,6 @@ test('station search resolves the Fundidora alias to Arena Monterrey and refresh
 test('accessibility settings persist and the peak scenario refreshes prediction and advice', async () => {
   await mount();
   const outlook = screen.getByText('Afluencia por hora').closest('details')!;
-  assert.equal(outlook.open, false);
-  await user.click(within(outlook).getByText('Afluencia por hora'));
   assert.equal(outlook.open, true);
   const initialForecast = screen
     .getByRole('img', { name: /Afluencia simulada por hora/ })
@@ -524,7 +522,6 @@ test('accessibility settings persist and the peak scenario refreshes prediction 
   await user.click(within(dialog).getByRole('button', { name: 'Hora pico' }));
   await closeDialog();
   const advice = await screen.findByText('Una salida después puede ir más tranquila');
-  await user.click(advice);
   assert.equal(advice.closest('details')?.open, true);
   assert.ok(
     requests.some((request) => request.path === '/api/board?station=padre-mier&scenario=peak'),
@@ -602,7 +599,8 @@ test('Home explores one chosen bus route without loading the regional graph and 
 
 test('expanding the Home Metro map keeps the selected station in Red', async () => {
   await mount();
-  await user.click(await screen.findByText('Ver mapa de la línea', { exact: true }));
+  const map = (await screen.findByText('Ver mapa de la línea', { exact: true })).closest('details');
+  assert.equal(map?.open, true);
   await user.click(await screen.findByRole('button', { name: 'Ampliar en la red', exact: true }));
   await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
   const station = await screen.findByRole(

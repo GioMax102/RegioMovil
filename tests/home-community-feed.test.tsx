@@ -32,8 +32,7 @@ const styles = registerHooks({
   },
 });
 const { default: HomeCommunityFeed } = await import('../src/components/HomeCommunityFeed');
-const { act, cleanup, fireEvent, render, screen, waitFor, within } =
-  await import('@testing-library/react');
+const { act, cleanup, fireEvent, render, screen, within } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
 styles.deregister();
 const originalFetch = globalThis.fetch;
@@ -121,27 +120,46 @@ test('Home community shows bounded reviewed cards and server totals without trea
   assert.ok(!document.querySelector('input[type="range"]'));
 });
 
-test('details and public evidence mount only after an explicit expansion and photo failure retains the observation', async () => {
+test('reviewed report details are visible immediately and lazy photo failure retains the observation', async () => {
   respond = async () => Response.json(feed([report('foto', { photoMime: 'image/jpeg' })]));
   const user = userEvent.setup({ document: dom.window.document });
   render(<HomeCommunityFeed stationId="a" />);
   await screen.findByText('Observación foto');
-  assert.equal(screen.queryByText('Detalle de foto'), null);
-  assert.equal(screen.queryByRole('img'), null);
-  await user.click(screen.getByText('Leer observación'));
-  await screen.findByText('Detalle de foto');
+  assert.ok(screen.getByText('Detalle de foto'));
+  assert.equal(screen.queryByText('Leer observación'), null);
   const photo = screen.getByRole('img', { name: 'Foto adjunta: Observación foto' });
   assert.equal(photo.getAttribute('src'), '/api/reports/foto/photo');
   assert.equal(photo.getAttribute('loading'), 'lazy');
   fireEvent.error(photo);
   await screen.findByText('La foto no está disponible.');
   assert.ok(screen.getByText('Observación foto'));
-  await user.click(screen.getByText('Leer observación'));
-  await waitFor(() => assert.equal(screen.queryByText('Detalle de foto'), null));
+  assert.ok(screen.getByText('Detalle de foto'));
   await user.click(screen.getByText('Sobre estas observaciones'));
   assert.ok(
     screen.getByText(/Publicadas con consentimiento tras revisión.*No son alertas oficiales/),
   );
+});
+
+test('synthetic scenarios have one clear dataset notice without claiming human review', async () => {
+  respond = async () =>
+    Response.json({
+      ...feed([report('banqueta')]),
+      dataset: {
+        kind: 'synthetic',
+        label: 'Escenario de visualización',
+        referenceDate: '2026-11-08',
+      },
+    });
+  render(<HomeCommunityFeed stationId="felix-u-gomez" />);
+  await screen.findByText('Observación banqueta');
+  assert.ok(screen.getByText('Visualización', { exact: true }));
+  assert.equal(screen.queryByText('Revisado', { exact: true }), null);
+  assert.equal(document.querySelectorAll('.report-dataset-notice').length, 1);
+  assert.ok(screen.getByText('Detalle de banqueta'));
+  const user = userEvent.setup({ document: dom.window.document });
+  await user.click(screen.getByText('Sobre estas observaciones'));
+  assert.ok(screen.getByText(/No describe hechos reales/));
+  assert.equal(screen.queryByText(/Publicadas con consentimiento/), null);
 });
 
 test('failed requests remain distinct from an empty community and can be retried in the same target', async () => {

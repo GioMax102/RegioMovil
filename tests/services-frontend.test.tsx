@@ -661,8 +661,14 @@ test('map route search opens a compact source-backed detail while the catalog st
   );
   assert.equal(screen.queryByRole('listbox'), null);
   await user.type(search, 'linea 1');
-  await user.click(await screen.findByRole('option', { name: /L1/ }));
-  await user.click(screen.getByRole('button', { name: 'Ver ficha de L1: Línea 1' }));
+  const option = await screen.findByRole('option', { name: /L1/ });
+  const optionBadge = within(option).getByText('L1');
+  assert.equal(optionBadge.title, 'Metro · L1');
+  assert.ok(optionBadge.style.backgroundColor);
+  await user.click(option);
+  const selectedRoute = screen.getByRole('button', { name: 'Ver ficha de L1: Línea 1' });
+  assert.equal(within(selectedRoute).getByText('L1').title, 'Metro · L1');
+  await user.click(selectedRoute);
   const dialog = await screen.findByRole('dialog', { name: 'L1 · Metrorrey' });
   const information = within(dialog).getByText('Información y fuentes', { selector: 'summary' })
     .parentElement as HTMLDetailsElement;

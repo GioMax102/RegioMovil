@@ -57,8 +57,13 @@
   background: var(--soft);
 }
 .home-simulation {
-  color: var(--muted);
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--dark);
   font-size: 0.75rem;
+  font-weight: 600;
   margin: 0 0 10px;
 }
 .home-arrival-summary {
@@ -81,7 +86,7 @@
   overflow-wrap: anywhere;
 }
 .home-arrival-direction > span {
-  color: var(--muted);
+  color: var(--dark);
   font-size: 0.75rem;
 }
 .home-arrival-time {
@@ -91,6 +96,9 @@
   color: var(--green);
   flex-wrap: wrap;
   justify-content: flex-end;
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: var(--soft);
 }
 .home-arrival-time strong {
   font-size: 1.4rem;
@@ -107,6 +115,8 @@
   gap: 6px;
   color: var(--dark);
   font-size: 0.8rem;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
 }
 .home-selector-fallback:focus-visible,
 .home-arrival-summary:focus-visible,
@@ -154,7 +164,7 @@
   font-variant-numeric: tabular-nums;
 }
 .home-outlook {
-  padding: 0 20px;
+  padding: 0 20px 16px;
   background: var(--white);
 }
 .home-outlook > summary,
@@ -201,7 +211,11 @@
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  align-items: center;
   margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--soft);
   font-size: 0.8rem;
   color: var(--dark);
 }
@@ -216,7 +230,14 @@
   opacity: 1;
 }
 .home-dashboard .all-arrivals {
-  padding-bottom: 0;
+  min-height: 46px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--green);
+  border-radius: 11px;
+  background: var(--white);
+  color: var(--green);
+  font-weight: 650;
 }
 .home-data-info a {
   display: block;
@@ -237,7 +258,7 @@
     padding: 16px;
   }
   .home-outlook {
-    padding: 0 16px;
+    padding: 0 16px 16px;
   }
 }
 

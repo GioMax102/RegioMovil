@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X, Users, TrainFront, Snowflake, CircleHelp, ChevronRight, Clock3 } from 'lucide-react';
-import { network } from '../api';
 import type { Arrival } from '../types';
 import { filterMetroForecast } from './metroServiceHours';
+import ServiceBadge from './ServiceBadge';
 
 // A native modal blocks focus/clicks outside it, but mobile browsers can still scroll
 // its document. Keep one document lock until the final nested dialog has closed.
@@ -91,14 +91,10 @@ export function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 export function LineBadge({ id }: { id: string }) {
-  const line = network.lines.find((l) => l.id === id);
   return (
-    <span
-      className="line-badge"
-      style={{ '--line': line?.color ?? '#2b6b50' } as React.CSSProperties}
-    >
-      {id.replace('L', 'Línea ')}
-    </span>
+    <ServiceBadge networkId="metrorrey" routeId={id} code={id} mode="metro" className="line-badge">
+      {/^L\d+$/.test(id) ? id.replace('L', 'Línea ') : id}
+    </ServiceBadge>
   );
 }
 export function Occupancy({ value, label }: { value: number; label?: string }) {

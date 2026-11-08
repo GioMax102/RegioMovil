@@ -150,18 +150,6 @@
   gap: 7px;
   flex-wrap: wrap;
 }
-.service-route-code {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 0.85rem;
-  font-weight: 750;
-  color: var(--dark);
-  line-height: 1.6;
-}
-.service-route-code > svg {
-  color: var(--service-color);
-}
 .service-status {
   font-size: 0.67rem;
   color: var(--dark);

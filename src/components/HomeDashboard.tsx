@@ -195,7 +195,7 @@ export default function HomeDashboard({
           <ArrowRight size={16} aria-hidden="true" />
         </button>
       </section>
-      <details className="panel home-outlook">
+      <details className="panel home-outlook" open>
         <summary>
           <Users size={19} aria-hidden="true" />
           <span>Afluencia por hora</span>
@@ -208,7 +208,7 @@ export default function HomeDashboard({
           </p>
         )}
         {board && <Forecast data={board.forecast} compact serviceDate={board.generatedAt} />}
-        <details className="home-advice">
+        <details className="home-advice" open>
           <summary>
             <span>{board?.advice.title || 'Compara antes de salir'}</span>
             <ChevronDown size={17} aria-hidden="true" />

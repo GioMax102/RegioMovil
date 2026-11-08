@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronDown, MessageSquare } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import {
   loadPublicReportFeed,
   publicReportPhotoUrl,
@@ -7,6 +7,7 @@ import {
   type PublicReportFeed,
 } from '../reportsApi';
 import './homeCommunityFeed.css';
+import ReportDatasetNotice from './ReportDatasetNotice';
 
 const categories: Record<string, string> = {
   infrastructure: 'Infraestructura',
@@ -22,7 +23,6 @@ const date = new Intl.DateTimeFormat('es-MX', {
 });
 
 function CommunityCard({ report }: { report: PublicReport }) {
-  const [open, setOpen] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
   const timestamp = new Date(report.createdAt);
   return (
@@ -35,28 +35,20 @@ function CommunityCard({ report }: { report: PublicReport }) {
       <time dateTime={Number.isFinite(+timestamp) ? report.createdAt : undefined}>
         {Number.isFinite(+timestamp) ? date.format(timestamp) : 'Fecha no disponible'}
       </time>
-      <details onToggle={(event) => setOpen(event.currentTarget.open)}>
-        <summary aria-label={`Leer observación: ${report.title}`}>
-          Leer observación
-          <ChevronDown size={16} aria-hidden="true" />
-        </summary>
-        {open && (
-          <div className="home-community-card-detail">
-            <p>{report.detail}</p>
-            {report.photoMime &&
-              (photoFailed ? (
-                <p>La foto no está disponible.</p>
-              ) : (
-                <img
-                  src={publicReportPhotoUrl(report.id)}
-                  alt={`Foto adjunta: ${report.title}`}
-                  loading="lazy"
-                  onError={() => setPhotoFailed(true)}
-                />
-              ))}
-          </div>
-        )}
-      </details>
+      <div className="home-community-card-detail">
+        <p>{report.detail}</p>
+        {report.photoMime &&
+          (photoFailed ? (
+            <p>La foto no está disponible.</p>
+          ) : (
+            <img
+              src={publicReportPhotoUrl(report.id)}
+              alt={`Foto adjunta: ${report.title}`}
+              loading="lazy"
+              onError={() => setPhotoFailed(true)}
+            />
+          ))}
+      </div>
     </article>
   );
 }
@@ -103,8 +95,13 @@ export default function HomeCommunityFeed({
       <header className="home-community-heading">
         <MessageSquare size={20} aria-hidden="true" />
         <h2>Lo que la comunidad comparte</h2>
-        <span className="home-community-reviewed">Revisado</span>
+        {state === 'ready' && (
+          <span className="home-community-reviewed">
+            {feed?.dataset?.kind === 'synthetic' ? 'Visualización' : 'Revisado'}
+          </span>
+        )}
       </header>
+      <ReportDatasetNotice dataset={feed?.dataset} />
       {!validTarget ? (
         <p>Elige una estación o una ruta para ver las observaciones de la comunidad.</p>
       ) : state === 'loading' ? (
@@ -168,8 +165,9 @@ export default function HomeCommunityFeed({
       <details className="home-community-scope">
         <summary>Sobre estas observaciones</summary>
         <p>
-          Publicadas con consentimiento tras revisión de contenido. No son alertas oficiales ni
-          acreditan una falla verificada.
+          {feed?.dataset?.kind === 'synthetic'
+            ? 'Este escenario usa observaciones inventadas para explorar el producto. No describe hechos reales ni constituye una alerta oficial.'
+            : 'Publicadas con consentimiento tras revisión de contenido. No son alertas oficiales ni acreditan una falla verificada.'}
         </p>
       </details>
     </section>

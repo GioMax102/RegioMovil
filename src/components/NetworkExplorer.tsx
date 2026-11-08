@@ -13,7 +13,8 @@ import type { TransitCatalogData } from '../types';
 import { loadMobilityNetwork } from '../mobility/api';
 import LocationMap from '../mobility/LocationMap';
 import type { MobilityNetwork } from '../mobility/types';
-import TransitCatalog, { serviceColors } from './TransitCatalog';
+import TransitCatalog from './TransitCatalog';
+import ServiceBadge from './ServiceBadge';
 import useMapWorkspaceHeight from '../useMapWorkspaceHeight';
 import { indexRouteSearch, searchIndexedRoutes } from './routeSearch';
 import './networkExplorer.css';
@@ -287,15 +288,13 @@ export default function NetworkExplorer({
       onClick={() => setDetailId(selectedService.id)}
       aria-label={`Ver ficha de ${selectedService.code}: ${selectedService.name}`}
     >
-      <span
-        className="network-route-dot"
-        style={{
-          background: selectedRoute?.color ?? serviceColors[selectedService.networkId],
-        }}
-        aria-hidden="true"
+      <ServiceBadge
+        networkId={selectedService.networkId}
+        routeId={selectedService.id}
+        code={selectedService.code}
+        mode={selectedService.mode}
       />
       <span>
-        <strong>{selectedService.code}</strong>
         <span>{selectedService.name}</span>
         {!selectedRoute && !selectedService.geometryPack && <small>Trazo pendiente</small>}
       </span>
@@ -485,17 +484,13 @@ export default function NetworkExplorer({
                           }
                           onClick={() => chooseRoute(route.id)}
                         >
-                          <span
-                            className="network-route-dot"
-                            style={{
-                              background:
-                                network?.routes.find((item) => item.id === route.id)?.color ??
-                                serviceColors[route.networkId],
-                            }}
-                            aria-hidden="true"
+                          <ServiceBadge
+                            networkId={route.networkId}
+                            routeId={route.id}
+                            code={route.code}
+                            mode={route.mode}
                           />
                           <span>
-                            <strong>{route.code}</strong>
                             <span>{route.name}</span>
                             {!route.geometryPack &&
                               !network?.routes.some((item) => item.id === route.id) && (

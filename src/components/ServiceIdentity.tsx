@@ -18,6 +18,7 @@ import {
   type ServiceIdentitySourceId,
 } from '../data/serviceIdentity';
 import { Dialog } from './Primitives';
+import ServiceBadge from './ServiceBadge';
 import './serviceIdentity.css';
 
 type Information = PaymentMethodId | 'unknown' | 'vehicle' | null;
@@ -47,10 +48,10 @@ export default function ServiceIdentity({
       aria-label={`Identificación y pago de ${input.code}`}
     >
       <div className="service-identity-heading">
-        <span className="service-identity-number">
+        <ServiceBadge {...input} className="service-identity-number">
           <VehicleIcon size={18} aria-hidden="true" />
           <strong>{input.code}</strong>
-        </span>
+        </ServiceBadge>
         {!compact && (
           <button
             className="service-vehicle-reference"
