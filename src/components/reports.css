@@ -315,7 +315,7 @@
 }
 .public-reports-detail > p,
 .public-reports article > p {
-  color: var(--muted);
+  color: var(--dark);
   margin: 8px 0;
   font-size: 0.85rem;
   line-height: 1.55;
@@ -355,7 +355,7 @@
   padding: 0;
   margin: 8px 0 0;
   list-style: none;
-  color: var(--muted);
+  color: var(--dark);
   font-size: 0.8rem;
 }
 .public-reports button:focus-visible,

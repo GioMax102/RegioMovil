@@ -1,0 +1,26 @@
+.report-dataset-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--dark);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.report-dataset-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.report-dataset-notice > span {
+  display: grid;
+  gap: 3px;
+}
+@media (forced-colors: active) {
+  .report-dataset-notice {
+    border: 1px solid CanvasText;
+  }
+}

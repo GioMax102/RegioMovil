@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, HandHeart, MessageSquare } from 'lucide-react';
 import './reports.css';
+import ReportDatasetNotice from './ReportDatasetNotice';
 import {
   loadPublicReportFeed,
   publicReportPhotoUrl,
   type PublicReport,
   type PublicReportSummary,
+  type ReportDataset,
 } from '../reportsApi';
 
 const categoryLabels: Record<string, string> = {
@@ -43,6 +45,7 @@ export default function PublicReports({
     key: string;
     reports: PublicReport[];
     summary?: PublicReportSummary;
+    dataset?: ReportDataset;
     state: 'loading' | 'ready' | 'error';
   }>({ key, reports: [], state: 'loading' });
   const [revision, setRevision] = useState(0);
@@ -61,8 +64,9 @@ export default function PublicReports({
   const state = result.key === key ? result.state : 'loading';
   const reports = result.key === key ? result.reports : [];
   const summary = result.key === key ? result.summary : undefined;
+  const dataset = result.key === key ? result.dataset : undefined;
   return (
-    <section className="panel public-reports" aria-label="Reportes comunitarios revisados">
+    <section className="panel public-reports" aria-label={dataset ? 'Reportes de visualización' : 'Reportes comunitarios revisados'}>
       {onReport ? (
         <button type="button" className="public-report-invite" onClick={onReport}>
           <span className="public-report-invite-icon">
@@ -90,11 +94,12 @@ export default function PublicReports({
           </button>
         </div>
       )}
+      <ReportDatasetNotice dataset={dataset} />
       {state === 'ready' && (
-        <details className="public-reports-detail" key={key}>
+        <details className="public-reports-detail" key={key} open>
           <summary>
             <MessageSquare size={17} aria-hidden="true" />
-            <span>Ver reportes</span>
+            <span>Reportes de este lugar</span>
             {summary && summary.total > 0 && (
               <small>
                 {summary.total} · {summary.open} abiertos
@@ -102,8 +107,9 @@ export default function PublicReports({
             )}
           </summary>
           <p className="public-reports-scope">
-            Publicados tras revisión de contenido. No son avisos oficiales ni acreditan una falla
-            verificada.
+            {dataset
+              ? 'Datos de visualización; no describen daños reales.'
+              : 'Observaciones de la comunidad; no son avisos oficiales.'}
           </p>
           {summary && summary.total > 0 && (
             <div className="public-report-summary">
@@ -163,7 +169,9 @@ export default function PublicReports({
                 ·{' '}
                 {report.status === 'resolved'
                   ? 'Marcado como resuelto'
-                  : 'Publicado tras revisión de contenido'}
+                  : dataset
+                    ? 'Abierto'
+                    : 'Publicado tras revisión de contenido'}
               </small>
               {report.photoMime && <ReportPhoto report={report} />}
             </article>

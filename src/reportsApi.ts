@@ -79,7 +79,23 @@ export type PublicReportCounts = { total: number; open: number; resolved: number
 export type PublicReportSummary = PublicReportCounts & {
   byCategory: Record<string, PublicReportCounts>;
 };
-export type PublicReportFeed = { reports: PublicReport[]; summary?: PublicReportSummary };
+export type ReportDataset = { kind: 'synthetic'; label: string; referenceDate?: string };
+export type PublicReportFeed = {
+  reports: PublicReport[];
+  summary?: PublicReportSummary;
+  dataset?: ReportDataset;
+};
+function reportDataset(value: unknown): ReportDataset | undefined {
+  if (!value || typeof value !== 'object' || (value as ReportDataset).kind !== 'synthetic') return;
+  const { referenceDate } = value as ReportDataset;
+  return {
+    kind: 'synthetic',
+    label: 'Escenario de visualización',
+    ...(typeof referenceDate === 'string' && Number.isFinite(Date.parse(referenceDate))
+      ? { referenceDate }
+      : {}),
+  };
+}
 
 function reportCounts(value: unknown): value is PublicReportCounts {
   if (!value || typeof value !== 'object') return false;
@@ -125,15 +141,21 @@ export async function loadPublicReportFeed(
         cache: 'no-store',
       });
       if (!response.ok) throw new Error('No pudimos consultar los reportes de este lugar.');
-      return response.json() as Promise<{ reports: PublicReport[]; summary?: unknown }>;
+      return response.json() as Promise<{
+        reports: PublicReport[];
+        summary?: unknown;
+        dataset?: unknown;
+      }>;
     },
     8000,
     signal,
   );
   if (!Array.isArray(result.reports))
     throw new Error('La respuesta de reportes no tiene un formato válido.');
+  const dataset = reportDataset(result.dataset);
   return {
     reports: result.reports,
+    ...(dataset ? { dataset } : {}),
     ...(reportSummary(result.summary, result.reports.length) ? { summary: result.summary } : {}),
   };
 }
