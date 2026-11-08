@@ -7,7 +7,6 @@ import {
   type PublicReportFeed,
 } from '../reportsApi';
 import './homeCommunityFeed.css';
-import ReportDatasetNotice from './ReportDatasetNotice';
 
 const categories: Record<string, string> = {
   infrastructure: 'Infraestructura',
@@ -101,7 +100,6 @@ export default function HomeCommunityFeed({
           </span>
         )}
       </header>
-      <ReportDatasetNotice dataset={feed?.dataset} />
       {!validTarget ? (
         <p>Elige una estación o una ruta para ver las observaciones de la comunidad.</p>
       ) : state === 'loading' ? (

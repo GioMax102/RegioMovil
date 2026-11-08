@@ -154,7 +154,8 @@ test('synthetic scenarios have one clear dataset notice without claiming human r
   await screen.findByText('Observación banqueta');
   assert.ok(screen.getByText('Visualización', { exact: true }));
   assert.equal(screen.queryByText('Revisado', { exact: true }), null);
-  assert.equal(document.querySelectorAll('.report-dataset-notice').length, 1);
+  assert.equal(document.querySelectorAll('.report-dataset-notice').length, 0);
+  assert.ok(screen.getByText('Visualización'));
   assert.ok(screen.getByText('Detalle de banqueta'));
   const user = userEvent.setup({ document: dom.window.document });
   await user.click(screen.getByText('Sobre estas observaciones'));

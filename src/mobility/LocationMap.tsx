@@ -35,6 +35,7 @@ export default function LocationMap({
   origin,
   destination,
   currentPosition,
+  nearbyRadiusMeters,
   preview,
   field,
   focus,
@@ -60,6 +61,7 @@ export default function LocationMap({
   origin?: MapPosition | null;
   destination?: MapPosition | null;
   currentPosition?: (MapPosition & { accuracy?: number }) | null;
+  nearbyRadiusMeters?: number;
   preview?: (MapPosition & { name: string }) | null;
   field?: 'from' | 'to' | null;
   focus?: MapPosition | null;
@@ -1152,6 +1154,17 @@ export default function LocationMap({
                   aria-label={`Tu ubicación${accuracy ? `, precisión aproximada de ${Math.round(accuracy)} metros` : ''}`}
                   pointerEvents="none"
                 >
+                  {nearbyRadiusMeters && nearbyRadiusMeters > 0 && (
+                    <circle
+                      r={nearbyRadiusMeters / metersPerPixel}
+                      fill="#1871d8"
+                      fillOpacity="0.055"
+                      stroke="#1871d8"
+                      strokeOpacity="0.4"
+                      strokeWidth="1.5"
+                      strokeDasharray="7 6"
+                    />
+                  )}
                   <circle
                     r={Math.max(13, Math.min(100, accuracy / metersPerPixel))}
                     fill="#1871d8"

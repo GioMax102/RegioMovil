@@ -99,11 +99,13 @@ export default function HomeSelectedRouteMap({
   pack,
   onExpand,
   viewCache,
+  nearbyPosition,
 }: {
   selection: HomeSelection;
   pack?: RoutePack;
   onExpand: () => void;
   viewCache?: Map<string, RegionalView>;
+  nearbyPosition?: { lat: number; lng: number; accuracy: number } | null;
 }) {
   const lowData = useDataSaver();
   const selectedId = selection.kind === 'metro' ? selection.stationId : selection.route.id;
@@ -149,7 +151,9 @@ export default function HomeSelectedRouteMap({
           compact
           inspectStops
           preserveViewportOnResize
-          focus={stop}
+          focus={nearbyPosition ?? stop}
+          currentPosition={nearbyPosition}
+          nearbyRadiusMeters={nearbyPosition ? 3000 : undefined}
           initialStopId={stopId}
           initialView={viewCache?.get(cacheKey)}
           onViewChange={remember}

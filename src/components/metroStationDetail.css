@@ -37,6 +37,108 @@
   flex-wrap: wrap;
   gap: 5px;
 }
+.metro-line-context {
+  min-width: 0;
+  padding: 13px 12px 11px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--white);
+}
+.metro-line-context-heading {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 11px;
+}
+.metro-line-context-heading > strong {
+  color: var(--dark);
+  font-size: 0.9rem;
+}
+.metro-line-context-heading > span {
+  color: var(--dark);
+  font-size: 0.74rem;
+}
+.metro-station-sequence {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  padding: 5px 2px 10px;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.metro-station-sequence > button {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 5px;
+  flex: 0 0 108px;
+  min-height: 74px;
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--dark);
+  font-size: 0.71rem;
+  line-height: 1.35;
+  text-align: center;
+  scroll-snap-align: center;
+}
+.metro-station-sequence > button::before {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  content: '';
+  background: var(--line);
+}
+.metro-station-sequence > button:first-child::before {
+  width: 50%;
+  left: 50%;
+}
+.metro-station-sequence > button:last-child::before {
+  width: 50%;
+}
+.metro-station-sequence-dot {
+  z-index: 1;
+  width: 17px;
+  height: 17px;
+  border: 3px solid var(--white);
+  border-radius: 50%;
+  background: #698278;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.metro-station-sequence > button[aria-current='location'] {
+  color: var(--green);
+  font-weight: 750;
+}
+.metro-station-sequence > button[aria-current='location'] .metro-station-sequence-dot {
+  background: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+}
+.metro-station-sequence > button > small {
+  color: var(--green);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+.metro-station-focus-map {
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ecefe7;
+}
+.metro-station-focus-map .network-map {
+  height: clamp(170px, 38vw, 245px);
+  min-height: 0;
+  border: 0;
+  border-radius: 12px;
+}
+.metro-station-focus-map .network-map > svg {
+  height: 100%;
+}
+.metro-station-focus-map .map-controls,
+.metro-station-focus-map .map-compass {
+  display: none;
+}
 
 .metro-station-outlook {
   padding: 14px 12px 8px;

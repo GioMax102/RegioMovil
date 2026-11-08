@@ -1,4 +1,5 @@
 import type { TransitRoute } from '../types';
+import type { PositionFix } from '../mobility/location';
 
 export type HomeSelectionSource = 'base' | 'manual' | 'nearby';
 export type HomeRoute = Pick<
@@ -19,4 +20,5 @@ export interface HomeUiState {
   metroMapOpen: boolean;
   returnTo?: 'plan' | 'map';
   scrollTop?: number;
+  nearbyPosition?: PositionFix | null;
 }

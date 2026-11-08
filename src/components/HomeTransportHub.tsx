@@ -7,6 +7,8 @@ import {
   Info,
   LocateFixed,
   Map,
+  Search,
+  X,
   Route,
 } from 'lucide-react';
 import { loadRoutePack, loadTransitCatalog, network } from '../api';
@@ -39,14 +41,22 @@ export function HomeTransportTools({
   selection,
   onSelect,
   reportOpen = false,
+  uiState,
+  onNearbyPosition,
 }: {
   selection: HomeSelection;
   onSelect: (selection: HomeSelection) => void;
   reportOpen?: boolean;
+  uiState?: HomeUiState;
+  onNearbyPosition?: (position: NonNullable<HomeUiState['nearbyPosition']> | null) => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerAttempt, setPickerAttempt] = useState(0);
   const nearby = useHomeNearby({ selection, onSelect, suspendAutomatic: pickerOpen || reportOpen });
+  useEffect(() => {
+    if (uiState) uiState.nearbyPosition = nearby.position;
+    if (nearby.position !== undefined) onNearbyPosition?.(nearby.position ?? null);
+  }, [uiState, nearby.position, onNearbyPosition]);
   function openPicker() {
     nearby.cancelPending();
     setPickerOpen(true);
@@ -69,11 +79,6 @@ export function HomeTransportTools({
           <LocateFixed size={16} aria-hidden="true" />
           {nearby.enabled ? 'Actualizar cercanos' : 'Cerca de mí'}
         </button>
-        {nearby.canExpand && (
-          <button type="button" onClick={() => void nearby.expandRadius()}>
-            Ampliar a 3 km
-          </button>
-        )}
         {nearby.enabled && (
           <button type="button" className="home-context-disable" onClick={nearby.disable}>
             Desactivar cercanía
@@ -168,11 +173,13 @@ function SelectedMap({
   pack,
   onNetwork,
   mapViews,
+  nearbyPosition,
 }: {
   selection: HomeSelection;
   pack?: RoutePack;
   onNetwork: (selection: HomeSelection) => void;
   mapViews?: Map<string, RegionalView>;
+  nearbyPosition?: HomeUiState['nearbyPosition'];
 }) {
   const [attempt, setAttempt] = useState(0);
   const station =
@@ -217,6 +224,7 @@ function SelectedMap({
         pack,
         onExpand: () => onNetwork(selection),
         viewCache: mapViews,
+        nearbyPosition,
       }}
       loadingLabel="Abriendo el mapa…"
       loadingFallback={<p role="status">Abriendo el mapa…</p>}
@@ -242,6 +250,7 @@ function MetroMapSection(props: {
   onNetwork: (selection: HomeSelection) => void;
   mapViews?: Map<string, RegionalView>;
   uiState?: HomeUiState;
+  nearbyPosition?: HomeUiState['nearbyPosition'];
 }) {
   const [open, setOpen] = useState(props.uiState?.metroMapOpen ?? true);
   return (
@@ -258,7 +267,12 @@ function MetroMapSection(props: {
         Ver mapa de la línea
         <ChevronDown size={17} aria-hidden="true" />
       </summary>
-      {open && <SelectedMap {...props} />}
+      {open && (
+        <SelectedMap
+          {...props}
+          nearbyPosition={props.nearbyPosition ?? props.uiState?.nearbyPosition}
+        />
+      )}
     </details>
   );
 }
@@ -277,6 +291,7 @@ export default function HomeTransportHub({
   reportOpen = false,
   mapViews,
   uiState,
+  nearbyPosition,
 }: {
   selection: HomeSelection;
   onSelect: (selection: HomeSelection) => void;
@@ -290,6 +305,7 @@ export default function HomeTransportHub({
   hasReportDraft?: boolean;
   mapViews?: Map<string, RegionalView>;
   uiState?: HomeUiState;
+  nearbyPosition?: HomeUiState['nearbyPosition'];
 }) {
   const storedDraft = useHomeReportDraft(reportOpen, draftOverride === undefined);
   const hasReportDraft = draftOverride ?? storedDraft;
@@ -301,6 +317,8 @@ export default function HomeTransportHub({
     updatedRoute?: HomeRoute;
   } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [stopPickerOpen, setStopPickerOpen] = useState(false);
+  const [stopQuery, setStopQuery] = useState('');
   const route = selection.kind === 'bus' ? selection.route : null;
   const key = homeSelectionKey(selection);
   const routeKey = route
@@ -367,6 +385,22 @@ export default function HomeTransportHub({
     [pack, routeKey],
   );
   const stop = selection.kind === 'bus' ? stops.find((item) => item.id === selection.stopId) : null;
+  const matchingStops = useMemo(() => {
+    const query = stopQuery
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    return stops
+      .filter((item) =>
+        item.name
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .includes(query),
+      )
+      .slice(0, 80);
+  }, [stops, stopQuery]);
   const target: Target =
     selection.kind === 'metro'
       ? { stationId: selection.stationId }
@@ -434,26 +468,77 @@ export default function HomeTransportHub({
           ) : (
             <>
               {stops.length > 0 && (
-                <label className="home-transport-field">
-                  Parada del recorrido
-                  <select
-                    value={stop?.id || ''}
-                    onChange={(event) =>
-                      onSelect({
-                        ...selection,
-                        stopId: event.target.value || undefined,
-                        source: 'manual',
-                      })
-                    }
-                  >
-                    <option value="">Elige una parada para planear desde ella</option>
-                    {stops.map((item) => (
-                      <option value={item.id} key={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <>
+                  <div className="home-transport-field">
+                    <span>Parada del recorrido</span>
+                    <button
+                      className="home-stop-picker-trigger"
+                      type="button"
+                      data-stop-id={stop?.id || ''}
+                      aria-haspopup="dialog"
+                      aria-expanded={stopPickerOpen}
+                      aria-label={`Parada del recorrido: ${stop?.name || 'Elegir parada'}`}
+                      onClick={() => {
+                        setStopQuery('');
+                        setStopPickerOpen(true);
+                      }}
+                    >
+                      <Map size={18} aria-hidden="true" />
+                      <span>{stop?.name || 'Elige una parada para planear desde ella'}</span>
+                      <ChevronDown size={17} aria-hidden="true" />
+                    </button>
+                  </div>
+                  {stopPickerOpen && (
+                    <Dialog title="Elige una parada" onClose={() => setStopPickerOpen(false)}>
+                      <p className="dialog-intro">Busca el nombre de una parada de esta ruta.</p>
+                      <label className="home-stop-search">
+                        <Search size={18} aria-hidden="true" />
+                        <input
+                          autoFocus
+                          type="search"
+                          value={stopQuery}
+                          onChange={(event) => setStopQuery(event.target.value)}
+                          placeholder="Buscar parada"
+                          aria-label="Buscar parada"
+                        />
+                        {stopQuery && (
+                          <button
+                            type="button"
+                            aria-label="Limpiar búsqueda"
+                            onClick={() => setStopQuery('')}
+                          >
+                            <X size={17} />
+                          </button>
+                        )}
+                      </label>
+                      <div
+                        className="home-stop-picker-list"
+                        role="listbox"
+                        aria-label="Paradas de la ruta"
+                      >
+                        {matchingStops.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            role="option"
+                            aria-selected={item.id === stop?.id}
+                            onClick={() => {
+                              onSelect({ ...selection, stopId: item.id, source: 'manual' });
+                              setStopPickerOpen(false);
+                            }}
+                          >
+                            <Map size={17} aria-hidden="true" />
+                            <span>{item.name}</span>
+                            {item.id === stop?.id && <strong>Seleccionada</strong>}
+                          </button>
+                        ))}
+                        {!matchingStops.length && (
+                          <p className="empty-small">No hay paradas que coincidan.</p>
+                        )}
+                      </div>
+                    </Dialog>
+                  )}
+                </>
               )}
               {selection.stopId && !stop && (
                 <p className="home-transport-note" role="status">
@@ -466,6 +551,7 @@ export default function HomeTransportHub({
                 pack={pack}
                 onNetwork={onNetwork}
                 mapViews={mapViews}
+                nearbyPosition={nearbyPosition ?? uiState?.nearbyPosition}
               />
               <p className="home-transport-note">
                 Confirma parada y sentido al abordar.
@@ -484,6 +570,7 @@ export default function HomeTransportHub({
           onNetwork={onNetwork}
           mapViews={mapViews}
           uiState={uiState}
+          nearbyPosition={nearbyPosition}
         />
       )}
       <div className="home-context-participation">

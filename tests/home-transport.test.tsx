@@ -8,12 +8,14 @@ import type { RoutePack } from '../src/types';
 import type { HomeSelection } from '../src/components/homeTypes';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });
+dom.window.scrollTo = () => {};
 const previous = new Map<string, PropertyDescriptor | undefined>();
 for (const name of [
   'window',
   'document',
   'navigator',
   'HTMLElement',
+  'HTMLDialogElement',
   'Element',
   'Node',
   'MutationObserver',
@@ -32,6 +34,12 @@ for (const name of [
     value: name === 'IS_REACT_ACT_ENVIRONMENT' ? true : dom.window[name as keyof Window],
   });
 }
+dom.window.HTMLDialogElement.prototype.showModal = function () {
+  this.setAttribute('open', '');
+};
+dom.window.HTMLDialogElement.prototype.close = function () {
+  this.removeAttribute('open');
+};
 const styles = registerHooks({
   load(url, context, next) {
     if (url.endsWith('/HomeSelectedRouteMap.tsx'))
@@ -213,12 +221,11 @@ test('bus context loads one settled pack, canonical stop selection updates conte
   const view = mount({ selection });
   const user = userEvent.setup({ document: dom.window.document });
   assert.ok(screen.getByText('Llegadas y afluencia no disponibles'));
-  const select = await screen.findByRole('combobox', { name: 'Parada del recorrido' });
-  assert.deepEqual(
-    [...(select as HTMLSelectElement).options].map((option) => option.value),
-    ['', 'bus-a:stop-a', 'bus-a:stop-b', 'bus-a:stop-c', 'bus-a:stop-d'],
-  );
-  await user.selectOptions(select, 'bus-a:stop-b');
+  const picker = await screen.findByRole('button', { name: 'Parada del recorrido: Elegir parada' });
+  await user.click(picker);
+  assert.ok(screen.getByRole('dialog', { name: 'Elige una parada' }));
+  assert.ok(screen.getByRole('searchbox', { name: 'Buscar parada' }));
+  await user.click(screen.getByRole('option', { name: 'Parada B' }));
   assert.equal(view.selections.length, 1);
   assert.equal(view.selections[0].kind, 'bus');
   assert.equal(view.selections[0].kind === 'bus' && view.selections[0].stopId, 'bus-a:stop-b');
@@ -241,7 +248,7 @@ test('manual routes without traces retain planning, reporting, sources and their
   const user = userEvent.setup({ document: dom.window.document });
   await screen.findByText(/Todavía no hay reportes públicos para esta ruta/);
   assert.ok(screen.getByText(/Trazo pendiente/));
-  assert.equal(screen.queryByRole('combobox', { name: 'Parada del recorrido' }), null);
+  assert.equal(screen.queryByRole('button', { name: /Parada del recorrido/ }), null);
   assert.equal(screen.queryByTestId('selected-map'), null);
   await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
   await user.click(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
@@ -267,7 +274,7 @@ test('rapid context changes are debounced and unfinished packs are aborted witho
   view.rerender(<HomeTransportHub {...view.props} selection={bus('bus-b', null)} />);
   await waitFor(() => assert.equal(aborts, 1));
   await act(async () => releasePack?.(json(pack)));
-  assert.equal(screen.queryByRole('combobox', { name: 'Parada del recorrido' }), null);
+  assert.equal(screen.queryByRole('button', { name: /Parada del recorrido/ }), null);
   assert.equal(screen.queryByTestId('selected-map'), null);
   assert.ok(requests.some((path) => path === '/api/reports?route=bus-b'));
 });
@@ -282,7 +289,7 @@ test('pack failures are retryable and never disable reporting or reuse Metro pre
   assert.equal(screen.queryByRole('button', { name: /llegada simulada/ }), null);
   failPack = false;
   await user.click(screen.getByRole('button', { name: 'Reintentar trazo' }));
-  await screen.findByRole('combobox', { name: 'Parada del recorrido' });
+  await screen.findByRole('button', { name: /Parada del recorrido/ });
 });
 
 test('a retained report draft resumes without silently assigning the newly selected route', async () => {
@@ -302,7 +309,7 @@ test('planning uses a stop only after its canonical identity is confirmed agains
   const user = userEvent.setup({ document: dom.window.document });
   await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
   assert.equal(view.planned[0].kind === 'bus' && view.planned[0].stopId, undefined);
-  await screen.findByRole('combobox', { name: 'Parada del recorrido' });
+  await screen.findByRole('button', { name: 'Parada del recorrido: Parada B' });
   await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
   assert.equal(view.planned[1].kind === 'bus' && view.planned[1].stopId, 'bus-a:stop-b');
 });

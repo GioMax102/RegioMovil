@@ -866,6 +866,7 @@ export default function App() {
                 onSave={() => toggleFavorite(station)}
                 onArrival={setArrival}
                 now={now}
+                onSelectStation={setStation}
               />
             </div>
           )}

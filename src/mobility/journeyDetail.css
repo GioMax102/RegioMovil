@@ -118,9 +118,22 @@
   background: color-mix(in srgb, var(--journey-stage-color, var(--muted)) 5%, var(--surface));
 }
 .journey-detail-steps .mobility-step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1;
   width: 30px;
   height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  line-height: 0;
+  box-sizing: border-box;
+}
+.journey-detail-steps .mobility-step-icon > svg {
+  display: block;
+  flex: none;
+  margin: 0;
 }
 .journey-detail-step-body {
   min-width: 0;

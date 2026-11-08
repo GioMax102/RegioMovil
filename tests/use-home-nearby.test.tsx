@@ -199,8 +199,7 @@ test('clean opening never reads GPS or downloads the optional index; explicit co
   assert.deepEqual(selected, [metro().selection]);
   assert.equal(localStorage.length, 1);
   assert.equal(localStorage.getItem(HOME_NEARBY_PREFERENCE_KEY), 'true');
-  assert.equal(result.current.radius, 1200);
-  assert.equal(result.current.canExpand, true);
+  assert.equal(result.current.radius, 3000);
 });
 
 test('returning web opening never calls geolocation even with granted permission; a current memory sample can be reused', async () => {
@@ -243,7 +242,7 @@ test('approximate or uncertainty-boundary fixes only suggest; a saved manual con
   assert.match(first.result.current.message, /aproximadas/);
   first.unmount();
   const second = mount();
-  nearestMetro = { ...metro(), distanceMeters: 1190, approximate: false };
+  nearestMetro = { ...metro(), distanceMeters: 2990, approximate: false };
   read = async () => sample({ accuracy: 30 });
   await act(async () => second.result.current.findNearby());
   assert.equal(selected.length, 0);
@@ -320,17 +319,12 @@ test('closing, disabling or unmounting suppresses a late index response and does
   }
 });
 
-test('radius expands to 3 km only on explicit action, retaining the eight-candidate limit without another GPS read', async () => {
+test('nearby search uses a single 3 km radius and keeps the eight-candidate limit', async () => {
   const { result } = mount();
   await act(async () => result.current.findNearby());
-  assert.equal(result.current.radius, 1200);
-  await act(async () => result.current.expandRadius());
   assert.equal(result.current.radius, 3000);
-  assert.equal(result.current.canExpand, false);
   assert.equal(reads.length, 1);
   assert.ok(rankedOptions.some((options) => options.radius === 3000 && options.limit === 8));
-  await act(async () => result.current.expandRadius());
-  assert.equal(reads.length, 1);
 });
 
 test('backgrounding discards a late sample; native foreground refreshes at most once and releases its listener', async () => {
@@ -435,16 +429,14 @@ test('pagehide aborts even before document.hidden changes and removes the loadin
   assert.equal(loads, 0);
 });
 
-test('an expired sample asks for explicit refresh instead of silently expanding or starting GPS', async () => {
+test('an expired sample remains in the same 3 km radius until the user refreshes', async () => {
   const point = sample();
   read = async () => point;
   const { result } = mount();
   await act(async () => result.current.findNearby());
   point.timestamp -= 61_000;
-  await act(async () => result.current.expandRadius());
-  assert.equal(result.current.radius, 1200);
-  assert.equal(result.current.canExpand, false);
-  assert.match(result.current.message, /Actualiza Cerca de mí antes de ampliar/);
+  assert.equal(result.current.radius, 3000);
+  assert.doesNotMatch(result.current.message, /ampliar/);
   assert.equal(reads.length, 1);
 });
 

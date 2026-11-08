@@ -74,9 +74,15 @@ function feed(id: string, synthetic = false): PublicReportFeed {
     photoMime: null,
     status: 'published',
   };
-  const counts = { total: 1, open: 1, resolved: 0 };
+  const resolvedReport: PublicReport = {
+    ...report,
+    id: `${id}-resuelto`,
+    title: `Observación resuelta ${id}`,
+    status: 'resolved',
+  };
+  const counts = { total: 2, open: 1, resolved: 1 };
   return {
-    reports: [report],
+    reports: [report, resolvedReport],
     summary: { ...counts, byCategory: { accessibility: counts } },
     ...(synthetic
       ? {
@@ -90,20 +96,29 @@ function feed(id: string, synthetic = false): PublicReportFeed {
   };
 }
 
-test('synthetic public reports show one dataset notice and their full text on entry without human-review claims', async () => {
+test('synthetic reports use compact provenance and filter the public conversation by status', async () => {
   respond = async () => Response.json(feed('banqueta', true));
   render(<PublicReports routeId="transmetro-san-bernabe-no-reeleccion" />);
   await screen.findByText('Observación banqueta');
   const section = screen.getByRole('region', { name: 'Reportes de visualización' });
   assert.equal(
-    within(section).getAllByRole('complementary', { name: 'Procedencia de los reportes' }).length,
-    1,
+    within(section).queryByRole('complementary', { name: 'Procedencia de los reportes' }),
+    null,
   );
   const detail = section.querySelector<HTMLDetailsElement>('.public-reports-detail');
   assert.equal(detail?.open, true);
-  assert.ok(within(section).getByText('Descripción completa de banqueta'));
-  assert.ok(within(section).getByText('Datos de visualización; no describen daños reales.'));
-  assert.ok(within(section).getByText(/Parada junto a la plaza/));
+  assert.equal(within(section).getAllByText('Descripción completa de banqueta').length, 2);
+  assert.ok(within(section).getByText('Escenario ilustrativo'));
+  assert.ok(within(section).getByText('Visualización'));
+  assert.equal(within(section).getAllByRole('article').length, 2);
+  await act(async () =>
+    within(section)
+      .getByRole('button', { name: /Resueltas/ })
+      .click(),
+  );
+  assert.equal(within(section).getAllByRole('article').length, 1);
+  assert.ok(within(section).getByText('Observación resuelta banqueta'));
+  assert.equal(within(section).getAllByText(/Parada junto a la plaza/).length, 1);
   assert.equal(within(section).queryByText(/Publicado tras revisión de contenido/), null);
   assert.equal(screen.queryByRole('region', { name: 'Reportes comunitarios revisados' }), null);
   assert.equal(requests[0].url.search, '?route=transmetro-san-bernabe-no-reeleccion');
@@ -113,17 +128,17 @@ test('switching from synthetic to community reports clears dataset provenance wh
   respond = async (url) => Response.json(feed(url.searchParams.get('station')!, true));
   const view = render(<PublicReports stationId="felix-u-gomez" />);
   await screen.findByText('Observación felix-u-gomez');
-  assert.ok(screen.getByRole('complementary', { name: 'Procedencia de los reportes' }));
+  assert.ok(screen.getAllByText('Visualización').length);
   respond = async () => Response.json(feed('talleres'));
   view.rerender(<PublicReports stationId="talleres" />);
   assert.equal(screen.queryByText('Observación felix-u-gomez'), null);
-  assert.equal(screen.queryByRole('complementary', { name: 'Procedencia de los reportes' }), null);
+  assert.equal(screen.queryByText('Visualización'), null);
   await screen.findByText('Observación talleres');
   const section = screen.getByRole('region', { name: 'Reportes comunitarios revisados' });
   assert.equal(section.querySelector<HTMLDetailsElement>('.public-reports-detail')?.open, true);
-  assert.ok(within(section).getByText('Descripción completa de talleres'));
-  assert.ok(within(section).getByText(/Publicado tras revisión de contenido/));
-  assert.equal(screen.queryByRole('complementary', { name: 'Procedencia de los reportes' }), null);
+  assert.equal(within(section).getAllByText('Descripción completa de talleres').length, 2);
+  assert.ok(within(section).getByText('Observaciones revisadas por la comunidad'));
+  assert.equal(screen.queryByText('Visualización'), null);
   assert.equal(screen.queryByText(/Datos de visualización/), null);
 });
 
@@ -140,8 +155,8 @@ test('a late response from an abandoned route cannot replace the current report 
   await act(async () => pending.get('ruta-b')!(Response.json(feed('ruta-b'))));
   await screen.findByText('Observación ruta-b');
   await act(async () => pending.get('ruta-a')!(Response.json(feed('ruta-a', true))));
-  assert.ok(screen.getByText('Descripción completa de ruta-b'));
+  assert.equal(screen.getAllByText('Descripción completa de ruta-b').length, 2);
   assert.equal(screen.queryByText('Observación ruta-a'), null);
-  assert.equal(screen.queryByRole('complementary', { name: 'Procedencia de los reportes' }), null);
+  assert.equal(screen.queryByText('Visualización'), null);
   assert.equal(document.querySelector<HTMLDetailsElement>('.public-reports-detail')?.open, true);
 });

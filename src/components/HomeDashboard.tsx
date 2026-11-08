@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { ArrowRight, Bookmark, ChevronDown, Clock3, Flag, Info, MapPin, Users } from 'lucide-react';
 import { network } from '../api';
 import type { Arrival, Board, Station } from '../types';
 import type { SavedMobilityTrip } from '../mobility/types';
 import { Forecast, LineBadge } from './Primitives';
 import type { HomeSelection, HomeUiState } from './homeTypes';
+import type { PositionFix } from '../mobility/location';
 import type { RegionalView } from '../mobility/regionalViewport';
 import { homeMetroArrivals } from './homeMetroArrivals';
 import {
@@ -67,6 +69,7 @@ export default function HomeDashboard({
   reportOpen?: boolean;
   now?: Date;
 }) {
+  const [nearbyPosition, setNearbyPosition] = useState<PositionFix | null>(null);
   const quietestHour = (
     board ? filterMetroForecast(board.forecast, new Date(board.generatedAt)) : []
   )
@@ -276,6 +279,8 @@ export default function HomeDashboard({
               if (next.kind === 'metro') onSelectStation?.(next.stationId);
             }),
           reportOpen,
+          uiState,
+          onNearbyPosition: setNearbyPosition,
         }}
       />
       {current.kind === 'metro' && metroContent}
@@ -308,6 +313,7 @@ export default function HomeDashboard({
           onSavedTrip,
           mapViews,
           uiState,
+          nearbyPosition,
         }}
       />
     </div>

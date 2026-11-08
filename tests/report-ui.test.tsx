@@ -374,13 +374,12 @@ test('a missing published photo is explained without hiding its report or resolv
   fireEvent.error(image);
   await screen.findByText('La foto no está disponible.');
   assert.ok(screen.getByText('Techo reparado'));
-  assert.match(
-    within(screen.getByRole('article')).getByText(/Marcado como resuelto/).textContent || '',
-    /Cruce observado/,
-  );
+  const report = within(screen.getByRole('article'));
+  assert.ok(report.getByText('Resuelto'));
+  assert.ok(report.getByText(/Cruce observado/));
 });
 
-test('public counts and categories cover the whole feed rather than only the recent list', async () => {
+test('public totals cover the full feed while status filters describe the visible conversation', async () => {
   const reports = Array.from({ length: 20 }, (_, index) => ({
     id: `report-${index}`,
     title: `Reporte ${index}`,
@@ -405,14 +404,13 @@ test('public counts and categories cover the whole feed rather than only the rec
       },
     });
   render(<PublicReports routeId="ruta-1-sur" />);
-  await screen.findByText('Mostrando los 20 reportes más recientes de 47 públicos.');
-  const categories = screen.getByRole('list', { name: 'Reportes por categoría' });
-  assert.match(categories.textContent || '', /Infraestructura: 25 abiertos · 5 resueltos/);
-  assert.match(categories.textContent || '', /Accesibilidad: 14 abiertos · 3 resueltos/);
-  assert.match(
-    screen.getByText(/reportes públicos ·/).textContent || '',
-    /47 reportes públicos · 39 abiertos · 8 resueltos/,
-  );
+  await screen.findByText('Mostrando 20 de 47 observaciones recientes.');
+  const metrics = screen.getByLabelText('Resumen de reportes');
+  assert.match(metrics.textContent || '', /47 reportes/);
+  assert.match(metrics.textContent || '', /39 abiertos/);
+  assert.match(metrics.textContent || '', /8 resueltos/);
+  assert.ok(screen.getByRole('button', { name: 'Abiertas · 20' }));
+  assert.ok(screen.getByRole('button', { name: 'Resueltas · 0' }));
   assert.equal(screen.getAllByRole('article').length, 20);
 });
 
