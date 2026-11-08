@@ -2,6 +2,8 @@
 
 **Plan del 5 de noviembre; implementación actualizada el 6 de noviembre de 2026.** Base `5187885`, plan guardado en `58cf9ac`; rama de implementación `codex/inicio-contextual`. I1–I6 implementados; I7 con verificación automatizada y visual, aceptación física pendiente. Consultar la [entrega y continuidad vigente](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md). Sin merge a `main`.
 
+**Solicitud posterior del 8 de noviembre:** la mayoría de información en Inicio debe estar desplegada. La [nueva entrega](ENTREGA_UI_REPORTES_2026-11-08.md) abre pronóstico, consejo, mapa y descripciones; sustituye las decisiones de cierre inicial descritas abajo, que se conservan como historia.
+
 Solicitud y referencia: [imagen del usuario](evidencia/2026-11-05/referencia-inicio-contextual.png). Este plan sustituye las decisiones de jerarquía y selector del [boceto anterior](PLAN_INICIO_2026-11-05.md), cuya entrega y evidencia siguen siendo históricas. Amplía **P8** del [plan P1–P10](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md), sin cerrar los pendientes físicos, de cobertura, administración o seguridad.
 
 ## 1. Resultado que se debe construir

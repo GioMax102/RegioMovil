@@ -10,6 +10,8 @@ Actualización **5 de noviembre**: [Inicio según el boceto del usuario](PLAN_IN
 
 Actualización **6 de noviembre**: [Inicio contextual, revisión 2](PLAN_INICIO_CONTEXTUAL_2026-11-05.md) implementado en `codex/inicio-contextual`: Metro inmediato, llegadas por sentido, selector circular, cercanía voluntaria con índice ligero y mapa de una ruta. La [entrega vigente](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md) conserva resultados, revisión del APK y pendientes físicos. No cierra P3/P6/P7/P10 ni acredita despliegue remoto.
 
+Actualización **8 de noviembre**: [UI y visualización de reportes](ENTREGA_UI_REPORTES_2026-11-08.md), con pronóstico/mapa abiertos, etiquetas sólidas y 1,200 registros sintéticos aislados. No cambia las cifras reales ni cierra aceptación física, cobertura o seguridad.
+
 Existen web/PWA, Android, exploración de red, planificación experimental, guía, guardados offline y reportes con publicación revisada. El nuevo panel privado implementa Better Auth 1.7.14, TOTP obligatorio, roles, sesiones/CSRF, bandeja y evidencia, decisiones con versión e indicadores agregados. Cuentas y recuperación se administran por CLI. También existen copias SQLite online, purga periódica e instrumentación/Compose Prometheus/Grafana, probados en entorno temporal. No se acredita instalación remota ni operación sostenida. La matriz OWASP es parcial y la consolidación de incidencias, atención institucional y visión computacional siguen pendientes.
 
 Antes de ampliar el uso, el producto debe conservar datos confiablemente, permitir operación responsable y demostrar su comportamiento en dispositivos reales. Después se puede medir impacto social. Un número de reportes no demuestra por sí solo daño, demanda de inversión ni representatividad de toda la población.

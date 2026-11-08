@@ -20,7 +20,7 @@ Este repositorio contiene un piloto funcional para web/PWA, Android y pantallas 
 
 El [índice documental](docs/README.md) distingue referencias vigentes, guías especializadas y registros históricos. Las cifras de una entrega anterior no acreditan el estado actual.
 
-Última entrega de Inicio: [selector contextual, cercanía y mapa por transporte](docs/ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md), con pruebas y continuidad.
+Última entrega: [Inicio visible y reportes para visualización](docs/ENTREGA_UI_REPORTES_2026-11-08.md). Continúa el [selector contextual](docs/ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md), con pruebas y comandos.
 
 ## Inicio rápido
 

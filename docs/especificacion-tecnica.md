@@ -14,6 +14,8 @@ El plugin Android permite consultar permisos y leer sin solicitar uno nuevo; se 
 
 Planear usa estación/parada confirmada como origen y destino vacío. Una ruta sin parada solicita origen, sin usar silenciosamente Metro/GPS. Reportar pasa estación o variante; el contrato aún no persiste la parada del autobús. Borradores y publicación revisada conservan su comportamiento. Consultar [entrega, comandos y límites](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md).
 
+Actualización **8 de noviembre**: pronóstico, consejo y mapa de Metro abiertos al iniciar; reportes con descripción visible. El mapa se solicita al montar ese contenido abierto, fuera de la precarga; sigue sin cargar el grafo regional desde Inicio. `ServiceBadge` unifica paleta y contraste. El perfil `community` genera reportes ficticios en una base separada; el feed declara procedencia sintética sin exponer semilla ni archivos privados. Ver [entrega vigente](ENTREGA_UI_REPORTES_2026-11-08.md).
+
 ## Alcance y límites del producto
 
 RegioMóvil reúne un catálogo de transporte de Nuevo León, mapas, planificación experimental Metro/autobús, guía de viaje, viajes guardados y observaciones comunitarias con texto/foto. La misma interfaz se entrega como web/PWA, Android con Capacitor y modo de pantalla de estación.
