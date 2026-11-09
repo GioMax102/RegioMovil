@@ -108,6 +108,22 @@ test('station outside service hours removes imminent units and closed-hour forec
     dom.window.close();
   }
 });
+test('station line sequence names its direction and uses the shared focused map', () => {
+  const dom = documentAt('2026-10-24T18:00:00Z');
+  try {
+    const doc = dom.window.document;
+    assert.match(
+      doc.querySelector('.metro-line-context-heading')?.textContent ?? '',
+      /Línea 1.*Talleres a Exposición/,
+    );
+    assert.ok(doc.querySelector('.metro-station-sequence [aria-current="location"]'));
+    assert.ok(doc.querySelectorAll('.metro-station-sequence [data-station-id]').length > 5);
+    assert.ok(doc.querySelector('.location-map.map-compact'));
+    assert.ok(doc.querySelector('.location-map-top-overlay .stop-sequence'));
+  } finally {
+    dom.window.close();
+  }
+});
 
 test('station reports the next holiday opening after an early closing', () => {
   const dom = documentAt('2026-12-25T05:15:00Z');

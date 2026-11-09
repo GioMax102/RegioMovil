@@ -56,60 +56,7 @@
   border-color: var(--green);
   background: var(--soft);
 }
-.home-simulation {
-  color: var(--muted);
-  font-size: 0.75rem;
-  margin: 0 0 10px;
-}
-.home-arrival-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px 12px;
-  width: 100%;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--white);
-  color: var(--dark);
-  text-align: left;
-}
-.home-arrival-direction {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.home-arrival-direction > span {
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-.home-arrival-time {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--green);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.home-arrival-time strong {
-  font-size: 1.4rem;
-  font-variant-numeric: tabular-nums;
-}
-.home-arrival-time > span {
-  font-size: 0.75rem;
-}
-.home-arrival-crowding {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  color: var(--dark);
-  font-size: 0.8rem;
-}
 .home-selector-fallback:focus-visible,
-.home-arrival-summary:focus-visible,
 .home-line-options button:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
@@ -154,12 +101,11 @@
   font-variant-numeric: tabular-nums;
 }
 .home-outlook {
-  padding: 0 20px;
+  padding: 0 20px 16px;
   background: var(--white);
 }
 .home-outlook > summary,
-.home-data-info > summary,
-.home-advice summary {
+.home-data-info > summary {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -173,24 +119,13 @@
 .home-outlook > summary span {
   flex: 1;
 }
-.home-outlook[open] > summary > svg:last-child,
-.home-advice[open] summary > svg {
+.home-outlook[open] > summary > svg:last-child {
   transform: rotate(180deg);
 }
 .home-outlook > summary::-webkit-details-marker,
-.home-data-info > summary::-webkit-details-marker,
-.home-advice summary::-webkit-details-marker {
+.home-data-info > summary::-webkit-details-marker {
   display: none;
 }
-.home-advice {
-  border-top: 1px solid var(--line);
-  margin-top: 12px;
-}
-.home-advice summary {
-  justify-content: space-between;
-  font-size: 0.85rem;
-}
-.home-advice p,
 .home-data-info p {
   font-size: 0.85rem;
   line-height: 1.6;
@@ -201,7 +136,11 @@
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  align-items: center;
   margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--soft);
   font-size: 0.8rem;
   color: var(--dark);
 }
@@ -216,7 +155,14 @@
   opacity: 1;
 }
 .home-dashboard .all-arrivals {
-  padding-bottom: 0;
+  min-height: 46px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--green);
+  border-radius: 11px;
+  background: var(--white);
+  color: var(--green);
+  font-weight: 650;
 }
 .home-data-info a {
   display: block;
@@ -237,7 +183,7 @@
     padding: 16px;
   }
   .home-outlook {
-    padding: 0 16px;
+    padding: 0 16px 16px;
   }
 }
 

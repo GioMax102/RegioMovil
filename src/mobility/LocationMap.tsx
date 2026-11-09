@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import { Info, LocateFixed, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
+import { ExternalLink, LocateFixed, MapPin, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import geography from '../data/monterrey-map.json';
 import { isRegionalCoordinate, simplifyOverviewGeometry } from './mapGeography';
 import {
@@ -35,6 +35,7 @@ export default function LocationMap({
   origin,
   destination,
   currentPosition,
+  nearbyRadiusMeters,
   preview,
   field,
   focus,
@@ -45,7 +46,7 @@ export default function LocationMap({
   compact = false,
   viewportPadding,
   preserveViewportOnResize = false,
-  mapInfo,
+  topOverlay,
   selectionOverlay,
   onExplore,
   onExpand,
@@ -60,6 +61,7 @@ export default function LocationMap({
   origin?: MapPosition | null;
   destination?: MapPosition | null;
   currentPosition?: (MapPosition & { accuracy?: number }) | null;
+  nearbyRadiusMeters?: number;
   preview?: (MapPosition & { name: string }) | null;
   field?: 'from' | 'to' | null;
   focus?: MapPosition | null;
@@ -70,8 +72,8 @@ export default function LocationMap({
   compact?: boolean;
   viewportPadding?: { top?: number; right?: number; bottom?: number; left?: number };
   preserveViewportOnResize?: boolean;
-  /** Extra context shares the one map information entry. */
-  mapInfo?: ReactNode;
+  /** A compact in-map control, such as the selected route's stop sequence. */
+  topOverlay?: ReactNode;
   /** Selected route and inspected stop use the same measured sheet. */
   selectionOverlay?: ReactNode;
   /** A deliberate pan/pinch/fit takes camera control from GPS guidance. */
@@ -90,6 +92,7 @@ export default function LocationMap({
   sizeRef.current = size;
   const [measured, setMeasured] = useState(false);
   const footer = useRef<HTMLDivElement>(null);
+  const topOverlayElement = useRef<HTMLDivElement>(null);
   const selection = useRef<HTMLDivElement>(null);
   const [footerHeight, setFooterHeight] = useState(52);
   const [selectionRight, setSelectionRight] = useState<number | null>(null);
@@ -188,7 +191,6 @@ export default function LocationMap({
   );
   const [tileFailed, setTileFailed] = useState(false);
   const [inspectedId, setInspectedId] = useState('');
-  const [infoOpen, setInfoOpen] = useState(false);
   const drag = useRef<{
     id: number;
     x: number;
@@ -635,6 +637,7 @@ export default function LocationMap({
       const footerBounds = footer.current?.getBoundingClientRect();
       const sheetBounds = selection.current?.getBoundingClientRect();
       const controlBounds = canvas.querySelector('.location-map-controls')?.getBoundingClientRect();
+      const topOverlayBounds = topOverlayElement.current?.getBoundingClientRect();
       const controlsCrossSheet =
         sheetBounds &&
         controlBounds &&
@@ -666,7 +669,9 @@ export default function LocationMap({
         ) + 12,
       );
       const top =
-        referenceBounds && referenceBounds.height < bounds.height
+        topOverlayBounds && topOverlayBounds.height < bounds.height
+          ? Math.max(0, topOverlayBounds.bottom - bounds.top + 12)
+          : referenceBounds && referenceBounds.height < bounds.height
           ? Math.max(0, referenceBounds.bottom - bounds.top + 12)
           : navigationMode
             ? 68
@@ -683,11 +688,12 @@ export default function LocationMap({
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     observer?.observe(canvas);
     if (footer.current) observer?.observe(footer.current);
+    if (topOverlayElement.current) observer?.observe(topOverlayElement.current);
     if (selection.current) observer?.observe(selection.current);
     const controls = canvas.querySelector('.location-map-controls');
     if (controls) observer?.observe(controls);
     return () => observer?.disconnect();
-  }, [inspectedId, selectionOverlay, infoOpen, compact, navigationMode, size.width, size.height]);
+  }, [inspectedId, selectionOverlay, topOverlay, compact, navigationMode, size.width, size.height]);
   const stationCard = inspected && (
     <section
       className="location-station-card"
@@ -713,6 +719,24 @@ export default function LocationMap({
             : ''}
         </p>
       </div>
+      <StationStreetView
+        station={{ ...inspected.stop, id: inspected.stop.stationId ?? inspected.stop.id }}
+        kind={inspected.stop.mode}
+        compact
+      />
+      {isRegionalCoordinate([inspected.stop.lng, inspected.stop.lat]) && (
+        <a
+          className="icon-button location-station-maps-link"
+          href={`https://www.google.com/maps/search/?api=1&query=${inspected.stop.lat},${inspected.stop.lng}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          referrerPolicy="no-referrer"
+          aria-label={`Abrir ${inspected.stop.name} en Google Maps`}
+          title="Abrir ubicación en Google Maps"
+        >
+          <ExternalLink size={18} aria-hidden="true" />
+        </a>
+      )}
       <button
         type="button"
         className="icon-button"
@@ -801,7 +825,7 @@ export default function LocationMap({
           '--map-footer-height': `${footerHeight}px`,
           '--map-selection-right':
             selectionRight === null ? 'calc(12px + var(--map-safe-right))' : `${selectionRight}px`,
-          '--map-overlay-top': `${viewportPadding?.top ?? (navigationMode ? 68 : 12)}px`,
+          '--map-overlay-top': `${Math.max(overlayPadding.top, viewportPadding?.top ?? 0, navigationMode ? 68 : 12)}px`,
           '--map-canvas-height': `${size.height}px`,
         } as CSSProperties
       }
@@ -1152,6 +1176,17 @@ export default function LocationMap({
                   aria-label={`Tu ubicación${accuracy ? `, precisión aproximada de ${Math.round(accuracy)} metros` : ''}`}
                   pointerEvents="none"
                 >
+                  {nearbyRadiusMeters && nearbyRadiusMeters > 0 && (
+                    <circle
+                      r={nearbyRadiusMeters / metersPerPixel}
+                      fill="#1871d8"
+                      fillOpacity="0.055"
+                      stroke="#1871d8"
+                      strokeOpacity="0.4"
+                      strokeWidth="1.5"
+                      strokeDasharray="7 6"
+                    />
+                  )}
                   <circle
                     r={Math.max(13, Math.min(100, accuracy / metersPerPixel))}
                     fill="#1871d8"
@@ -1184,6 +1219,11 @@ export default function LocationMap({
               {mapCaption}
             </div>
           </details>
+        )}
+        {topOverlay && (
+          <div ref={topOverlayElement} className="location-map-top-overlay">
+            {topOverlay}
+          </div>
         )}
         <div className="location-map-controls">
           <button
@@ -1237,33 +1277,11 @@ export default function LocationMap({
           </button>
         )}
         {(navigationMode || compact) && (stationCard || selectionOverlay) && (
-          <div ref={selection} className="location-map-selection" hidden={infoOpen}>
+          <div ref={selection} className="location-map-selection">
             {stationCard || selectionOverlay}
           </div>
         )}
         <div ref={footer} className="location-map-footer">
-          {compact && !navigationMode && (
-            <details
-              className="location-map-info"
-              onToggle={(event) => setInfoOpen(event.currentTarget.open)}
-            >
-              <summary
-                aria-label={
-                  contextRoutes?.length === 1
-                    ? 'Consultar paradas de la ruta'
-                    : 'Información del mapa'
-                }
-              >
-                <Info size={19} aria-hidden="true" />
-              </summary>
-              <div>
-                {mapInfo}
-                {mapLegend}
-                {inspectStops && stopSelection}
-                {mapCaption}
-              </div>
-            </details>
-          )}
           <a
             className="location-map-credit"
             href="https://www.openstreetmap.org/copyright"

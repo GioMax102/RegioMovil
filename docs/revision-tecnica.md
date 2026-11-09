@@ -14,7 +14,7 @@ Recorrido de interfaz actualizado el **6 de noviembre de 2026** para Inicio cont
 4. Probar «Cerca de mí» sólo si se desea ordenar opciones por ubicación. La distancia es en línea recta y puede ser aproximada; no confirma acceso a pie ni vehículos cercanos. La selección manual sigue disponible sin conceder el permiso.
 5. Usar **«Planear desde aquí»** para abrir Planear con la estación o parada canónica confirmada como origen y el destino vacío. Si sólo se eligió una ruta, sin parada válida, se solicita el origen. Buscar el destino, comparar alternativas y abrir el detalle o la guía como acciones separadas.
 6. Usar **«Reportar aquí»** para abrir el formulario contextual, o «Crear reporte general» para no asignar un transporte. Un borrador existente ofrece «Continuar reporte» y conserva su contexto; tocar el acceso no envía nada. Las observaciones públicas de la estación o variante se muestran tras consentimiento y revisión, con sus límites visibles.
-7. Abrir Guardados para retomar viajes reales del dispositivo. Consultar los mapas de Metro mediante «Ver mapa de la línea», inicialmente cerrado; ajustes, fuentes y pronóstico permanecen accesibles.
+7. Abrir Guardados para retomar viajes reales del dispositivo. El mapa de Metro y el pronóstico aparecen desplegados al iniciar desde el 8 de noviembre; ajustes, fuentes y pronóstico permanecen accesibles.
 
 Esta guía describe el comportamiento que debe revisarse; no acredita pruebas físicas, resultados de CI ni una nueva publicación de web o Android. No hay calificaciones ni estrellas agregadas en este lote.
 

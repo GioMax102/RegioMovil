@@ -18,6 +18,7 @@ function geographicPoint(point: { lng: number; lat: number }) {
 export default function NetworkMap({
   network,
   selected,
+  focusStationId,
   onSelect,
   highlighted = [],
   journey,
@@ -25,6 +26,7 @@ export default function NetworkMap({
 }: {
   network: Network;
   selected?: string;
+  focusStationId?: string;
   onSelect?: (id: string) => void;
   highlighted?: string[];
   journey?: Journey;
@@ -82,6 +84,19 @@ export default function NetworkMap({
     const p = geographicPoint(point);
     return { x: p.x * scale + offsetX, y: p.y * scale + offsetY };
   };
+  const focusPoint = focusStationId
+    ? network.stations.find((station) => station.id === focusStationId)
+    : undefined;
+  const autoZoom = focusStationId ? 2 : 1;
+  const focusCoordinates = focusPoint ? project(focusPoint) : undefined;
+  const focusPan = focusCoordinates
+    ? {
+        x: WIDTH / 2 - (focusCoordinates.x * autoZoom + (WIDTH / 2) * (1 - autoZoom)),
+        y: HEIGHT / 2 - (focusCoordinates.y * autoZoom + (HEIGHT / 2) * (1 - autoZoom)),
+      }
+    : { x: 0, y: 0 };
+  const renderZoom = focusPoint ? autoZoom : zoom;
+  const renderPan = { x: pan.x + focusPan.x, y: pan.y + focusPan.y };
   const points = (stations: Station[]) =>
     stations
       .map((station) => {
@@ -158,8 +173,8 @@ export default function NetworkMap({
                 return {
                   station,
                   distance: Math.hypot(
-                    p.x * zoom + (WIDTH / 2) * (1 - zoom) + pan.x - x,
-                    p.y * zoom + (HEIGHT / 2) * (1 - zoom) + pan.y - y,
+                    p.x * renderZoom + (WIDTH / 2) * (1 - renderZoom) + renderPan.x - x,
+                    p.y * renderZoom + (HEIGHT / 2) * (1 - renderZoom) + renderPan.y - y,
                   ),
                 };
               })
@@ -180,7 +195,7 @@ export default function NetworkMap({
         <rect width={WIDTH} height={HEIGHT} fill="#ecefe7" />
         <g clipPath={`url(#${mapId}-clip)`}>
           <g
-            transform={`translate(${(WIDTH / 2) * (1 - zoom) + pan.x} ${(HEIGHT / 2) * (1 - zoom) + pan.y}) scale(${zoom})`}
+            transform={`translate(${(WIDTH / 2) * (1 - renderZoom) + renderPan.x} ${(HEIGHT / 2) * (1 - renderZoom) + renderPan.y}) scale(${renderZoom})`}
           >
             <g transform={`translate(${offsetX} ${offsetY}) scale(${scale})`} aria-hidden="true">
               <image href={basemapUrl} width={geography.width} height={geography.height} />

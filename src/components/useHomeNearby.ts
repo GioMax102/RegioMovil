@@ -16,7 +16,6 @@ import type { HomeCandidate, HomeSelection } from './homeTypes';
 
 export const HOME_NEARBY_PREFERENCE_KEY = 'regiomovil:home-nearby-enabled';
 export const HOME_NEARBY_RADIUS = LOCATION_POLICY.radius;
-export const HOME_NEARBY_EXPANDED_RADIUS = LOCATION_POLICY.expandedRadius;
 export const HOME_NEARBY_LIMIT = LOCATION_POLICY.limit;
 const stations = rawNetwork.stations as Station[];
 
@@ -56,6 +55,7 @@ export function useHomeNearby({
   const [candidates, setCandidates] = useState<HomeCandidate[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [position, setPosition] = useState<PositionFix | null>(null);
   const [radius, setRadius] = useState<number>(HOME_NEARBY_RADIUS);
   const latest = useRef({ selection, onSelect, suspendAutomatic, enabled });
   latest.current = { selection, onSelect, suspendAutomatic, enabled };
@@ -87,7 +87,7 @@ export function useHomeNearby({
   const cancelPending = useCallback(() => invalidate(true), [invalidate]);
 
   const run = useCallback(
-    async (automatic: boolean, targetRadius: number, expand = false) => {
+    async (automatic: boolean, targetRadius: number) => {
       if (!mounted.current || !visible()) return;
       if (automatic) {
         if (!latest.current.enabled || latest.current.suspendAutomatic || entryAttempted.current)
@@ -109,11 +109,7 @@ export function useHomeNearby({
       try {
         let position: PositionFix | null = null;
         let permissionAllowsAutomatic = true;
-        if (expand) {
-          position = sample.current;
-          if (!isFreshLocation(position))
-            throw new Error('Actualiza Cerca de mí antes de ampliar el radio.');
-        } else if (automatic) {
+        if (automatic) {
           const permission = await checkLocationPermission();
           if (!current()) return;
           if (permission === 'denied') {
@@ -153,6 +149,7 @@ export function useHomeNearby({
           );
         index.current = nearbyIndex;
         sample.current = position;
+        setPosition(position);
         radiusRef.current = targetRadius;
         setRadius(targetRadius);
         const result = rankHomeNearby(nearbyIndex, position, stations, {
@@ -166,10 +163,9 @@ export function useHomeNearby({
               result.some((candidate) => candidate.approximate)
               ? 'Opciones aproximadas: confirma el transporte que prefieras. La distancia es en línea recta.'
               : 'Opciones cercanas por distancia en línea recta; no representan vehículos en vivo.'
-            : `No encontramos opciones a ${targetRadius === HOME_NEARBY_RADIUS ? '1.2' : '3'} km. Conservamos tu selección.`,
+            : `No encontramos opciones en un radio de ${targetRadius / 1000} km. Conservamos tu selección.`,
         );
         if (
-          !expand &&
           permissionAllowsAutomatic &&
           position.accuracy <= LOCATION_POLICY.automaticAccuracy &&
           !interacted.current &&
@@ -195,6 +191,7 @@ export function useHomeNearby({
         if (!current() || controller.signal.aborted) return;
         setCandidates([]);
         sample.current = null;
+        setPosition(null);
         setMessage(
           error instanceof Error
             ? error.message
@@ -215,19 +212,12 @@ export function useHomeNearby({
     setEnabled(true);
     await run(false, radiusRef.current);
   }, [run]);
-  const expandRadius = useCallback(async () => {
-    if (radiusRef.current !== HOME_NEARBY_RADIUS) return;
-    if (!isFreshLocation(sample.current)) {
-      setMessage('Actualiza Cerca de mí antes de ampliar el radio.');
-      return;
-    }
-    await run(false, HOME_NEARBY_EXPANDED_RADIUS, true);
-  }, [run]);
   const disable = useCallback(() => {
     invalidate(true);
     storePreference(false);
     setEnabled(false);
     sample.current = null;
+    setPosition(null);
     forgetLocation();
     setCandidates([]);
     setMessage('Cercanía desactivada. Puedes seguir eligiendo transporte manualmente.');
@@ -297,10 +287,9 @@ export function useHomeNearby({
     message,
     enabled,
     radius,
-    canExpand: !busy && radius === HOME_NEARBY_RADIUS && isFreshLocation(sample.current),
+    position,
     findNearby,
     disable,
-    expandRadius,
     cancelPending,
   };
 }

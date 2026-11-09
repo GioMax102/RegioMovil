@@ -1,6 +1,7 @@
 /** Native-close stubs deliberately do not restore focus: unmount must handle that case. */
 import test, { after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { JSDOM } from 'jsdom';
 
@@ -37,11 +38,19 @@ dom.window.HTMLDialogElement.prototype.close = function () {
 };
 const { render, cleanup, screen, within, act } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
+const sourceHooks = registerHooks({
+  load(url, context, nextLoad) {
+    return url.endsWith('.css')
+      ? { format: 'module', source: '', shortCircuit: true }
+      : nextLoad(url, context);
+  },
+});
 const { Dialog } = await import('../src/components/Primitives');
 afterEach(async () => {
   await act(async () => cleanup());
 });
 after(() => {
+  sourceHooks.deregister();
   dom.window.close();
   for (const [name, descriptor] of previous) {
     if (descriptor) Object.defineProperty(globalThis, name, descriptor);

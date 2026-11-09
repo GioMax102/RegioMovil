@@ -97,7 +97,7 @@ export default function App() {
     source: 'base',
   }));
   const homeMapViews = useRef(new Map<string, RegionalView>());
-  const homeUiState = useRef<HomeUiState>({ metroMapOpen: false });
+  const homeUiState = useRef<HomeUiState>({ metroMapOpen: true });
   const [networkSelection, setNetworkSelection] = useState<{ routeId: string; stopId?: string }>();
   const [requireOriginSelection, setRequireOriginSelection] = useState(false);
   const [initialMobilityTrip, setInitialMobilityTrip] = useState<
@@ -866,6 +866,8 @@ export default function App() {
                 onSave={() => toggleFavorite(station)}
                 onArrival={setArrival}
                 now={now}
+                onSelectStation={setStation}
+                nearbyPosition={homeUiState.current.nearbyPosition ?? null}
               />
             </div>
           )}

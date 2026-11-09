@@ -4,6 +4,8 @@ import { network } from '../api';
 import { networkLabel } from '../mobility/networks';
 import type { HomeCandidate, HomeSelection } from './homeTypes';
 import TransportIllustration from './TransportIllustration';
+import { LineBadge } from './Primitives';
+import ServiceBadge from './ServiceBadge';
 
 export const homeSelectionKey = (selection: HomeSelection) =>
   selection.kind === 'metro' ? `metro:${selection.stationId}` : `bus:${selection.route.id}`;
@@ -101,15 +103,6 @@ export default function HomeTransportSelector({
     >
       <button
         type="button"
-        className="home-context-arrow"
-        aria-label="Anterior transporte"
-        disabled={index <= 0}
-        onClick={() => move(index - 1)}
-      >
-        <ChevronLeft size={20} />
-      </button>
-      <button
-        type="button"
         className="home-context-vehicle"
         aria-label={`Cambiar transporte: ${label}`}
         onClick={onOpenPicker}
@@ -126,8 +119,18 @@ export default function HomeTransportSelector({
         <h2>{label}</h2>
         {station && (
           <span className="home-context-lines">
-            {station.lineIds.map((lineId) => lineId.replace('L', 'Línea ')).join(' · ')}
+            {station.lineIds.map((lineId) => (
+              <LineBadge key={lineId} id={lineId} />
+            ))}
           </span>
+        )}
+        {selection.kind === 'bus' && (
+          <ServiceBadge
+            networkId={selection.route.networkId}
+            code={selection.route.code}
+            routeId={selection.route.id}
+            mode="bus"
+          />
         )}
         <p>
           {selection.source === 'base'
@@ -139,23 +142,34 @@ export default function HomeTransportSelector({
             ? ` · ${Math.round(current.distanceMeters)} m${current.approximate ? ' aprox.' : ''} en línea recta`
             : ''}
         </p>
+      </div>
+      <div className="home-context-navigation">
+        <button
+          type="button"
+          className="home-context-arrow"
+          aria-label="Anterior transporte"
+          disabled={index <= 0}
+          onClick={() => move(index - 1)}
+        >
+          <ChevronLeft size={20} aria-hidden="true" />
+        </button>
         <span className="home-context-count">
           {index + 1} de {options.length}
-          <span aria-hidden="true"> · </span>
-          <button type="button" onClick={onOpenPicker}>
-            Cambiar
-          </button>
         </span>
+        <button type="button" className="home-context-manual" onClick={onOpenPicker}>
+          Cambiar transporte
+          <ChevronDown size={15} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="home-context-arrow"
+          aria-label="Siguiente transporte"
+          disabled={index >= options.length - 1}
+          onClick={() => move(index + 1)}
+        >
+          <ChevronRight size={20} aria-hidden="true" />
+        </button>
       </div>
-      <button
-        type="button"
-        className="home-context-arrow"
-        aria-label="Siguiente transporte"
-        disabled={index >= options.length - 1}
-        onClick={() => move(index + 1)}
-      >
-        <ChevronRight size={20} />
-      </button>
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {label}, {index + 1} de {options.length}
       </span>

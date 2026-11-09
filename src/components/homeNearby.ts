@@ -119,9 +119,7 @@ export function rankHomeNearby(
     !Number.isFinite(age) ||
     age < -5000 ||
     age > HOME_NEARBY_POLICY.maxAgeMs ||
-    !([HOME_NEARBY_POLICY.radius, HOME_NEARBY_POLICY.expandedRadius] as readonly number[]).includes(
-      radius,
-    )
+    radius !== HOME_NEARBY_POLICY.radius
   )
     return [];
   const candidates: { key: string; value: HomeCandidate }[] = [];

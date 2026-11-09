@@ -6,6 +6,7 @@ import {
   publicReportPhotoUrl,
   type PublicReport,
   type PublicReportSummary,
+  type ReportDataset,
 } from '../reportsApi';
 
 const categoryLabels: Record<string, string> = {
@@ -43,9 +44,12 @@ export default function PublicReports({
     key: string;
     reports: PublicReport[];
     summary?: PublicReportSummary;
+    dataset?: ReportDataset;
     state: 'loading' | 'ready' | 'error';
   }>({ key, reports: [], state: 'loading' });
   const [revision, setRevision] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'resolved'>('all');
+  useEffect(() => setStatusFilter('all'), [key]);
   useEffect(() => {
     const controller = new AbortController();
     setResult({ key, reports: [], state: 'loading' });
@@ -61,8 +65,22 @@ export default function PublicReports({
   const state = result.key === key ? result.state : 'loading';
   const reports = result.key === key ? result.reports : [];
   const summary = result.key === key ? result.summary : undefined;
+  const dataset = result.key === key ? result.dataset : undefined;
+  const visibleReports = reports.filter(
+    (report) => report.status === 'published' || report.status === 'resolved',
+  );
+  const visibleOpen = visibleReports.filter((report) => report.status === 'published').length;
+  const visibleResolved = visibleReports.filter((report) => report.status === 'resolved').length;
+  const filteredReports = visibleReports.filter(
+    (report) =>
+      statusFilter === 'all' ||
+      (statusFilter === 'resolved' ? report.status === 'resolved' : report.status === 'published'),
+  );
   return (
-    <section className="panel public-reports" aria-label="Reportes comunitarios revisados">
+    <section
+      className="panel public-reports"
+      aria-label={dataset ? 'Reportes de visualización' : 'Reportes comunitarios revisados'}
+    >
       {onReport ? (
         <button type="button" className="public-report-invite" onClick={onReport}>
           <span className="public-report-invite-icon">
@@ -91,46 +109,38 @@ export default function PublicReports({
         </div>
       )}
       {state === 'ready' && (
-        <details className="public-reports-detail" key={key}>
+        <details className="public-reports-detail" key={key} open>
           <summary>
             <MessageSquare size={17} aria-hidden="true" />
-            <span>Ver reportes</span>
+            <span>Reportes de este lugar</span>
             {summary && summary.total > 0 && (
               <small>
                 {summary.total} · {summary.open} abiertos
               </small>
             )}
           </summary>
-          <p className="public-reports-scope">
-            Publicados tras revisión de contenido. No son avisos oficiales ni acreditan una falla
-            verificada.
-          </p>
+          <div className="public-reports-context">
+            {dataset ? <span className="public-report-origin">Visualización</span> : null}
+            <span>
+              {dataset ? 'Escenario ilustrativo' : 'Observaciones revisadas por la comunidad'}
+            </span>
+          </div>
           {summary && summary.total > 0 && (
             <div className="public-report-summary">
-              <p>
-                <strong>{summary.total}</strong>{' '}
-                {summary.total === 1 ? 'reporte público' : 'reportes públicos'} ·{' '}
-                <strong>{summary.open}</strong> {summary.open === 1 ? 'abierto' : 'abiertos'} ·{' '}
-                <strong>{summary.resolved}</strong>{' '}
-                {summary.resolved === 1 ? 'resuelto' : 'resueltos'}
-              </p>
-              {summary.total > 0 && (
-                <ul className="public-report-categories" aria-label="Reportes por categoría">
-                  {Object.entries(summary.byCategory)
-                    .filter(([, count]) => count.total > 0)
-                    .sort(([, a], [, b]) => b.open - a.open || b.total - a.total)
-                    .map(([category, count]) => (
-                      <li key={category}>
-                        <strong>{categoryLabels[category] || category}</strong>: {count.open}{' '}
-                        {count.open === 1 ? 'abierto' : 'abiertos'} · {count.resolved}{' '}
-                        {count.resolved === 1 ? 'resuelto' : 'resueltos'}
-                      </li>
-                    ))}
-                </ul>
-              )}
+              <div className="public-report-metrics" aria-label="Resumen de reportes">
+                <span>
+                  <strong>{summary.total}</strong> reportes
+                </span>
+                <span>
+                  <strong>{summary.open}</strong> abiertos
+                </span>
+                <span>
+                  <strong>{summary.resolved}</strong> resueltos
+                </span>
+              </div>
               {reports.length < summary.total && (
                 <p>
-                  Mostrando los {reports.length} reportes más recientes de {summary.total} públicos.
+                  Mostrando {reports.length} de {summary.total} observaciones recientes.
                 </p>
               )}
             </div>
@@ -146,28 +156,61 @@ export default function PublicReports({
           {!reports.length && summary?.total !== 0 && (
             <p>No hay reportes recientes disponibles para mostrar.</p>
           )}
-          {reports.map((report) => (
-            <article key={report.id}>
-              <strong>{report.title}</strong>
-              <p>{report.detail}</p>
-              <small>
-                {report.targetType === 'unit'
-                  ? `Unidad${report.unitReference ? ` · ${report.unitReference}` : ''}`
-                  : report.targetType === 'route'
-                    ? `Parada o recorrido${report.locationReference ? ` · ${report.locationReference}` : ''}`
-                    : 'Estación'}{' '}
-                ·{' '}
-                <time dateTime={report.createdAt}>
-                  {new Date(report.createdAt).toLocaleDateString('es-MX')}
-                </time>{' '}
-                ·{' '}
-                {report.status === 'resolved'
-                  ? 'Marcado como resuelto'
-                  : 'Publicado tras revisión de contenido'}
-              </small>
-              {report.photoMime && <ReportPhoto report={report} />}
-            </article>
-          ))}
+          {!!visibleReports.length && (
+            <div
+              className="public-report-filters"
+              role="group"
+              aria-label="Filtrar observaciones por estado"
+            >
+              {(
+                [
+                  ['all', `Todas · ${visibleReports.length}`],
+                  ['open', `Abiertas · ${visibleOpen}`],
+                  ['resolved', `Resueltas · ${visibleResolved}`],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={statusFilter === value}
+                  onClick={() => setStatusFilter(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="public-report-thread">
+            {filteredReports.map((report) => (
+              <article className="public-report-bubble" key={report.id}>
+                <div className="public-report-bubble-meta">
+                  <span
+                    className={`public-report-status ${report.status === 'resolved' ? 'resolved' : 'open'}`}
+                  >
+                    {report.status === 'resolved' ? 'Resuelto' : 'Abierto'}
+                  </span>
+                  <span>{categoryLabels[report.category] || 'Observación'}</span>
+                </div>
+                <strong>{report.title}</strong>
+                <p>{report.detail}</p>
+                <small>
+                  {report.targetType === 'unit'
+                    ? `Unidad${report.unitReference ? ` · ${report.unitReference}` : ''}`
+                    : report.targetType === 'route'
+                      ? `Parada o recorrido${report.locationReference ? ` · ${report.locationReference}` : ''}`
+                      : 'Estación'}{' '}
+                  ·{' '}
+                  <time dateTime={report.createdAt}>
+                    {new Date(report.createdAt).toLocaleDateString('es-MX')}
+                  </time>
+                </small>
+                {report.photoMime && <ReportPhoto report={report} />}
+              </article>
+            ))}
+            {visibleReports.length > 0 && filteredReports.length === 0 && (
+              <p>No hay observaciones con este estado.</p>
+            )}
+          </div>
         </details>
       )}
     </section>

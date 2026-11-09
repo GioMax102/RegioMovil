@@ -265,19 +265,24 @@ export function createApp({ network, catalog = null, mobilityNetwork = null, pla
         if (url.pathname === '/api/reports' || url.pathname === '/api/reports/summary') {
           const routeId = url.searchParams.get('route');
           const stationId = url.searchParams.get('station');
+          const dataset = store.datasetInfo();
+          const provenance = dataset ? {
+            source: 'synthetic', verification: 'synthetic',
+            dataset: { kind: 'synthetic', label: 'Escenario de visualización', referenceDate: dataset.referenceDate },
+          } : { source: 'community', verification: 'moderated' };
           if (routeId && stationId) throw new HttpError(400, 'INVALID_TARGET', 'Consulta una estación o un recorrido a la vez.');
           if (routeId) {
             validRoute(routeId);
-            if (url.pathname.endsWith('/summary')) return send(response, 200, { ...store.summary({ routeId }, date), routeId, source: 'community', verification: 'moderated', notice: 'Conteos de reportes publicados, no de personas únicas ni medidas de calidad o prioridad de inversión.' });
+            if (url.pathname.endsWith('/summary')) return send(response, 200, { ...store.summary({ routeId }, date), routeId, ...provenance, notice: dataset ? 'Conteos generados para visualizar la aplicación; no representan observaciones reales.' : 'Conteos de reportes publicados, no de personas únicas ni medidas de calidad o prioridad de inversión.' });
             const { total, open, resolved, byCategory } = store.summary({ routeId }, date);
             return send(response, 200, { reports: store.listByRoute(routeId, 20, date), routeId, summary: { total, open, resolved, byCategory },
-              source: 'community', verification: 'moderated', notice: 'Reportes comunitarios revisados; no son avisos oficiales.' });
+              ...provenance, notice: dataset ? 'Reportes inventados para visualizar la aplicación.' : 'Reportes comunitarios revisados; no son avisos oficiales.' });
           }
           const station = validStation(stationId || 'padre-mier');
-          if (url.pathname.endsWith('/summary')) return send(response, 200, { ...store.summary({ stationId: station.id }, date), stationId: station.id, source: 'community', verification: 'moderated', notice: 'Conteos de reportes publicados, no de personas únicas ni medidas de calidad o prioridad de inversión.' });
+          if (url.pathname.endsWith('/summary')) return send(response, 200, { ...store.summary({ stationId: station.id }, date), stationId: station.id, ...provenance, notice: dataset ? 'Conteos generados para visualizar la aplicación; no representan observaciones reales.' : 'Conteos de reportes publicados, no de personas únicas ni medidas de calidad o prioridad de inversión.' });
           const { total, open, resolved, byCategory } = store.summary({ stationId: station.id }, date);
           return send(response, 200, { reports: store.list(station.id, 20, date), stationId: station.id, summary: { total, open, resolved, byCategory },
-            source: 'community', verification: 'moderated', notice: 'Reportes comunitarios revisados. No son avisos oficiales ni alimentan el modelo.' });
+            ...provenance, notice: dataset ? 'Reportes inventados para visualizar la aplicación.' : 'Reportes comunitarios revisados. No son avisos oficiales ni alimentan el modelo.' });
         }
       }
       if (request.method === 'POST' && url.pathname === '/api/mobility/plan') {

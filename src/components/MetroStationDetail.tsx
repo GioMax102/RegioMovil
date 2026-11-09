@@ -1,6 +1,8 @@
 import { Clock3, Info, Accessibility } from 'lucide-react';
+import { network } from '../api';
 import { ArrivalCard, Forecast, LineBadge } from './Primitives';
 import StationActions from './StationActions';
+import HomeSelectedRouteMap from './HomeSelectedRouteMap';
 import PublicReports from './DeferredReports';
 import {
   getMetroServiceWindow,
@@ -19,6 +21,8 @@ export default function MetroStationDetail({
   onArrival,
   now,
   onReport,
+  onSelectStation,
+  nearbyPosition,
 }: {
   station: Station;
   board: Board | null;
@@ -27,9 +31,16 @@ export default function MetroStationDetail({
   onArrival: (arrival: Arrival) => void;
   now: Date;
   onReport?: () => void;
+  onSelectStation?: (stationId: string) => void;
+  nearbyPosition?: { lat: number; lng: number; accuracy: number } | null;
 }) {
   const open = isMetroOperating(now);
   const hours = getMetroServiceWindow(now);
+  const line = network.lines.find((item) => station.lineIds.includes(item.id));
+  const lineStations =
+    line?.stationIds
+      .map((id) => network.stations.find((item) => item.id === id))
+      .filter((item): item is Station => !!item) ?? [];
   return (
     <div className="station-detail metro-station-detail">
       <header className="metro-station-heading">
@@ -55,6 +66,18 @@ export default function MetroStationDetail({
           <strong>Fuera de horario</strong>
           <span>Abre {getNextMetroOpening(now)}</span>
         </p>
+      )}
+      {line && lineStations.length > 1 && (
+        <section aria-label={`Estaciones de ${line.name}`}>
+          <HomeSelectedRouteMap
+            key={station.id}
+            selection={{ kind: 'metro', stationId: station.id, lineId: line.id, source: 'manual' }}
+            nearbyPosition={nearbyPosition}
+            onStopSelect={(stop) => {
+              if (stop.stationId) onSelectStation?.(stop.stationId);
+            }}
+          />
+        </section>
       )}
       <section className="panel metro-station-outlook">
         <div className="metro-section-title">

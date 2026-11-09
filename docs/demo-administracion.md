@@ -37,3 +37,9 @@ La semilla reproduce distribución, categorías y contextos; UUIDs y claves de c
 5. Para repetir desde cero, detener este servidor con Ctrl+C y generar **otro directorio nuevo**. No borrar bases reales para restaurar la demo.
 
 Pruebas automáticas: [agregación/aislamiento y 5.000 reportes](../tests/report-map.test.mjs), [MFA/roles](../tests/admin-backend.test.mjs), [filtros/cancelación de interfaz](../tests/admin-report-map.test.tsx). El fixture no acredita operación real ni rendimiento del teléfono.
+
+## Corpus comunitario ampliado · 8 de noviembre
+
+`--profile community` genera 1,200 registros y conserva el perfil original al omitir esa opción. Hay 1,020 públicos, 120 pendientes y 60 rechazados; distribución por los 209 recorridos de autobús y 38 estaciones. Los focos son Félix U. Gómez/L3 y TM San Bernabé–No Reelección. Textos naturales sin rótulos individuales; procedencia sintética persistente y visible en el entorno. El manifiesto incorpora hash y conteos. No sobrescribe destinos ni cambia la base real.
+
+Consultar [entrega, ruta persistente y comandos](ENTREGA_UI_REPORTES_2026-11-08.md). Usar el `demo.env` generado mantiene identidad separada; la sesión de visualización de 4173 descrita allí conserva la identidad administrativa local y cambia únicamente la base de reportes mediante variable del proceso.

@@ -1,9 +1,19 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { Forecast } from '../src/components/Primitives';
+
+const sourceHooks = registerHooks({
+  load(url, context, nextLoad) {
+    return url.endsWith('.css')
+      ? { format: 'module', source: '', shortCircuit: true }
+      : nextLoad(url, context);
+  },
+});
+const { Forecast } = await import('../src/components/Primitives');
+after(() => sourceHooks.deregister());
 
 function highlightedHours(data: { hour: string; occupancy: number }[], compact = false) {
   const dom = new JSDOM(renderToStaticMarkup(<Forecast data={data} compact={compact} />));

@@ -1,4 +1,5 @@
 .home-selected-route-map {
+  position: relative;
   min-width: 0;
 }
 .home-selected-route-map .location-map-canvas {

@@ -4,49 +4,6 @@
   --map-safe-right: 0px;
   min-width: 0;
 }
-.location-map-info {
-  position: relative;
-  flex: 0 0 44px;
-  color: var(--dark);
-}
-.location-map-info > summary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  list-style: none;
-  inline-size: 44px;
-  block-size: 44px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--white);
-  box-shadow: var(--surface-shadow);
-  cursor: pointer;
-}
-.location-map-info > summary::-webkit-details-marker {
-  display: none;
-}
-.location-map-info > div {
-  position: absolute;
-  inset-inline-start: 0;
-  inset-block-end: 52px;
-  inline-size: min(330px, calc(100vw - 48px));
-  max-block-size: max(
-    44px,
-    min(
-      260px,
-      calc(
-        var(--map-canvas-height, 420px) - var(--map-overlay-top, 12px) -
-          var(--map-footer-height, 52px) - 24px
-      )
-    )
-  );
-  overflow-y: auto;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--white);
-  box-shadow: var(--surface-shadow);
-}
 .location-map-footer {
   position: absolute;
   z-index: 3;
@@ -77,11 +34,25 @@
 }
 .location-map-selection > .location-station-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px 44px;
+  grid-template-columns: minmax(0, 1fr) auto repeat(3, 40px);
   gap: 4px;
   margin: 0;
   padding: 10px;
   background: var(--white);
+}
+.location-map-selection .location-station-card .station-street-view {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.location-map-selection .location-station-card .station-photo-action,
+.location-map-selection .location-station-card .station-map-action,
+.location-map-selection .location-station-card .location-station-maps-link,
+.location-map-selection .location-station-card > .icon-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 44px;
 }
 .location-map-selection > .location-station-card > svg {
   display: none;
@@ -111,6 +82,12 @@
 }
 .location-map-canvas > svg:active {
   cursor: grabbing;
+}
+.location-map-top-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 10px 68px auto 10px;
+  max-width: calc(100% - 82px);
 }
 .location-map-basemap {
   opacity: 0.6;
@@ -275,6 +252,19 @@
   border-radius: 14px;
   overflow: hidden;
   background: white;
+}
+.location-map-selection > .location-station-card .station-street-view {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.location-map-selection > .location-station-card .station-photo-action,
+.location-map-selection > .location-station-card .station-map-action {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  min-width: 40px;
+  height: 44px;
 }
 .location-map-controls button {
   width: 46px;

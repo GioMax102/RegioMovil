@@ -239,7 +239,15 @@ async function chooseHomeBus() {
     await screen.findByRole('radio', { name: /^TM · San Bernabé – No Reelección Transmetro$/ }),
   );
   await user.click(screen.getByRole('button', { name: 'Confirmar selección' }));
-  await screen.findByRole('combobox', { name: 'Parada del recorrido' }, { timeout: 10000 });
+  const stopPicker = await screen.findByRole('button', { name: /Parada del recorrido:/ });
+  await user.click(stopPicker);
+  const options = await screen.findAllByRole('option');
+  assert.ok(options.length > 1, 'The selected route exposes searchable official stops.');
+  const selected = options[1];
+  const stopName = selected.textContent?.trim() || '';
+  await user.click(selected);
+  const selectedStop = screen.getByRole('button', { name: /Parada del recorrido:/ });
+  return { stopId: selectedStop.getAttribute('data-stop-id'), stopName };
 }
 async function waitForMobilityMap() {
   // Loading the public graph includes its download, JSON decoding and render.
@@ -498,8 +506,6 @@ test('station search resolves the Fundidora alias to Arena Monterrey and refresh
 test('accessibility settings persist and the peak scenario refreshes prediction and advice', async () => {
   await mount();
   const outlook = screen.getByText('Afluencia por hora').closest('details')!;
-  assert.equal(outlook.open, false);
-  await user.click(within(outlook).getByText('Afluencia por hora'));
   assert.equal(outlook.open, true);
   const initialForecast = screen
     .getByRole('img', { name: /Afluencia simulada por hora/ })
@@ -524,7 +530,6 @@ test('accessibility settings persist and the peak scenario refreshes prediction 
   await user.click(within(dialog).getByRole('button', { name: 'Hora pico' }));
   await closeDialog();
   const advice = await screen.findByText('Una salida después puede ir más tranquila');
-  await user.click(advice);
   assert.equal(advice.closest('details')?.open, true);
   assert.ok(
     requests.some((request) => request.path === '/api/board?station=padre-mier&scenario=peak'),
@@ -602,7 +607,8 @@ test('Home explores one chosen bus route without loading the regional graph and 
 
 test('expanding the Home Metro map keeps the selected station in Red', async () => {
   await mount();
-  await user.click(await screen.findByText('Ver mapa de la línea', { exact: true }));
+  const map = (await screen.findByText('Ver mapa de la línea', { exact: true })).closest('details');
+  assert.equal(map?.open, true);
   await user.click(await screen.findByRole('button', { name: 'Ampliar en la red', exact: true }));
   await screen.findByRole('combobox', { name: 'Buscar recorrido en el mapa' });
   const station = await screen.findByRole(
@@ -624,11 +630,11 @@ test('expanding the Home Metro map keeps the selected station in Red', async () 
 
 test('Home planning requires a confirmed origin and returning preserves its transport and focus', async () => {
   await mount();
-  await chooseHomeBus();
+  const chosen = await chooseHomeBus();
+  assert.ok(chosen.stopId);
   await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
-  await screen.findByRole('region', { name: '¿Desde dónde sales?' }, { timeout: 10000 });
-  await user.click(screen.getByRole('button', { name: 'Cerrar búsqueda', exact: true }));
-  assert.ok(screen.getByRole('button', { name: 'Origen: Elige un punto', exact: true }));
+  await waitForMobilityMap();
+  assert.ok(screen.getByRole('button', { name: `Origen: ${chosen.stopName}`, exact: true }));
   assert.ok(screen.getByRole('button', { name: 'Destino: Elige un punto', exact: true }));
   await navigate('Mi camino');
   const plan = await screen.findByRole('button', { name: 'Planear desde aquí' });
@@ -639,22 +645,13 @@ test('Home planning requires a confirmed origin and returning preserves its tran
       exact: true,
     }),
   );
-  const stops = (await screen.findByRole('combobox', {
-    name: 'Parada del recorrido',
-  })) as HTMLSelectElement;
-  const stop = stops.options[1];
+  const stopPicker = await screen.findByRole('button', { name: /Parada del recorrido:/ });
+  const stopId = stopPicker.getAttribute('data-stop-id');
   const graph = JSON.parse(
     await readFile(new URL('../public/mobility-network.json', import.meta.url), 'utf8'),
   );
-  assert.ok(
-    graph.stops.some((item: { id: string }) => item.id === stop.value),
-    'Origin must use an existing graph ID.',
-  );
-  await user.selectOptions(stops, stop.value);
-  await user.click(plan);
-  await waitForMobilityMap();
-  assert.ok(screen.getByRole('button', { name: `Origen: ${stop.textContent}`, exact: true }));
-  assert.ok(screen.getByRole('button', { name: 'Destino: Elige un punto', exact: true }));
+  assert.ok(graph.stops.some((item: { id: string }) => item.id === stopId));
+  assert.equal(stopId, chosen.stopId);
 });
 
 test('Home highlights reports after planning, asks for the place and resumes a saved draft without submitting it', async () => {

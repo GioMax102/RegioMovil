@@ -13,7 +13,9 @@ import type { TransitCatalogData } from '../types';
 import { loadMobilityNetwork } from '../mobility/api';
 import LocationMap from '../mobility/LocationMap';
 import type { MobilityNetwork } from '../mobility/types';
-import TransitCatalog, { serviceColors } from './TransitCatalog';
+import TransitCatalog from './TransitCatalog';
+import ServiceBadge from './ServiceBadge';
+import StopSequence from './StopSequence';
 import useMapWorkspaceHeight from '../useMapWorkspaceHeight';
 import { indexRouteSearch, searchIndexedRoutes } from './routeSearch';
 import './networkExplorer.css';
@@ -49,6 +51,7 @@ export default function NetworkExplorer({
   const catalogId = useId();
   const [networkId, setNetworkId] = useState('all');
   const [routeId, setRouteId] = useState('');
+  const [selectedStopId, setSelectedStopId] = useState(initialSelection?.stopId ?? '');
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [activeResult, setActiveResult] = useState(-1);
@@ -227,6 +230,30 @@ export default function NetworkExplorer({
   );
   const selectedRoute = routes.find((route) => route.id === routeId);
   const selectedService = catalogRoutes.find((route) => route.id === routeId);
+  const selectedRouteStops = useMemo(() => {
+    if (!selectedRoute || !network) return [];
+    const byId = new Map(network.stops.map((stop) => [stop.id, stop]));
+    const orderedIds = selectedRoute.segments.flatMap((segment) => segment.stopIds);
+    const ids = orderedIds.length
+      ? orderedIds
+      : network.stops.filter((stop) => stop.routeIds.includes(routeId)).map((stop) => stop.id);
+    const seen = new Set<string>();
+    return ids.flatMap((id) => {
+      const stop = byId.get(id);
+      if (!stop || seen.has(id)) return [];
+      seen.add(id);
+      return [stop];
+    });
+  }, [selectedRoute, network, routeId]);
+  const stopSequence = selectedRoute && selectedRouteStops.length > 1 ? (
+    <StopSequence
+      label={`${selectedRoute.code} · ${selectedRoute.name}`}
+      stops={selectedRouteStops.map((stop) => ({ id: stop.id, name: stop.name }))}
+      selectedId={selectedStopId}
+      numbered={selectedRoute.mode !== 'metro'}
+      onSelect={setSelectedStopId}
+    />
+  ) : null;
   const displayedRoutes = useMemo(
     () => (routeId ? (selectedRoute ? [selectedRoute] : []) : routes),
     [routeId, selectedRoute, routes],
@@ -253,6 +280,7 @@ export default function NetworkExplorer({
     cancelInitialSelection();
     setNetworkId(id);
     setRouteId('');
+    setSelectedStopId('');
     setQuery('');
     setSearching(false);
     setActiveResult(-1);
@@ -262,6 +290,7 @@ export default function NetworkExplorer({
     const route = catalog?.routes.find((item) => item.id === id);
     if (!route) return;
     setRouteId(id);
+    setSelectedStopId(initialSelection?.routeId === id ? initialSelection.stopId ?? '' : '');
     setNetworkId(route.networkId);
     setQuery(`${route.code} · ${route.name}`);
     setSearching(false);
@@ -277,6 +306,7 @@ export default function NetworkExplorer({
     cancelInitialSelection();
     setQuery('');
     setRouteId('');
+    setSelectedStopId('');
     setSearching(false);
     setActiveResult(-1);
   }
@@ -287,15 +317,13 @@ export default function NetworkExplorer({
       onClick={() => setDetailId(selectedService.id)}
       aria-label={`Ver ficha de ${selectedService.code}: ${selectedService.name}`}
     >
-      <span
-        className="network-route-dot"
-        style={{
-          background: selectedRoute?.color ?? serviceColors[selectedService.networkId],
-        }}
-        aria-hidden="true"
+      <ServiceBadge
+        networkId={selectedService.networkId}
+        routeId={selectedService.id}
+        code={selectedService.code}
+        mode={selectedService.mode}
       />
       <span>
-        <strong>{selectedService.code}</strong>
         <span>{selectedService.name}</span>
         {!selectedRoute && !selectedService.geometryPack && <small>Trazo pendiente</small>}
       </span>
@@ -312,28 +340,16 @@ export default function NetworkExplorer({
         compact
         inspectStops
         initialStopId={
-          initialSelection?.routeId === routeId &&
           network.stops.some(
-            (stop) => stop.id === initialSelection.stopId && stop.routeIds.includes(routeId),
+            (stop) => stop.id === selectedStopId && stop.routeIds.includes(routeId),
           )
-            ? initialSelection?.stopId
+            ? selectedStopId
             : undefined
         }
         viewportPadding={{ top: overlayHeight + 20, right: 76, bottom: 20, left: 16 }}
         selectionOverlay={selectedRouteCard}
-        mapInfo={
-          <>
-            <strong>
-              {selectedRoute ? `Mostrando 1 de ${routes.length}` : routes.length} recorridos con
-              trazo disponible.
-            </strong>
-            <p>
-              Los trazos publicados no confirman el servicio de hoy, el sentido de abordaje ni las
-              condiciones de las paradas. Consulta la fuente de cada ficha. Los tiempos y la
-              afluencia del piloto son simulados.
-            </p>
-          </>
-        }
+        topOverlay={stopSequence}
+        onStopSelect={(stop) => setSelectedStopId(stop.id)}
         preserveViewportOnResize
         onExpand={expanded ? undefined : enterMapScreen}
       />
@@ -485,17 +501,13 @@ export default function NetworkExplorer({
                           }
                           onClick={() => chooseRoute(route.id)}
                         >
-                          <span
-                            className="network-route-dot"
-                            style={{
-                              background:
-                                network?.routes.find((item) => item.id === route.id)?.color ??
-                                serviceColors[route.networkId],
-                            }}
-                            aria-hidden="true"
+                          <ServiceBadge
+                            networkId={route.networkId}
+                            routeId={route.id}
+                            code={route.code}
+                            mode={route.mode}
                           />
                           <span>
-                            <strong>{route.code}</strong>
                             <span>{route.name}</span>
                             {!route.geometryPack &&
                               !network?.routes.some((item) => item.id === route.id) && (

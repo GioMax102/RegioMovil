@@ -4,6 +4,10 @@ Organización inicial: **29 de octubre de 2026**, base `cc69761`, integración d
 
 Actualización **6 de noviembre**: [entrega de Inicio contextual](ENTREGA_INICIO_CONTEXTUAL_2026-11-06.md), [plan I1–I7](PLAN_INICIO_CONTEXTUAL_2026-11-05.md) y recorrido actualizado para evaluadores. Las verificaciones y pendientes de esa entrega sustituyen el estado anterior de Inicio.
 
+Actualización **8 de noviembre**: [Inicio desplegado, etiquetas sólidas y corpus sintético aislado](ENTREGA_UI_REPORTES_2026-11-08.md). Incluye comandos de visualización, procedencia y continuidad.
+
+Plan vigente: [UI móvil, reportes, mapas y estaciones](PLAN_CONTINUIDAD_UI_UX_2026-11-08.md). Integra las últimas anotaciones y registra criterios de continuidad.
+
 ## Lectura principal
 
 1. [Pitch](pitch.md): qué propone el producto y qué apoyo necesita.
@@ -16,7 +20,7 @@ Actualización **6 de noviembre**: [entrega de Inicio contextual](ENTREGA_INICIO
 8. [Plan de producto y comunidad, 31 de octubre](PLAN_PRODUCTO_COMUNIDAD_2026-10-31.md): diez solicitudes, implementación y pendientes vinculados a la [entrega](ENTREGA_PRODUCTO_2026-10-31.md).
 9. [Evaluación web y eficiencia, 1 de noviembre](ENTREGA_EVALUADORES_2026-11-01.md): portal, navegación, benchmark, regresiones y secuencia de revisión antes de main.
 10. [Inicio según boceto, 5 de noviembre](PLAN_INICIO_2026-11-05.md): Metro/autobús, selección cercana o manual, esquema y comunidad; pruebas y siguiente paso de P8.
-11. [Reestructuración de Inicio contextual, revisión 2](PLAN_INICIO_CONTEXTUAL_2026-11-05.md): plan vigente para próxima implementación; base Metro inmediata, selector circular y rutas cercanas. Sustituye la jerarquía del boceto anterior; todavía no implementado.
+11. [Reestructuración de Inicio contextual, revisión 2](PLAN_INICIO_CONTEXTUAL_2026-11-05.md): antecedente de la base Metro inmediata, selector circular y rutas cercanas. Su continuidad se registra en el plan UI/UX del 8 de noviembre.
 
 ## Referencias especializadas
 

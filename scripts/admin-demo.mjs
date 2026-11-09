@@ -13,14 +13,14 @@ import { populateAdminDemo } from '../server/admin-demo.mjs';
 const args = process.argv.slice(2);
 if (args.includes('--help')) {
   console.log(
-    'node scripts/admin-demo.mjs --directory /tmp/regiomovil-admin-demo-NAME [--seed NAME] [--date ISO]\nCreates isolated synthetic reports, a manifest and a private demo.env for port4180. Never overwrites a destination. Create its administrative account using admin-user.mjs and complete MFA normally.',
+    'node scripts/admin-demo.mjs --directory /tmp/regiomovil-admin-demo-NAME [--profile map|community] [--seed NAME] [--date ISO]\nCreates isolated synthetic reports (map: 240, community: 1200), a manifest and a private demo.env for port4180. Never overwrites a destination. Create its administrative account using admin-user.mjs and complete MFA normally.',
   );
   process.exit(0);
 }
 const input = {};
 for (let i = 0; i < args.length; i += 2) {
   if (
-    !['--directory', '--seed', '--date'].includes(args[i]) ||
+    !['--directory', '--seed', '--date', '--profile'].includes(args[i]) ||
     !args[i + 1] ||
     input[args[i]] !== undefined
   )
@@ -28,6 +28,8 @@ for (let i = 0; i < args.length; i += 2) {
   input[args[i]] = args[i + 1];
 }
 if (!input['--directory']) throw new Error('Se requiere un directorio nuevo explícito.');
+const profile = input['--profile'] ?? 'map';
+if (!['map', 'community'].includes(profile)) throw new Error('El perfil debe ser map o community.');
 const requested = resolve(input['--directory']);
 if (
   /[\u0000-\u001f\u007f]/.test(requested) ||
@@ -67,6 +69,7 @@ const manifest = populateAdminDemo(databasePath, {
   catalog: JSON.parse(readFileSync('data/transit-catalog.json', 'utf8')),
   seed: input['--seed'] ?? 'regiomovil-31',
   referenceDate: date,
+  profile,
 });
 writeFileSync(join(directory, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', {
   flag: 'wx',
@@ -95,6 +98,7 @@ console.log(
     directory,
     manifest: join(directory, 'manifest.json'),
     environment: join(directory, 'demo.env'),
+    profile,
     ...manifest.expected,
   }),
 );

@@ -17,6 +17,7 @@ import type { RoutePack, TransitCatalogData, TransitRoute } from '../types';
 import { Dialog } from './Primitives';
 import NetworkMap from './NetworkMap';
 import ServiceIdentity from './ServiceIdentity';
+import ServiceBadge from './ServiceBadge';
 import PublicReports from './DeferredReports';
 import './transit-catalog.css';
 
@@ -295,18 +296,23 @@ export default function TransitCatalog({
                 key={route.id}
                 className="service-card panel"
                 onClick={() => setSelected(route)}
-                style={
-                  {
-                    '--service-color': serviceColors[route.networkId] ?? '#386d4a',
-                  } as React.CSSProperties
-                }
                 aria-label={`Ver ruta ${route.code}: ${route.name}. ${statusLabels[route.status]}. ${networkName(route.networkId)}`}
               >
                 <div className="service-card-top">
-                  <span className="service-route-code">
-                    {route.mode === 'metro' ? <TrainFront size={18} /> : <BusFront size={18} />}{' '}
+                  <ServiceBadge
+                    networkId={route.networkId}
+                    routeId={route.id}
+                    code={route.code}
+                    mode={route.mode}
+                    className="service-route-code"
+                  >
+                    {route.mode === 'metro' ? (
+                      <TrainFront size={18} aria-hidden="true" />
+                    ) : (
+                      <BusFront size={18} aria-hidden="true" />
+                    )}
                     {route.code}
-                  </span>
+                  </ServiceBadge>
                   {!['published', 'operational'].includes(route.status) && (
                     <span className={`service-status ${route.status}`}>
                       {statusLabels[route.status]}

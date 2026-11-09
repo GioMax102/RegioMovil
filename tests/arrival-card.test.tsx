@@ -1,10 +1,20 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { ArrivalCard } from '../src/components/Primitives';
 import type { Arrival } from '../src/types';
+
+const sourceHooks = registerHooks({
+  load(url, context, nextLoad) {
+    return url.endsWith('.css')
+      ? { format: 'module', source: '', shortCircuit: true }
+      : nextLoad(url, context);
+  },
+});
+const { ArrivalCard } = await import('../src/components/Primitives');
+after(() => sourceHooks.deregister());
 
 const arrival: Arrival = {
   id: 'unit-test',
@@ -34,8 +44,8 @@ test('arrival card shows the simulated ETA range instead of a precise minute est
     assert.match(doc.querySelector('.arrival-estimate')!.textContent!, /Llegada estimada/);
     const button = doc.querySelector('button')!;
     assert.equal(button.type, 'button');
-    assert.match(button.getAttribute('aria-label')!, /llegada simulada en 7 a 12 minutos/);
-    assert.match(doc.querySelector('.arrival-badges')!.textContent!, /Simulación/);
+    assert.match(button.getAttribute('aria-label')!, /llegada estimada en 7 a 12 minutos/);
+    assert.doesNotMatch(doc.querySelector('.arrival-badges')!.textContent!, /Simulación/);
   } finally {
     dom.window.close();
   }
@@ -58,7 +68,7 @@ test('crowding and cooling use explicit text labels, including unknown cooling',
       );
       assert.match(
         doc.querySelector('button')!.getAttribute('aria-label')!,
-        /Aire acondicionado simulado/,
+        /Aire acondicionado:/,
       );
     } finally {
       dom.window.close();

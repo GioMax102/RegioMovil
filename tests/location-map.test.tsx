@@ -771,7 +771,8 @@ test('a compact map expands on tap or Enter, without confusing a drag or cancell
   });
   assert.equal(expanded, 2);
   assert.equal(container.querySelector('.location-map > .location-map-legend'), null);
-  assert.equal(container.querySelector('.location-map-info')?.hasAttribute('open'), false);
+  assert.equal(container.querySelector('.location-map-info'), null);
+  assert.ok(container.querySelector('.location-map-credit'));
 });
 
 test('journey geometry gaps stay disconnected and resizing a sheet refits a route into the visible map', async () => {
@@ -891,7 +892,6 @@ test('the common overlay dock measures attribution/safe inset and fits above the
       field: null,
       compact: true,
       selectionOverlay: <button>Ruta con nombre completo de referencia</button>,
-      mapInfo: <p>Cobertura verificada por catálogo</p>,
       viewportPadding: { top: 90, left: 12, right: 72 },
     });
     const map = container.querySelector<HTMLElement>('.location-map')!;
@@ -902,10 +902,9 @@ test('the common overlay dock measures attribution/safe inset and fits above the
       'A tall sheet reserves the intersecting control column.',
     );
     assert.ok(container.querySelector('.location-map-selection > button'));
-    assert.equal(container.querySelectorAll('.location-map-footer details').length, 1);
-    assert.ok(
-      container.querySelector('.location-map-info')?.textContent?.includes('Cobertura verificada'),
-    );
+    assert.equal(container.querySelectorAll('.location-map-footer details').length, 0);
+    assert.equal(container.querySelector('.location-map-info'), null);
+    assert.ok(container.querySelector('.location-map-credit')?.textContent?.includes('OpenStreetMap'));
     await act(async () =>
       container
         .querySelector<HTMLButtonElement>('[aria-label="Centrar mapa en las rutas"]')!
@@ -920,20 +919,6 @@ test('the common overlay dock measures attribution/safe inset and fits above the
       assert.ok(x >= 12 && x <= rect.width - 72);
       assert.ok(y >= 90 && y <= 258, `y=${y} stays above the measured selection sheet.`);
     }
-    const info = container.querySelector<HTMLDetailsElement>('.location-map-info')!;
-    await act(async () => {
-      info.open = true;
-      info.dispatchEvent(new dom.window.Event('toggle'));
-    });
-    assert.equal(
-      container.querySelector<HTMLElement>('.location-map-selection')!.hidden,
-      true,
-      'Information temporarily replaces the sheet instead of covering its actions.',
-    );
-    await act(async () => {
-      info.open = false;
-      info.dispatchEvent(new dom.window.Event('toggle'));
-    });
     assert.equal(container.querySelector<HTMLElement>('.location-map-selection')!.hidden, false);
   } finally {
     dom.window.HTMLElement.prototype.getBoundingClientRect = previousRect;

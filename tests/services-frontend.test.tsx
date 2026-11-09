@@ -264,15 +264,8 @@ test('Red restores the exact canonical Metro stop received with its initial rout
   const selected = await screen.findByRole('region', { name: 'Estación seleccionada' });
   assert.ok(within(selected).getByText('Universidad', { exact: true }));
   assert.ok(within(selected).getByRole('button', { name: 'Centrar estación Universidad' }));
-  assert.equal(
-    (
-      screen.getByRole('combobox', {
-        name: 'Paradas de la ruta',
-        hidden: true,
-      }) as HTMLSelectElement
-    ).value,
-    'metro:universidad',
-  );
+  const sequence = screen.getByRole('region', { name: /paradas/i });
+  assert.ok(within(sequence).getByRole('button', { name: /Universidad, seleccionada/ }));
   assert.deepEqual(
     [...document.querySelectorAll('polyline[data-line]')].map((line) =>
       line.getAttribute('data-line'),
@@ -579,15 +572,10 @@ test('Red isolates a published route, expands one map and resets the selection w
   await waitFor(() => assert.equal(document.querySelectorAll('polyline[data-line]').length, 1));
   assert.ok(document.querySelector('polyline[data-line="L1"]'));
   assert.ok(screen.getByRole('button', { name: 'Metro', exact: true, pressed: true }));
-  const information = document.querySelector('.location-map-info') as HTMLDetailsElement;
-  assert.equal(information.open, false, 'Coverage is available without filling the map with text.');
-  assert.equal(
-    document.querySelectorAll('.location-map-footer details').length,
-    1,
-    'Coverage, legend and stops share one information entry.',
-  );
+  assert.equal(document.querySelector('.location-map-info'), null);
+  assert.ok(document.querySelector('.location-map-credit'));
   assert.equal(document.querySelector('.network-coverage-info'), null);
-  assert.ok(screen.getByText(/Mostrando 1 de 3 recorridos/));
+  assert.equal(document.querySelectorAll('polyline[data-line="L1"]').length, 1);
   screen.getByRole('group', { name: /^Mapa interactivo/ }).focus();
   await user.keyboard('{Enter}');
   const expanded = document.querySelector(
@@ -661,8 +649,14 @@ test('map route search opens a compact source-backed detail while the catalog st
   );
   assert.equal(screen.queryByRole('listbox'), null);
   await user.type(search, 'linea 1');
-  await user.click(await screen.findByRole('option', { name: /L1/ }));
-  await user.click(screen.getByRole('button', { name: 'Ver ficha de L1: Línea 1' }));
+  const option = await screen.findByRole('option', { name: /L1/ });
+  const optionBadge = within(option).getByText('L1');
+  assert.equal(optionBadge.title, 'Metro · L1');
+  assert.ok(optionBadge.style.backgroundColor);
+  await user.click(option);
+  const selectedRoute = screen.getByRole('button', { name: 'Ver ficha de L1: Línea 1' });
+  assert.equal(within(selectedRoute).getByText('L1').title, 'Metro · L1');
+  await user.click(selectedRoute);
   const dialog = await screen.findByRole('dialog', { name: 'L1 · Metrorrey' });
   const information = within(dialog).getByText('Información y fuentes', { selector: 'summary' })
     .parentElement as HTMLDetailsElement;
