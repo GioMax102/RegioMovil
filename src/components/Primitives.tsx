@@ -112,7 +112,7 @@ export function ArrivalCard({ arrival, onDetails }: { arrival: Arrival; onDetail
       className="arrival-card arrival-card-refined"
       type="button"
       onClick={onDetails}
-      aria-label={`${arrival.lineName} hacia ${arrival.direction}, llegada simulada en ${arrival.etaRange[0]} a ${arrival.etaRange[1]} minutos. Afluencia simulada ${arrival.occupancyLabel}. Aire acondicionado simulado: ${arrival.climate === 'working' ? 'funcionando' : arrival.climate === 'unavailable' ? 'no disponible' : 'sin información'}. Ver detalles.`}
+      aria-label={`${arrival.lineName} hacia ${arrival.direction}, llegada estimada en ${arrival.etaRange[0]} a ${arrival.etaRange[1]} minutos. Afluencia ${arrival.occupancyLabel}. Aire acondicionado: ${arrival.climate === 'working' ? 'funcionando' : arrival.climate === 'unavailable' ? 'no disponible' : 'sin información'}. Ver detalles.`}
     >
       <div className="arrival-top">
         <span className="train-icon" aria-hidden="true">
@@ -121,7 +121,6 @@ export function ArrivalCard({ arrival, onDetails }: { arrival: Arrival; onDetail
         <div>
           <span className="arrival-badges">
             <LineBadge id={arrival.lineId} />
-            <small>Simulación</small>
           </span>
           <h3>
             <span className="arrival-direction-label">Hacia</span> {arrival.direction}

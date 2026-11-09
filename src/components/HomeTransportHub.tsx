@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
-  Bookmark,
   ChevronDown,
-  Flag,
   Info,
   LocateFixed,
   Map,
@@ -15,6 +13,7 @@ import { loadRoutePack, loadTransitCatalog, network } from '../api';
 import type { RoutePack } from '../types';
 import type { RegionalView } from '../mobility/regionalViewport';
 import type { SavedMobilityTrip } from '../mobility/types';
+import type { MobilityStop } from '../mobility/types';
 import { homeMetroCoordinates, homeRouteSegments, homeSourceHref } from './homeTransport';
 import { homeCanonicalStops } from './homeNearby';
 import type { HomeRoute, HomeSelection, HomeUiState } from './homeTypes';
@@ -27,12 +26,12 @@ import HomeTransportMap from './HomeTransportMap';
 import DeferredSection from './DeferredSection';
 import { Dialog } from './Primitives';
 import HomeSavedTrips from './HomeSavedTrips';
+import DeferredReports from './DeferredReports';
 import { useHomeReportDraft } from './useHomeReportDraft';
 import { useHomeUiReturn } from './useHomeUiReturn';
 import './homeTransportHub.css';
 
 const loadPicker = () => import('./HomeTransportPicker');
-const loadCommunity = () => import('./HomeCommunityFeed');
 const loadSelectedMap = () => import('./HomeSelectedRouteMap');
 type Target = { stationId?: string; routeId?: string };
 
@@ -147,39 +146,20 @@ export function HomeTransportTools({
   );
 }
 
-function CommunitySection({ target, onContribute }: { target: Target; onContribute: () => void }) {
-  const [attempt, setAttempt] = useState(0);
-  return (
-    <DeferredSection
-      key={attempt}
-      load={loadCommunity}
-      componentProps={{ ...target, onContribute }}
-      loadingLabel="Consultando la comunidad…"
-      loadingFallback={<p role="status">Consultando la comunidad…</p>}
-      onRetry={() => setAttempt((value) => value + 1)}
-      errorFallback={
-        <div className="home-community-error" role="alert">
-          <p>No pudimos abrir las observaciones. Puedes seguir consultando tu transporte.</p>
-          <button type="button" onClick={() => setAttempt((value) => value + 1)}>
-            Reintentar observaciones
-          </button>
-        </div>
-      }
-    />
-  );
-}
 function SelectedMap({
   selection,
   pack,
   onNetwork,
   mapViews,
   nearbyPosition,
+  onStopSelect,
 }: {
   selection: HomeSelection;
   pack?: RoutePack;
   onNetwork: (selection: HomeSelection) => void;
   mapViews?: Map<string, RegionalView>;
   nearbyPosition?: HomeUiState['nearbyPosition'];
+  onStopSelect: (stop: MobilityStop) => void;
 }) {
   const [attempt, setAttempt] = useState(0);
   const station =
@@ -225,6 +205,7 @@ function SelectedMap({
         onExpand: () => onNetwork(selection),
         viewCache: mapViews,
         nearbyPosition,
+        onStopSelect,
       }}
       loadingLabel="Abriendo el mapa…"
       loadingFallback={<p role="status">Abriendo el mapa…</p>}
@@ -251,6 +232,7 @@ function MetroMapSection(props: {
   mapViews?: Map<string, RegionalView>;
   uiState?: HomeUiState;
   nearbyPosition?: HomeUiState['nearbyPosition'];
+  onSelect: (selection: HomeSelection) => void;
 }) {
   const [open, setOpen] = useState(props.uiState?.metroMapOpen ?? true);
   return (
@@ -271,6 +253,14 @@ function MetroMapSection(props: {
         <SelectedMap
           {...props}
           nearbyPosition={props.nearbyPosition ?? props.uiState?.nearbyPosition}
+          onStopSelect={(stop) => {
+            if (props.selection.kind === 'metro')
+              props.onSelect({
+                ...props.selection,
+                stationId: stop.stationId ?? stop.id.replace(/^metro:/, ''),
+                source: 'manual',
+              });
+          }}
         />
       )}
     </details>
@@ -283,7 +273,7 @@ export default function HomeTransportHub({
   onSelect,
   onNetwork,
   onPlan,
-  onSaved,
+  onSaved: _onSaved,
   onSavedTrip,
   onReportTarget,
   onReportGeneral,
@@ -407,25 +397,33 @@ export default function HomeTransportHub({
       : { routeId: selection.route.id };
   const source = homeSourceHref(pack?.sourceUrl);
   const date = /^(\d{4}-\d{2}-\d{2})/.exec(pack?.verifiedAt || '')?.[1];
-  const report = () => (hasReportDraft ? onReportGeneral() : onReportTarget(target));
   const planningSelection: HomeSelection = selection.kind === 'bus' ? { ...selection } : selection;
   if (planningSelection.kind === 'bus') {
     if (stop) planningSelection.stopId = stop.id;
     else delete planningSelection.stopId;
   }
+  const selectMapStop = (stop: MobilityStop) => {
+    if (selection.kind === 'metro') {
+      onSelect({
+        ...selection,
+        stationId: stop.stationId ?? stop.id.replace(/^metro:/, ''),
+        source: 'manual',
+      });
+    } else {
+      onSelect({ ...selection, stopId: stop.id, source: 'manual' });
+    }
+  };
   const actions = (
     <div className="home-context-actions" aria-label="Acciones para este transporte">
-      <button type="button" data-home-action="plan" onClick={() => onPlan(planningSelection)}>
+      <button
+        type="button"
+        className="home-plan-primary"
+        data-home-action="plan"
+        onClick={() => onPlan(planningSelection)}
+      >
         <Route size={19} aria-hidden="true" />
         <span>Planear desde aquí</span>
-      </button>
-      <button type="button" className="home-context-report" onClick={report}>
-        <Flag size={19} aria-hidden="true" />
-        <span>{hasReportDraft ? 'Continuar reporte' : 'Reportar aquí'}</span>
-      </button>
-      <button type="button" onClick={onSaved}>
-        <Bookmark size={19} aria-hidden="true" />
-        <span>Guardados</span>
+        <ArrowRight size={19} aria-hidden="true" />
       </button>
     </div>
   );
@@ -552,6 +550,7 @@ export default function HomeTransportHub({
                 onNetwork={onNetwork}
                 mapViews={mapViews}
                 nearbyPosition={nearbyPosition ?? uiState?.nearbyPosition}
+                onStopSelect={selectMapStop}
               />
               <p className="home-transport-note">
                 Confirma parada y sentido al abordar.
@@ -571,15 +570,14 @@ export default function HomeTransportHub({
           mapViews={mapViews}
           uiState={uiState}
           nearbyPosition={nearbyPosition}
+          onSelect={onSelect}
         />
       )}
-      <div className="home-context-participation">
-        <button type="button" onClick={onReportGeneral}>
-          Crear reporte general
-          <ArrowRight size={16} aria-hidden="true" />
-        </button>
-      </div>
-      <CommunitySection key={`community:${key}`} target={target} onContribute={report} />
+      <DeferredReports
+        key={`community:${key}`}
+        {...target}
+        onReport={hasReportDraft ? onReportGeneral : () => onReportTarget(target)}
+      />
       {selection.kind === 'bus' && (
         <details className="home-transport-sources">
           <summary>Fuente y alcance</summary>

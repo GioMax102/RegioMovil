@@ -44,8 +44,8 @@ test('arrival card shows the simulated ETA range instead of a precise minute est
     assert.match(doc.querySelector('.arrival-estimate')!.textContent!, /Llegada estimada/);
     const button = doc.querySelector('button')!;
     assert.equal(button.type, 'button');
-    assert.match(button.getAttribute('aria-label')!, /llegada simulada en 7 a 12 minutos/);
-    assert.match(doc.querySelector('.arrival-badges')!.textContent!, /Simulación/);
+    assert.match(button.getAttribute('aria-label')!, /llegada estimada en 7 a 12 minutos/);
+    assert.doesNotMatch(doc.querySelector('.arrival-badges')!.textContent!, /Simulación/);
   } finally {
     dom.window.close();
   }
@@ -68,7 +68,7 @@ test('crowding and cooling use explicit text labels, including unknown cooling',
       );
       assert.match(
         doc.querySelector('button')!.getAttribute('aria-label')!,
-        /Aire acondicionado simulado/,
+        /Aire acondicionado:/,
       );
     } finally {
       dom.window.close();

@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import { network } from '../api';
 import type { RoutePack } from '../types';
-import type { MobilityNetwork, MobilityRoute } from '../mobility/types';
+import type { MobilityNetwork, MobilityRoute, MobilityStop } from '../mobility/types';
 import type { RegionalView } from '../mobility/regionalViewport';
 import LocationMap from '../mobility/LocationMap';
 import { useDataSaver } from '../dataPreferences';
 import { normalizePublishedRoute } from '../../shared/published-route.mjs';
 import { homeMetroCoordinates } from './homeTransport';
 import HomeTransportMap from './HomeTransportMap';
+import StopSequence from './StopSequence';
 import type { HomeSelection } from './homeTypes';
 import './homeSelectedRouteMap.css';
 
@@ -100,12 +101,14 @@ export default function HomeSelectedRouteMap({
   onExpand,
   viewCache,
   nearbyPosition,
+  onStopSelect,
 }: {
   selection: HomeSelection;
   pack?: RoutePack;
-  onExpand: () => void;
+  onExpand?: () => void;
   viewCache?: Map<string, RegionalView>;
   nearbyPosition?: { lat: number; lng: number; accuracy: number } | null;
+  onStopSelect?: (stop: MobilityStop) => void;
 }) {
   const lowData = useDataSaver();
   const selectedId = selection.kind === 'metro' ? selection.stationId : selection.route.id;
@@ -127,6 +130,23 @@ export default function HomeSelectedRouteMap({
   );
   const stopId = selection.kind === 'metro' ? `metro:${selection.stationId}` : selection.stopId;
   const stop = subset?.stops.find((item) => item.id === stopId);
+  const sequence = route && subset && subset.stops.length > 1 ? (
+    <StopSequence
+      className="home-stop-sequence-overlay"
+      label={
+        selection.kind === 'metro'
+          ? `${route.name} · ${subset.stops[0].name} a ${subset.stops.at(-1)?.name}`
+          : `${route.code} · Paradas`
+      }
+      stops={subset.stops.map((item) => ({ id: item.id, name: item.name }))}
+      selectedId={stopId ?? ''}
+      numbered={selection.kind === 'bus'}
+      onSelect={(id) => {
+        const chosen = subset.stops.find((item) => item.id === id);
+        if (chosen) onStopSelect?.(chosen);
+      }}
+    />
+  ) : null;
   if (!subset || !route)
     return (
       <p role="status">El mapa de este recorrido no está disponible. Puedes consultar la red.</p>
@@ -134,13 +154,17 @@ export default function HomeSelectedRouteMap({
   return (
     <div className="home-selected-route-map" data-home-action="map" tabIndex={-1}>
       {lowData ? (
-        <HomeTransportMap
-          segments={route.segments.map((segment) => segment.coordinates)}
-          marker={stop}
-          line={selection.kind === 'metro' ? route.id : undefined}
-          name={route.name}
-          onNetwork={onExpand}
-        />
+        <>
+          {sequence}
+          <HomeTransportMap
+            segments={route.segments.map((segment) => segment.coordinates)}
+            marker={stop}
+            line={selection.kind === 'metro' ? route.id : undefined}
+            name={route.name}
+            onNetwork={onExpand}
+            currentPosition={nearbyPosition}
+          />
+        </>
       ) : (
         <LocationMap
           key={cacheKey}
@@ -151,24 +175,22 @@ export default function HomeSelectedRouteMap({
           compact
           inspectStops
           preserveViewportOnResize
-          focus={nearbyPosition ?? stop}
+          focus={selection.kind === 'metro' ? stop : nearbyPosition ?? stop}
           currentPosition={nearbyPosition}
           nearbyRadiusMeters={nearbyPosition ? 3000 : undefined}
           initialStopId={stopId}
+          topOverlay={sequence}
+          onStopSelect={onStopSelect}
           initialView={viewCache?.get(cacheKey)}
           onViewChange={remember}
           onExpand={onExpand}
-          mapInfo={
-            <p>
-              Mapa local de un recorrido publicado. Confirma parada y sentido al abordar; no indica
-              la operación actual.
-            </p>
-          }
         />
       )}
-      <button type="button" className="text-button" onClick={onExpand}>
-        Ampliar en la red
-      </button>
+      {onExpand && (
+        <button type="button" className="text-button" onClick={onExpand}>
+          Ampliar en la red
+        </button>
+      )}
     </div>
   );
 }

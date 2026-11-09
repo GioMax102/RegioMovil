@@ -56,70 +56,7 @@
   border-color: var(--green);
   background: var(--soft);
 }
-.home-simulation {
-  width: fit-content;
-  padding: 5px 9px;
-  border-radius: 8px;
-  background: var(--soft);
-  color: var(--dark);
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin: 0 0 10px;
-}
-.home-arrival-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px 12px;
-  width: 100%;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--white);
-  color: var(--dark);
-  text-align: left;
-}
-.home-arrival-direction {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.home-arrival-direction > span {
-  color: var(--dark);
-  font-size: 0.75rem;
-}
-.home-arrival-time {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--green);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  padding: 8px 10px;
-  border-radius: 11px;
-  background: var(--soft);
-}
-.home-arrival-time strong {
-  font-size: 1.4rem;
-  font-variant-numeric: tabular-nums;
-}
-.home-arrival-time > span {
-  font-size: 0.75rem;
-}
-.home-arrival-crowding {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  color: var(--dark);
-  font-size: 0.8rem;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
-}
 .home-selector-fallback:focus-visible,
-.home-arrival-summary:focus-visible,
 .home-line-options button:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
@@ -168,8 +105,7 @@
   background: var(--white);
 }
 .home-outlook > summary,
-.home-data-info > summary,
-.home-advice summary {
+.home-data-info > summary {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -183,24 +119,13 @@
 .home-outlook > summary span {
   flex: 1;
 }
-.home-outlook[open] > summary > svg:last-child,
-.home-advice[open] summary > svg {
+.home-outlook[open] > summary > svg:last-child {
   transform: rotate(180deg);
 }
 .home-outlook > summary::-webkit-details-marker,
-.home-data-info > summary::-webkit-details-marker,
-.home-advice summary::-webkit-details-marker {
+.home-data-info > summary::-webkit-details-marker {
   display: none;
 }
-.home-advice {
-  border-top: 1px solid var(--line);
-  margin-top: 12px;
-}
-.home-advice summary {
-  justify-content: space-between;
-  font-size: 0.85rem;
-}
-.home-advice p,
 .home-data-info p {
   font-size: 0.85rem;
   line-height: 1.6;

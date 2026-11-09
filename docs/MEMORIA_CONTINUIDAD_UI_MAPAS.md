@@ -1,5 +1,9 @@
 # Continuidad de RegioMóvil — UI, mapas y cobertura
 
+## Estado al 8 de noviembre de 2026 — mapas y tarjetas
+
+Plan activo y criterios: [PLAN_CONTINUIDAD_MAPAS_Y_TARJETAS_2026-11-08.md](PLAN_CONTINUIDAD_MAPAS_Y_TARJETAS_2026-11-08.md). Se implementaron los primeros bloques en `codex/ux-reportes-visibles`: Inicio prioriza Planear, usa una tarjeta de llegada común y el feed de reportes filtrable; se comparte `StopSequence` entre Inicio/Red/Metro, se simplifica el mapa de bajo consumo y se retiró el popover de información de `LocationMap`. El detalle Metro reutiliza el mapa de Inicio y permite cambiar el foco de estación desde la secuencia. TypeScript, 71 pruebas focalizadas y build Android debug pasan. Vite está en 5173, API web en 3001 y API para Android en 4173; el APK está en `output/android/regiomovil-debug.apk`. ADB no mostró un teléfono conectado; al reconectar, autorizar USB y correr `./regiomovil android-connect` para abrir el túnel.
+
 > Continuación del 27 de octubre: consultar primero [quejas y cobertura actualizada](MEMORIA_QUEJAS_COBERTURA_2026-10-27.md). `feature/queja` integra esta base de `fixes`, 185 rutas de autobús y los reportes revisados.
 
 

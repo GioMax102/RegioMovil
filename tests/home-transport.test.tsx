@@ -196,7 +196,7 @@ function mount(overrides: Partial<Props> = {}) {
   };
 }
 
-test('Metro shows its map on entry without the graph/catalog/packs and keeps compact actions separate', async () => {
+test('Metro foregrounds planning and puts contextual reporting in the community card', async () => {
   const view = mount();
   const user = userEvent.setup({ document: dom.window.document });
   await screen.findByText(/Todavía no hay reportes públicos/);
@@ -204,13 +204,13 @@ test('Metro shows its map on entry without the graph/catalog/packs and keeps com
   assert.equal(document.querySelector<HTMLDetailsElement>('.home-metro-map')?.open, true);
   assert.ok(requests.every((path) => path.startsWith('/api/reports?station=')));
   await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
-  await user.click(screen.getByRole('button', { name: 'Guardados', exact: true }));
-  await user.click(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
-  await user.click(screen.getByRole('button', { name: 'Crear reporte general' }));
+  assert.equal(screen.queryByRole('button', { name: 'Guardados', exact: true }), null);
+  assert.equal(screen.queryByRole('button', { name: 'Crear reporte general', exact: true }), null);
+  await user.click(await screen.findByRole('button', { name: /Ayuda a mejorar este lugar/ }));
   assert.deepEqual(view.planned, [metro]);
-  assert.equal(view.saved(), 1);
+  assert.equal(view.saved(), 0);
   assert.deepEqual(view.reported, [{ stationId: metro.kind === 'metro' ? metro.stationId : '' }]);
-  assert.equal(view.general(), 1);
+  assert.equal(view.general(), 0);
   await user.click(screen.getByRole('button', { name: 'Ampliar recorrido' }));
   assert.deepEqual(view.expanded, [metro]);
   assert.deepEqual(view.selections, []);
@@ -238,7 +238,7 @@ test('bus context loads one settled pack, canonical stop selection updates conte
     screen.getByRole('link', { name: 'Fuente del trazo' }).getAttribute('href'),
     pack.sourceUrl,
   );
-  await user.click(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
+  await user.click(await screen.findByRole('button', { name: /Ayuda a mejorar este lugar/ }));
   assert.deepEqual(view.reported, [{ routeId: 'bus-a' }]);
 });
 
@@ -251,7 +251,7 @@ test('manual routes without traces retain planning, reporting, sources and their
   assert.equal(screen.queryByRole('button', { name: /Parada del recorrido/ }), null);
   assert.equal(screen.queryByTestId('selected-map'), null);
   await user.click(screen.getByRole('button', { name: 'Planear desde aquí' }));
-  await user.click(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
+  await user.click(await screen.findByRole('button', { name: /Ayuda a mejorar este lugar/ }));
   assert.deepEqual(view.planned, [selection]);
   assert.deepEqual(view.reported, [{ routeId: 'without-trace' }]);
   assert.ok(requests.every((path) => path.startsWith('/api/reports?route=without-trace')));
@@ -284,7 +284,7 @@ test('pack failures are retryable and never disable reporting or reuse Metro pre
   mount({ selection: bus() });
   const user = userEvent.setup({ document: dom.window.document });
   await screen.findByRole('alert');
-  assert.ok(screen.getByRole('button', { name: 'Reportar aquí', exact: true }));
+  assert.ok(await screen.findByRole('button', { name: /Ayuda a mejorar este lugar/ }));
   assert.ok(screen.getByText('Llegadas y afluencia no disponibles'));
   assert.equal(screen.queryByRole('button', { name: /llegada simulada/ }), null);
   failPack = false;
@@ -295,7 +295,8 @@ test('pack failures are retryable and never disable reporting or reuse Metro pre
 test('a retained report draft resumes without silently assigning the newly selected route', async () => {
   const view = mount({ selection: bus(), hasReportDraft: true });
   const user = userEvent.setup({ document: dom.window.document });
-  await user.click(screen.getByRole('button', { name: 'Continuar reporte' }));
+  await screen.findByRole('button', { name: /Ayuda a mejorar este lugar/ });
+  await user.click(screen.getByRole('button', { name: /Ayuda a mejorar este lugar/ }));
   assert.equal(view.general(), 1);
   assert.deepEqual(view.reported, []);
 });

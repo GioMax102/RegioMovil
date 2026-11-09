@@ -167,10 +167,8 @@ test('selected-route map restores camera after unmount/resize, but changing the 
   const map = () => first.container.querySelector('svg[data-map-zoom]')!;
   assert.equal(map().getAttribute('data-map-zoom'), '15.000');
   assert.equal(map().getAttribute('data-map-center'), '25.7500000,-100.3200000');
-  assert.equal(
-    (screen.getByLabelText('Paradas de la ruta') as HTMLSelectElement).value,
-    'sample:a',
-  );
+  assert.ok(screen.getByRole('group', { name: /Paradas/i }));
+  assert.ok(screen.getByRole('button', { name: /Parada 1: A/ }).getAttribute('aria-current'));
   const user = userEvent.setup({ document: dom.window.document });
   await user.click(screen.getByRole('button', { name: 'Acercar mapa' }));
   const zoom = map().getAttribute('data-map-zoom'),
@@ -200,10 +198,7 @@ test('selected-route map restores camera after unmount/resize, but changing the 
       onExpand={() => {}}
     />,
   );
-  assert.equal(
-    (screen.getByLabelText('Paradas de la ruta') as HTMLSelectElement).value,
-    'sample:b',
-  );
+  assert.ok(screen.getByRole('button', { name: /Parada 2: B/ }).getAttribute('aria-current'));
   assert.notEqual(restored().getAttribute('data-map-center'), center);
   assert.ok(views.has('bus:sample:123456abcdef:sample:a'));
 });

@@ -143,7 +143,7 @@ function savedTrip(label: string): SavedMobilityTrip {
   } as SavedMobilityTrip;
 }
 
-test('hourly crowding and advice are visible on entry while methodology remains optional', async () => {
+test('hourly crowding is visible without redundant advice; simulation remains in sources', async () => {
   const user = userEvent.setup({ document: dom.window.document });
   const { container } = mount();
   await screen.findByRole('button', { name: 'Ver estación', exact: true });
@@ -151,7 +151,8 @@ test('hourly crowding and advice are visible on entry while methodology remains 
   const info = container.querySelector('.home-data-info') as HTMLDetailsElement;
   assert.equal(outlook.open, true);
   assert.equal(info.open, false);
-  assert.equal(container.querySelector<HTMLDetailsElement>('.home-advice')?.open, true);
+  assert.equal(container.querySelector('.home-advice'), null);
+  assert.equal(screen.queryByText('Llegadas y afluencia simuladas'), null);
   assert.ok(screen.getByRole('img', { name: /Afluencia simulada por hora/ }));
   assert.match(container.querySelector('.home-quiet-hour')!.textContent!, /12:00/);
   await user.click(screen.getByText('Afluencia por hora'));
@@ -160,8 +161,9 @@ test('hourly crowding and advice are visible on entry while methodology remains 
   assert.equal(outlook.open, true);
   await user.click(screen.getByText('Datos y fuentes'));
   assert.equal(info.open, true);
-  assert.match(info.textContent!, /son una simulación/);
+  assert.match(info.textContent!, /estimaciones de demostración/);
   assert.ok(info.querySelectorAll('a[href^="https:"]').length > 0);
+  assert.equal(container.querySelector('.home-data-info')?.parentElement, container.querySelector('.home-dashboard'));
 });
 
 test('home never invents saved destinations or retains the old verbose shortcut cards', async () => {

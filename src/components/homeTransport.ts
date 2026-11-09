@@ -89,9 +89,14 @@ export function homeMetroCoordinates(stations: readonly Station[], stationIds: r
 }
 
 /** A small route schematic. It deliberately fetches no street tiles or regional graph. */
-export function projectHomePreview(segments: readonly HomeCoordinates[][], marker?: HomePoint) {
+export function projectHomePreview(
+  segments: readonly HomeCoordinates[][],
+  marker?: HomePoint,
+  userPosition?: HomePoint | null,
+) {
   const points = segments.flat();
   if (marker) points.push([marker.lng, marker.lat]);
+  if (userPosition) points.push([userPosition.lng, userPosition.lat]);
   const valid = points.filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat));
   if (!valid.length) return null;
   const origin = valid[0];
@@ -115,5 +120,7 @@ export function projectHomePreview(segments: readonly HomeCoordinates[][], marke
         .join(' '),
     ),
     marker: marker ? project([marker.lng, marker.lat]) : null,
+    userPosition: userPosition ? project([userPosition.lng, userPosition.lat]) : null,
+    radius: userPosition ? (3000 / 111_000) * scale : 0,
   };
 }

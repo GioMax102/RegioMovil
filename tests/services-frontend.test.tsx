@@ -264,15 +264,8 @@ test('Red restores the exact canonical Metro stop received with its initial rout
   const selected = await screen.findByRole('region', { name: 'Estación seleccionada' });
   assert.ok(within(selected).getByText('Universidad', { exact: true }));
   assert.ok(within(selected).getByRole('button', { name: 'Centrar estación Universidad' }));
-  assert.equal(
-    (
-      screen.getByRole('combobox', {
-        name: 'Paradas de la ruta',
-        hidden: true,
-      }) as HTMLSelectElement
-    ).value,
-    'metro:universidad',
-  );
+  const sequence = screen.getByRole('region', { name: /paradas/i });
+  assert.ok(within(sequence).getByRole('button', { name: /Universidad, seleccionada/ }));
   assert.deepEqual(
     [...document.querySelectorAll('polyline[data-line]')].map((line) =>
       line.getAttribute('data-line'),
@@ -579,15 +572,10 @@ test('Red isolates a published route, expands one map and resets the selection w
   await waitFor(() => assert.equal(document.querySelectorAll('polyline[data-line]').length, 1));
   assert.ok(document.querySelector('polyline[data-line="L1"]'));
   assert.ok(screen.getByRole('button', { name: 'Metro', exact: true, pressed: true }));
-  const information = document.querySelector('.location-map-info') as HTMLDetailsElement;
-  assert.equal(information.open, false, 'Coverage is available without filling the map with text.');
-  assert.equal(
-    document.querySelectorAll('.location-map-footer details').length,
-    1,
-    'Coverage, legend and stops share one information entry.',
-  );
+  assert.equal(document.querySelector('.location-map-info'), null);
+  assert.ok(document.querySelector('.location-map-credit'));
   assert.equal(document.querySelector('.network-coverage-info'), null);
-  assert.ok(screen.getByText(/Mostrando 1 de 3 recorridos/));
+  assert.equal(document.querySelectorAll('polyline[data-line="L1"]').length, 1);
   screen.getByRole('group', { name: /^Mapa interactivo/ }).focus();
   await user.keyboard('{Enter}');
   const expanded = document.querySelector(

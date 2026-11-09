@@ -5,7 +5,9 @@ import React from 'react';
 import { JSDOM } from 'jsdom';
 
 /** Each caller runs in its own test process: rejected imports stay cached in ESM. */
-export async function homeWithFailedModule(module: 'HomeTransportHub' | 'HomeCommunityFeed') {
+export async function homeWithFailedModule(
+  module: 'HomeTransportHub' | 'HomeCommunityFeed' | 'PublicReports',
+) {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', {
     url: 'http://localhost/',
   });

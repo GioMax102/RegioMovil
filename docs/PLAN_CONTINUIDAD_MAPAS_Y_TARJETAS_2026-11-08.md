@@ -3,7 +3,16 @@
 **Fecha:** 8 de noviembre de 2026  
 **Rama base verificada:** `codex/ux-reportes-visibles`  
 **Commit base:** `4a8f2ec` — `Mejora reportes comunitarios y selector de estaciones`  
-**Alcance de este documento:** plan y criterios de aceptación. La implementación comienza en una interacción posterior.
+**Alcance de este documento:** especificación, criterios de aceptación y estado de ejecución para continuidad.
+
+## Estado de ejecución — 8 de noviembre de 2026
+
+- **Aplicado:** Inicio oculta los accesos secundarios redundantes, destaca «Planear desde aquí», quita el consejo «Compara antes de salir», reutiliza `ArrivalCard`, mantiene procedencia al final y carga reportes con el mismo feed y filtros de Red.
+- **Aplicado:** la secuencia de estaciones es compartida por Inicio, Red y detalle Metro. El desplazamiento/selección sincroniza el punto enfocado; las rutas de autobús muestran número y nombre en la ficha. Modo de ahorro usa esquema ligero, con posición del usuario y radio aproximado de búsqueda.
+- **Aplicado:** el mapa del detalle Metro reutiliza el mapa interactivo de Inicio; tarjetas de estación añaden acceso a Street View y Google Maps si hay coordenadas. `LocationMap` ya no muestra el botón de información/cobertura; conserva atribución.
+- **Verificado:** TypeScript, compilación web/Capacitor y ocho grupos de pruebas focalizadas (71 pruebas: tarjeta de llegada, Inicio, mapas, flujo de transporte, error diferido de reportes, mapa interactivo, detalle Metro y Red). El APK debug se generó en `output/android/regiomovil-debug.apk` con API local `http://localhost:4173`.
+- **Servidor activo:** Vite `http://localhost:5173`, API web `http://localhost:3001` y API para Android `http://localhost:4173/api/health` (200 OK y CORS `https://localhost`). La pestaña existente de `localhost:4173` sirve el bundle web actualizado.
+- **Pendiente de prueba física:** `adb devices -l` no mostró un teléfono conectado; ADB necesita el dispositivo desbloqueado y autorizado. Falta revisión física de tamaño pequeño, TalkBack, GPS y desempeño en el teléfono del usuario.
 
 ## Objetivo
 
@@ -117,9 +126,10 @@ Unificar apariencia, capas, atribución y controles entre `LocationMap` y `Netwo
 - Llegadas/afluencia conservan una nota de simulación en fuentes y no se presentan como datos en vivo.
 - Suite y build pasan; no suben recursos iniciales ni memoria del mapa sin justificación medida; Android se revisa en teléfono.
 
-## Inicio de la siguiente interacción
+## Próximo ciclo de continuidad
 
-1. Comprobar `git status`, rama y commits; conservar trabajo del usuario.
-2. Leer este plan y `docs/MEMORIA_CONTINUIDAD_UI_MAPAS.md`; cotejar anotaciones con componentes actuales antes de modificar.
-3. Implementar Fase 1 en un bloque revisable y probar Inicio móvil; continuar con Fases 2–4 en bloques dependientes.
-4. Cerrar cada interacción con pruebas relevantes, actualización de continuidad y, si está validado, commit/push normal en la rama de trabajo.
+1. Conectar teléfono con depuración USB, aceptar el permiso en el dispositivo y ejecutar `./regiomovil android-connect`; eso verifica salud/API y reenvía el puerto 4173.
+2. Abrir el proyecto `android/` en Android Studio y pulsar Run. El bundle actual ya está compilado/sincronizado; para cambios web futuros ejecutar `./regiomovil android --dev-local-api` antes de Run.
+3. Probar 320/360/390 px, desplazamiento de la secuencia, centro de estación, acciones ver/guardar/reportar/Maps, filtros de reportes, GPS/radio, tamaño de fuente y TalkBack.
+4. Completar cobertura de Planear, trayectoria y guía con el mapa común; medir render/memoria en dispositivo de gama baja y registrar evidencia/cifras.
+5. Actualizar este estado y `docs/MEMORIA_CONTINUIDAD_UI_MAPAS.md` después de cada bloque probado. No sobrescribir cambios de usuario ni publicar despliegues productivos desde esta continuidad.

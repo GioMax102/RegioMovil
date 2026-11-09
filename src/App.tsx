@@ -867,6 +867,7 @@ export default function App() {
                 onArrival={setArrival}
                 now={now}
                 onSelectStation={setStation}
+                nearbyPosition={homeUiState.current.nearbyPosition ?? null}
               />
             </div>
           )}

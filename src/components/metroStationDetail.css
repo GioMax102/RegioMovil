@@ -37,13 +37,6 @@
   flex-wrap: wrap;
   gap: 5px;
 }
-.metro-line-context {
-  min-width: 0;
-  padding: 13px 12px 11px;
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  background: var(--white);
-}
 .metro-line-context-heading {
   display: grid;
   gap: 3px;
@@ -121,25 +114,6 @@
   font-size: 0.66rem;
   font-weight: 700;
 }
-.metro-station-focus-map {
-  overflow: hidden;
-  border-radius: 12px;
-  background: #ecefe7;
-}
-.metro-station-focus-map .network-map {
-  height: clamp(170px, 38vw, 245px);
-  min-height: 0;
-  border: 0;
-  border-radius: 12px;
-}
-.metro-station-focus-map .network-map > svg {
-  height: 100%;
-}
-.metro-station-focus-map .map-controls,
-.metro-station-focus-map .map-compass {
-  display: none;
-}
-
 .metro-station-outlook {
   padding: 14px 12px 8px;
   min-width: 0;

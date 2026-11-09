@@ -6,7 +6,7 @@
 }
 .home-transport-hub {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 .home-context-selector {
   display: grid;
@@ -301,37 +301,30 @@
   font: inherit;
 }
 .home-context-actions {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr;
-  gap: 8px;
+  display: block;
 }
-.home-context-actions button {
+.home-context-actions .home-plan-primary {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 52px;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
   min-width: 0;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--white);
-  color: var(--green);
-  font-size: 0.86rem;
+  padding: 14px 18px;
+  border: 1px solid var(--green);
+  border-radius: 16px;
+  background:
+    repeating-radial-gradient(ellipse at 105% 130%, transparent 0 16px, #ffffff14 17px 18px),
+    var(--app-primary);
+  color: #fff;
+  box-shadow: var(--surface-shadow);
+  font-size: 0.96rem;
   line-height: 1.4;
-  font-weight: 600;
-  text-align: left;
+  font-weight: 700;
+  text-align: center;
 }
-.home-context-actions button:first-child {
-  background: var(--green);
-  border-color: var(--green);
-  color: var(--white);
-}
-.home-context-actions .home-context-report {
-  border-color: var(--green);
-  background: var(--soft);
-}
-.home-context-actions svg {
+.home-context-actions .home-plan-primary svg {
   flex: none;
 }
 .home-context-participation {
@@ -660,6 +653,16 @@
   stroke: currentColor;
   stroke-width: 1px;
 }
+.home-transport-map .home-map-search-radius {
+  fill: #48b7d433;
+  stroke: #1689ab;
+  stroke-width: 1.5px;
+}
+.home-transport-map .home-map-user-position > circle:last-child {
+  fill: #1689ab;
+  stroke: #fff;
+  stroke-width: 3px;
+}
 .home-transport-map-caption {
   display: block;
   font-size: 0.72rem;
@@ -701,17 +704,7 @@
     font-size: 0.78rem;
     padding-inline: 6px;
   }
-  .home-context-actions {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .home-context-actions button {
-    padding: 11px 12px;
-    font-size: 0.86rem;
-  }
-  .home-context-actions button:first-child {
-    grid-column: 1 / -1;
-  }
+  .home-context-actions .home-plan-primary { min-height: 60px; }
   .dialog:has(.home-transport-picker) {
     inset: auto 0 var(--app-safe-bottom);
     width: 100%;
@@ -748,8 +741,10 @@
 @media (forced-colors: active) {
   .home-context-vehicle,
   .home-picker-choice,
-  .home-context-actions button {
+  .home-context-actions .home-plan-primary {
     border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
   }
   .home-picker-choice[aria-checked='true'] {
     outline: 2px solid Highlight;

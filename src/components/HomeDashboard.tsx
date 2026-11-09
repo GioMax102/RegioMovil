@@ -3,7 +3,7 @@ import { ArrowRight, Bookmark, ChevronDown, Clock3, Flag, Info, MapPin, Users } 
 import { network } from '../api';
 import type { Arrival, Board, Station } from '../types';
 import type { SavedMobilityTrip } from '../mobility/types';
-import { Forecast, LineBadge } from './Primitives';
+import { ArrivalCard, Forecast, LineBadge } from './Primitives';
 import type { HomeSelection, HomeUiState } from './homeTypes';
 import type { PositionFix } from '../mobility/location';
 import type { RegionalView } from '../mobility/regionalViewport';
@@ -151,7 +151,6 @@ export default function HomeDashboard({
             ))}
           </div>
         )}
-        {open && <p className="home-simulation">Llegadas y afluencia simuladas</p>}
         <div className="arrival-list" aria-busy={loading}>
           {!open ? (
             <p className="home-service-closed" role="status">
@@ -162,29 +161,7 @@ export default function HomeDashboard({
           ) : board ? (
             nextArrivals.length ? (
               nextArrivals.map((arrival) => (
-                <button
-                  type="button"
-                  className="home-arrival-summary"
-                  key={arrival.id}
-                  onClick={() => onArrival(arrival)}
-                  aria-label={`${arrival.lineName} hacia ${arrival.direction}, llegada simulada en ${arrival.etaRange[0]} a ${arrival.etaRange[1]} minutos. Afluencia simulada ${arrival.occupancyLabel}. Ver detalles.`}
-                >
-                  <span className="home-arrival-direction">
-                    <span>Hacia</span>
-                    <strong>{arrival.direction}</strong>
-                  </span>
-                  <span className="home-arrival-time">
-                    <Clock3 size={17} aria-hidden="true" />
-                    <strong>
-                      {arrival.etaRange[0]}–{arrival.etaRange[1]}
-                    </strong>
-                    <span>min</span>
-                  </span>
-                  <span className="home-arrival-crowding">
-                    <Users size={17} aria-hidden="true" />
-                    Afluencia <strong>{arrival.occupancyLabel}</strong>
-                  </span>
-                </button>
+                <ArrivalCard key={arrival.id} arrival={arrival} onDetails={() => onArrival(arrival)} />
               ))
             ) : (
               <p role="status">No hay llegadas disponibles para esta línea.</p>
@@ -211,38 +188,6 @@ export default function HomeDashboard({
           </p>
         )}
         {board && <Forecast data={board.forecast} compact serviceDate={board.generatedAt} />}
-        <details className="home-advice" open>
-          <summary>
-            <span>{board?.advice.title || 'Compara antes de salir'}</span>
-            <ChevronDown size={17} aria-hidden="true" />
-          </summary>
-          <p>
-            {board?.advice.body ||
-              'Compara las siguientes unidades para elegir el viaje que te acomode.'}
-          </p>
-        </details>
-      </details>
-      <details className="home-data-info">
-        <summary>
-          <Info size={17} aria-hidden="true" />
-          <span>Datos y fuentes</span>
-        </summary>
-        <p>
-          Llegadas, afluencia y condiciones de las unidades son una simulación. El pronóstico de
-          demostración puede diferir del servicio real.
-        </p>
-        <p>
-          Horario general de Metro: {hours.opens}–{hours.closes}. No confirma el servicio de esta
-          estación.
-        </p>
-        <a href={metroHoursSource} target="_blank" rel="noopener noreferrer">
-          Horarios: Metrorrey · consulta 24 oct 2026
-        </a>
-        {network.sources.map((source) => (
-          <a key={source.id} href={source.url} target="_blank" rel="noopener noreferrer">
-            {source.title}
-          </a>
-        ))}
       </details>
     </>
   );
@@ -316,6 +261,29 @@ export default function HomeDashboard({
           nearbyPosition,
         }}
       />
+      {current.kind === 'metro' && (
+        <details className="home-data-info">
+          <summary>
+            <Info size={17} aria-hidden="true" />
+            <span>Datos y fuentes</span>
+          </summary>
+          <p>
+            Llegadas y afluencia son estimaciones de demostración, no información en tiempo real.
+          </p>
+          <p>
+            Horario general de Metro: {hours.opens}–{hours.closes}. No confirma el servicio de esta
+            estación.
+          </p>
+          <a href={metroHoursSource} target="_blank" rel="noopener noreferrer">
+            Horarios: Metrorrey · consulta 24 oct 2026
+          </a>
+          {network.sources.map((source) => (
+            <a key={source.id} href={source.url} target="_blank" rel="noopener noreferrer">
+              {source.title}
+            </a>
+          ))}
+        </details>
+      )}
     </div>
   );
 }
